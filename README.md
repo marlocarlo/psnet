@@ -3,6 +3,7 @@
   <img src="https://img.shields.io/badge/platform-Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white" alt="Windows">
   <img src="https://img.shields.io/badge/TUI-ratatui-blue?style=for-the-badge" alt="Ratatui">
   <img src="https://img.shields.io/badge/license-MIT-green?style=for-the-badge" alt="MIT License">
+  <a href="https://crates.io/crates/psnet"><img src="https://img.shields.io/crates/v/psnet?style=for-the-badge&logo=rust&logoColor=white&color=e6522c" alt="crates.io"></a>
 </p>
 
 <h1 align="center">
@@ -114,11 +115,20 @@ Think **Wireshark meets htop**, but for your terminal.
 
 ## Installation
 
-### From Source (Recommended)
+### Via Cargo (Recommended)
+
+```powershell
+cargo install psnet
+
+# Then run from anywhere
+psnet
+```
+
+### From Source
 
 ```powershell
 # Clone the repository
-git clone https://github.com/yourusername/psnet.git
+git clone https://github.com/marlocarlo/psnet.git
 cd psnet
 
 # Build optimized release binary
@@ -126,15 +136,6 @@ cargo build --release
 
 # Run it
 .\target\release\psnet.exe
-```
-
-### Via Cargo Install
-
-```powershell
-cargo install --path .
-
-# Then run from anywhere
-psnet
 ```
 
 ### Requirements
