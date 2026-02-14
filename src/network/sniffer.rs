@@ -8,7 +8,7 @@
 
 use std::collections::VecDeque;
 use std::net::{IpAddr, Ipv4Addr};
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 
@@ -98,6 +98,10 @@ pub struct PacketSniffer {
     pub active: Arc<AtomicBool>,
     pub error_msg: Arc<Mutex<Option<String>>>,
     handle: Option<thread::JoinHandle<()>>,
+    /// Total packets ever added (for drain_new tracking).
+    total_added: Arc<AtomicUsize>,
+    /// How many packets we've consumed for traffic events.
+    consumed_count: usize,
 }
 
 impl PacketSniffer {
@@ -108,6 +112,8 @@ impl PacketSniffer {
             active: Arc::new(AtomicBool::new(false)),
             error_msg: Arc::new(Mutex::new(None)),
             handle: None,
+            total_added: Arc::new(AtomicUsize::new(0)),
+            consumed_count: 0,
         }
     }
 
@@ -122,9 +128,10 @@ impl PacketSniffer {
         let active = Arc::clone(&self.active);
         let error_msg = Arc::clone(&self.error_msg);
         let max = self.max_snippets;
+        let total_added = Arc::clone(&self.total_added);
 
         self.handle = Some(thread::spawn(move || {
-            sniffer_thread(snippets, active, error_msg, max);
+            sniffer_thread(snippets, active, error_msg, max, total_added);
         }));
     }
 
@@ -133,6 +140,25 @@ impl PacketSniffer {
         self.active.store(false, Ordering::Relaxed);
         if let Some(h) = self.handle.take() {
             let _ = h.join();
+        }
+    }
+
+    /// Get new packets added since the last call to drain_new.
+    pub fn drain_new(&mut self) -> Vec<PacketSnippet> {
+        let total = self.total_added.load(Ordering::Relaxed);
+        if total <= self.consumed_count {
+            return Vec::new();
+        }
+        let new_count = total - self.consumed_count;
+        self.consumed_count = total;
+
+        if let Ok(lock) = self.snippets.lock() {
+            // Take the last `new_count` items (they're the newest)
+            let len = lock.len();
+            let skip = len.saturating_sub(new_count);
+            lock.iter().skip(skip).cloned().collect()
+        } else {
+            Vec::new()
         }
     }
 
@@ -164,6 +190,7 @@ fn sniffer_thread(
     active: Arc<AtomicBool>,
     error_msg: Arc<Mutex<Option<String>>>,
     max_snippets: usize,
+    total_added: Arc<AtomicUsize>,
 ) {
     unsafe {
         // Initialize Winsock
@@ -256,6 +283,7 @@ fn sniffer_thread(
             if let Some(snippet) = parse_packet(pkt, local_ip) {
                 if let Ok(mut lock) = snippets.lock() {
                     lock.push_back(snippet);
+                    total_added.fetch_add(1, Ordering::Relaxed);
                     while lock.len() > max_snippets {
                         lock.pop_front();
                     }

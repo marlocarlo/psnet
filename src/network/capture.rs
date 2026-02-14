@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::collections::HashSet;
 
 use chrono::Local;
 
@@ -34,6 +35,8 @@ pub struct TrafficTracker {
     pub conn_data: HashMap<ConnKey, u64>,
     /// Hide localhost/loopback connections in traffic view.
     pub hide_localhost: bool,
+    /// Keys that had DATA events this tick (prevents flooding).
+    data_seen_this_tick: HashSet<ConnKey>,
 }
 
 impl TrafficTracker {
@@ -48,6 +51,7 @@ impl TrafficTracker {
             paused: false,
             conn_data: HashMap::new(),
             hide_localhost: true, // Hide localhost by default — show real traffic
+            data_seen_this_tick: HashSet::new(),
         }
     }
 
@@ -56,6 +60,9 @@ impl TrafficTracker {
         if self.paused {
             return;
         }
+
+        // Reset per-tick dedup for data events
+        self.data_seen_this_tick.clear();
 
         let now = Local::now().time();
         let mut current: HashMap<ConnKey, ConnInfo> = HashMap::with_capacity(connections.len());
@@ -186,9 +193,7 @@ impl TrafficTracker {
         if self.log.len() > self.max_log_size {
             self.log.drain(0..self.log.len() - self.max_log_size);
         }
-        if self.auto_scroll {
-            self.scroll_offset = self.log.len();
-        }
+        // With reversed display, auto_scroll means offset 0 (newest first)
     }
 
     pub fn filtered_log(&self) -> Vec<&TrafficEntry> {
@@ -210,6 +215,76 @@ impl TrafficTracker {
                         || e.dns_name.as_ref().map(|n| n.to_lowercase().contains(&ft)).unwrap_or(false)
                 })
                 .collect()
+        }
+    }
+
+    /// Ingest sniffer packets as DATA events in the traffic log.
+    /// Matches packets to known connections to resolve process names.
+    pub fn ingest_packets(&mut self, packets: &[PacketSnippet], connections: &[Connection], dns_cache: &DnsCache) {
+        if self.paused {
+            return;
+        }
+        let now = Local::now().time();
+
+        for pkt in packets {
+            // Build a ConnKey to match against known connections
+            let (local_addr, remote_addr, local_port, remote_port, inbound) = match pkt.direction {
+                PacketDirection::Outbound => (
+                    pkt.src_ip, Some(pkt.dst_ip), pkt.src_port, Some(pkt.dst_port), false,
+                ),
+                PacketDirection::Inbound => (
+                    pkt.dst_ip, Some(pkt.src_ip), pkt.dst_port, Some(pkt.src_port), true,
+                ),
+            };
+
+            let key = ConnKey {
+                proto: pkt.protocol.clone(),
+                local_addr,
+                local_port,
+                remote_addr,
+                remote_port,
+            };
+
+            // Rate limit: one DATA event per connection per tick
+            if self.data_seen_this_tick.contains(&key) {
+                continue;
+            }
+            self.data_seen_this_tick.insert(key.clone());
+
+            // Try to find the process name from connections table
+            let process_name = connections.iter()
+                .find(|c| {
+                    c.proto == pkt.protocol
+                        && ((c.local_port == local_port && c.remote_port == remote_port)
+                            || (c.local_port == remote_port.unwrap_or(0) && c.remote_port == Some(local_port)))
+                })
+                .map(|c| c.process_name.clone())
+                .unwrap_or_default();
+
+            // DNS lookup
+            let dns_name = remote_addr
+                .and_then(|ip| dns_cache.get(&ip).cloned().flatten());
+
+            // Track cumulative data
+            *self.conn_data.entry(key).or_insert(0) += pkt.payload_size as u64;
+
+            self.push_event(TrafficEntry {
+                timestamp: now,
+                event: TrafficEventKind::DataActivity {
+                    bytes: pkt.payload_size,
+                    inbound,
+                },
+                proto: pkt.protocol.clone(),
+                local_addr,
+                local_port,
+                remote_addr,
+                remote_port,
+                process_name,
+                outbound: !inbound,
+                state_label: "ESTAB".to_string(),
+                dns_name,
+                data_size: Some(pkt.payload_size as u64),
+            });
         }
     }
 

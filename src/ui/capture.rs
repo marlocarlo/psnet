@@ -29,7 +29,7 @@ pub fn draw_traffic(f: &mut Frame, area: Rect, app: &App) {
 
     let visible_height = area.height.saturating_sub(5) as usize;
     let scroll = if tracker.auto_scroll {
-        total.saturating_sub(visible_height)
+        0
     } else {
         tracker.scroll_offset.min(total.saturating_sub(visible_height))
     };
@@ -52,6 +52,7 @@ pub fn draw_traffic(f: &mut Frame, area: Rect, app: &App) {
 
     let rows: Vec<Row> = filtered
         .iter()
+        .rev()
         .skip(scroll)
         .take(visible_height)
         .map(|entry| {
@@ -69,6 +70,8 @@ pub fn draw_traffic(f: &mut Frame, area: Rect, app: &App) {
                 TrafficEventKind::NewConnection => "● OPEN",
                 TrafficEventKind::ConnectionClosed => "✕ CLOSE",
                 TrafficEventKind::StateChange { .. } => "↔ STATE",
+                TrafficEventKind::DataActivity { inbound: true, .. } => "◀ DATA",
+                TrafficEventKind::DataActivity { inbound: false, .. } => "▶ DATA",
             };
 
             // ── State ──
@@ -76,12 +79,17 @@ pub fn draw_traffic(f: &mut Frame, area: Rect, app: &App) {
                 TrafficEventKind::StateChange { from, to } => {
                     format!("{} → {}", from.label(), to.label())
                 }
+                TrafficEventKind::DataActivity { bytes, .. } => {
+                    crate::utils::format_bytes(*bytes as u64)
+                }
                 _ => entry.state_label.clone(),
             };
             let state_color = match &entry.event {
                 TrafficEventKind::StateChange { to, .. } => to.color(),
                 TrafficEventKind::NewConnection => Color::Green,
                 TrafficEventKind::ConnectionClosed => Color::Red,
+                TrafficEventKind::DataActivity { inbound: true, .. } => Color::Cyan,
+                TrafficEventKind::DataActivity { inbound: false, .. } => Color::Magenta,
             };
 
             // ── Process ──
@@ -92,6 +100,8 @@ pub fn draw_traffic(f: &mut Frame, area: Rect, app: &App) {
                 TrafficEventKind::NewConnection => Color::Rgb(15, 25, 18),
                 TrafficEventKind::ConnectionClosed => Color::Rgb(25, 15, 15),
                 TrafficEventKind::StateChange { .. } => Color::Rgb(25, 25, 12),
+                TrafficEventKind::DataActivity { inbound: true, .. } => Color::Rgb(12, 20, 28),
+                TrafficEventKind::DataActivity { inbound: false, .. } => Color::Rgb(20, 14, 25),
             };
 
             Row::new(vec![

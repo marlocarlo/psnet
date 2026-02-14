@@ -181,6 +181,7 @@ pub enum TrafficEventKind {
     NewConnection,
     ConnectionClosed,
     StateChange { from: TcpState, to: TcpState },
+    DataActivity { bytes: usize, inbound: bool },
 }
 
 impl TrafficEventKind {
@@ -189,6 +190,7 @@ impl TrafficEventKind {
             Self::NewConnection => "CONNECT",
             Self::ConnectionClosed => "CLOSE",
             Self::StateChange { .. } => "STATE",
+            Self::DataActivity { .. } => "DATA",
         }
     }
 
@@ -198,6 +200,8 @@ impl TrafficEventKind {
             Self::NewConnection => Color::Green,
             Self::ConnectionClosed => Color::Red,
             Self::StateChange { .. } => Color::Yellow,
+            Self::DataActivity { inbound: true, .. } => Color::Cyan,
+            Self::DataActivity { inbound: false, .. } => Color::Magenta,
         }
     }
 }

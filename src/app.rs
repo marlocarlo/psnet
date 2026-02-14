@@ -133,6 +133,12 @@ impl App {
 
         // Update traffic tracker
         self.traffic_tracker.update(&self.connections, &self.dns_cache);
+
+        // Feed sniffer packets into traffic log as DATA events
+        let new_packets = self.sniffer.drain_new();
+        if !new_packets.is_empty() {
+            self.traffic_tracker.ingest_packets(&new_packets, &self.connections, &self.dns_cache);
+        }
     }
 
     // ─── DNS resolution ───────────────────────────────────────────────
@@ -338,8 +344,7 @@ impl App {
             }
             BottomTab::Traffic => {
                 self.traffic_tracker.auto_scroll = false;
-                self.traffic_tracker.scroll_offset =
-                    self.traffic_tracker.scroll_offset.saturating_sub(n);
+                self.traffic_tracker.scroll_offset += n;
             }
         }
     }
@@ -350,9 +355,9 @@ impl App {
                 self.conn_scroll += n;
             }
             BottomTab::Traffic => {
-                self.traffic_tracker.scroll_offset += n;
-                let max = self.traffic_tracker.log.len();
-                if self.traffic_tracker.scroll_offset >= max {
+                self.traffic_tracker.scroll_offset =
+                    self.traffic_tracker.scroll_offset.saturating_sub(n);
+                if self.traffic_tracker.scroll_offset == 0 {
                     self.traffic_tracker.auto_scroll = true;
                 }
             }
@@ -364,7 +369,7 @@ impl App {
             BottomTab::Connections => self.conn_scroll = 0,
             BottomTab::Traffic => {
                 self.traffic_tracker.auto_scroll = false;
-                self.traffic_tracker.scroll_offset = 0;
+                self.traffic_tracker.scroll_offset = self.traffic_tracker.log.len();
             }
         }
     }
@@ -374,7 +379,7 @@ impl App {
             BottomTab::Connections => self.conn_scroll = self.connections.len(),
             BottomTab::Traffic => {
                 self.traffic_tracker.auto_scroll = true;
-                self.traffic_tracker.scroll_offset = self.traffic_tracker.log.len();
+                self.traffic_tracker.scroll_offset = 0;
             }
         }
     }
