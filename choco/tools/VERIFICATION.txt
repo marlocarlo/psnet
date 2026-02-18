@@ -35,11 +35,11 @@ HOW TO VERIFY:
 
 The binary is built directly from the source code at the repository above
 using the GitHub Actions release workflow:
-  $repoUrl$/blob/main/.github/workflows/release.yml
+  $repoUrl$/blob/master/.github/workflows/release.yml
 
 The workflow computes SHA256 and MD5 checksums during build and injects
 them into this package automatically, ensuring integrity from source to
 distribution.
 
 LICENSE:
-  MIT — see LICENSE.txt in this directory or $repoUrl$/blob/main/LICENSE
+  MIT — see LICENSE.txt in this directory or $repoUrl$/blob/master/LICENSE

@@ -7,7 +7,7 @@
     <authors>marlocarlo</authors>
     <owners>marlocarlo</owners>
     <projectUrl>$repoUrl$</projectUrl>
-    <licenseUrl>$repoUrl$/blob/main/LICENSE</licenseUrl>
+    <licenseUrl>$repoUrl$/blob/master/LICENSE</licenseUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <projectSourceUrl>$repoUrl$</projectSourceUrl>
     <docsUrl>$repoUrl$#readme</docsUrl>

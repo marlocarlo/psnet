@@ -312,7 +312,7 @@ jobs:
           PackageName: psnet
           PackageUrl: https://github.com/marlocarlo/psnet
           License: MIT
-          LicenseUrl: https://github.com/marlocarlo/psnet/blob/main/LICENSE
+          LicenseUrl: https://github.com/marlocarlo/psnet/blob/master/LICENSE
           ShortDescription: A beautiful real-time TUI network monitor for Windows — built in Rust
           Tags:
           - cli
