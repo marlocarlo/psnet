@@ -1,0 +1,45 @@
+VERIFICATION
+
+Verification is intended to assist the Chocolatey moderators and community
+in verifying that this package's contents are trustworthy.
+
+═══════════════════════════════════════════════════════════════════════════════
+
+PACKAGE:     psnet $version$
+SOURCE:      $repoUrl$
+DOWNLOAD:    $url$
+SHA256:      $checksum$
+
+═══════════════════════════════════════════════════════════════════════════════
+
+HOW TO VERIFY:
+
+  1. Go to the official GitHub Releases page:
+     $repoUrl$/releases/tag/$tag$
+
+  2. Download the file:
+     psnet-$version$-x86_64-windows.zip
+
+  3. Compute the SHA256 hash of the downloaded file:
+
+     PowerShell:
+       Get-FileHash psnet-$version$-x86_64-windows.zip -Algorithm SHA256
+
+     certutil:
+       certutil -hashfile psnet-$version$-x86_64-windows.zip SHA256
+
+  4. Verify the hash matches the checksum above and the one embedded
+     in chocolateyinstall.ps1 (checksum64 parameter).
+
+═══════════════════════════════════════════════════════════════════════════════
+
+The binary is built directly from the source code at the repository above
+using the GitHub Actions release workflow:
+  $repoUrl$/blob/main/.github/workflows/release.yml
+
+The workflow computes SHA256 and MD5 checksums during build and injects
+them into this package automatically, ensuring integrity from source to
+distribution.
+
+LICENSE:
+  MIT — see LICENSE.txt in this directory or $repoUrl$/blob/main/LICENSE

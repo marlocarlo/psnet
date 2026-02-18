@@ -1,6 +1,6 @@
 [package]
 name = "psnet"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 description = "A beautiful real-time TUI network monitor for Windows PowerShell — built in Rust"
 license = "MIT"
@@ -9,6 +9,7 @@ homepage = "https://github.com/marlocarlo/psnet"
 readme = "README.md"
 keywords = ["network", "monitor", "tui", "windows", "terminal"]
 categories = ["command-line-utilities", "network-programming"]
+exclude = [".github/", "choco/", "target/", "image.png", ".playwright-mcp/"]
 
 [dependencies]
 ratatui = "0.29"

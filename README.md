@@ -4,6 +4,8 @@
   <img src="https://img.shields.io/badge/TUI-ratatui-blue?style=for-the-badge" alt="Ratatui">
   <img src="https://img.shields.io/badge/license-MIT-green?style=for-the-badge" alt="MIT License">
   <a href="https://crates.io/crates/psnet"><img src="https://img.shields.io/crates/v/psnet?style=for-the-badge&logo=rust&logoColor=white&color=e6522c" alt="crates.io"></a>
+  <a href="https://community.chocolatey.org/packages/psnet"><img src="https://img.shields.io/chocolatey/v/psnet?style=for-the-badge&logo=chocolatey&logoColor=white&color=80B5E3" alt="Chocolatey"></a>
+  <a href="https://github.com/microsoft/winget-pkgs/tree/master/manifests/m/marlocarlo/psnet"><img src="https://img.shields.io/badge/winget-marlocarlo.psnet-blue?style=for-the-badge&logo=windows&logoColor=white" alt="WinGet"></a>
 </p>
 
 <h1 align="center">
@@ -115,7 +117,7 @@ Think **Wireshark meets htop**, but for your terminal.
 
 ## Installation
 
-### Via Cargo (Recommended)
+### Via Cargo
 
 ```powershell
 cargo install psnet
@@ -123,6 +125,28 @@ cargo install psnet
 # Then run from anywhere
 psnet
 ```
+
+### Via Chocolatey
+
+```powershell
+choco install psnet
+
+# Then run from anywhere
+psnet
+```
+
+### Via WinGet
+
+```powershell
+winget install marlocarlo.psnet
+
+# Then run from anywhere
+psnet
+```
+
+### Download Binary
+
+Grab the latest `psnet.exe` directly from [GitHub Releases](https://github.com/marlocarlo/psnet/releases/latest) — no installation needed. Just download, place it in your PATH, and run.
 
 ### From Source
 
@@ -306,7 +330,7 @@ Contributions are welcome! Here are some areas where help would be great:
 - 📊 **Per-process bandwidth tracking** — showing which app is using the most bandwidth
 - 💾 **Export** — save traffic logs to CSV/JSON
 - 🎨 **Themes** — configurable color schemes
-- 📦 **Package managers** — Scoop, Chocolatey, WinGet manifests
+- 📦 **Package managers** — available on Cargo, Chocolatey, and WinGet
 
 ## License
 

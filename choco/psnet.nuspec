@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+  <metadata>
+    <id>psnet</id>
+    <version>$version$</version>
+    <title>PSNET — Real-Time TUI Network Monitor</title>
+    <authors>marlocarlo</authors>
+    <owners>marlocarlo</owners>
+    <projectUrl>$repoUrl$</projectUrl>
+    <licenseUrl>$repoUrl$/blob/main/LICENSE</licenseUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <projectSourceUrl>$repoUrl$</projectSourceUrl>
+    <docsUrl>$repoUrl$#readme</docsUrl>
+    <bugTrackerUrl>$repoUrl$/issues</bugTrackerUrl>
+    <packageSourceUrl>$repoUrl$/tree/main/choco</packageSourceUrl>
+    <releaseNotes>$repoUrl$/releases</releaseNotes>
+    <copyright>Copyright (c) 2026 PSNET Contributors</copyright>
+    <tags>network monitor tui terminal windows rust cli wireshark sniffer connections speed</tags>
+    <summary>A beautiful real-time TUI network monitor for Windows — built in Rust</summary>
+    <description><![CDATA[## PSNET — See your network. Understand your network.
+
+PSNET is a **zero-dependency** (no Npcap/WinPcap needed) TUI network monitor built in Rust for Windows.
+It gives you real-time visibility into everything happening on your network:
+
+- **Live speed graphs** — sparkline waveforms for download and upload
+- **Smart connection table** — DNS-resolved hostnames, service labels, process names
+- **Traffic event log** — Wireshark-style connection lifecycle events
+- **Wire preview** — real packet payload inspection (requires Administrator)
+- **Beautiful dark theme** — consistent deep navy palette with Unicode box-drawing
+
+### Quick Start
+
+```
+psnet
+```
+
+For packet inspection (Wire preview), run your terminal as Administrator.
+
+### Requirements
+
+- Windows 10/11
+- Administrator privileges (optional, for Wire packet preview)
+]]></description>
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>

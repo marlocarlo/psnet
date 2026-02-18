@@ -1,0 +1,278 @@
+# ============================================================================
+# PSNET — Automated Release & Distribution Workflow
+# ============================================================================
+# Triggers on GitHub Release publish. Builds the binary, uploads release assets
+# with checksums, then publishes to crates.io, Chocolatey, and WinGet.
+#
+# Required GitHub Secrets:
+#   CARGO_REGISTRY_TOKEN  — crates.io API token
+#   CHOCO_API_KEY         — Chocolatey API key
+#   WINGET_GITHUB_TOKEN   — GitHub PAT with public_repo scope (for winget-pkgs PRs)
+# ============================================================================
+
+name: Release & Publish
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # ──────────────────────────────────────────────────────────────────────────
+  # 1. Build release binary, create archives, compute checksums, upload assets
+  # ──────────────────────────────────────────────────────────────────────────
+  build:
+    name: Build & Upload Release Assets
+    runs-on: windows-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      sha256_exe: ${{ steps.checksum.outputs.sha256_exe }}
+      sha256_zip: ${{ steps.checksum.outputs.sha256_zip }}
+      md5_exe: ${{ steps.checksum.outputs.md5_exe }}
+      md5_zip: ${{ steps.checksum.outputs.md5_zip }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract version from tag
+        id: version
+        shell: pwsh
+        run: |
+          $tag = "${{ github.event.release.tag_name }}"
+          $version = $tag -replace '^v', ''
+          "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry & build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Build release binary
+        run: cargo build --release
+
+      - name: Prepare release artifacts
+        shell: pwsh
+        run: |
+          $version = "${{ steps.version.outputs.version }}"
+          Copy-Item target/release/psnet.exe psnet.exe
+          Compress-Archive -Path psnet.exe -DestinationPath "psnet-${version}-x86_64-windows.zip"
+
+      - name: Compute checksums
+        id: checksum
+        shell: pwsh
+        run: |
+          $version = "${{ steps.version.outputs.version }}"
+
+          $sha256_exe = (Get-FileHash psnet.exe -Algorithm SHA256).Hash
+          $sha256_zip = (Get-FileHash "psnet-${version}-x86_64-windows.zip" -Algorithm SHA256).Hash
+          $md5_exe    = (Get-FileHash psnet.exe -Algorithm MD5).Hash
+          $md5_zip    = (Get-FileHash "psnet-${version}-x86_64-windows.zip" -Algorithm MD5).Hash
+
+          "sha256_exe=$sha256_exe" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "sha256_zip=$sha256_zip" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "md5_exe=$md5_exe"       | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "md5_zip=$md5_zip"       | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
+          $body = @"
+          ## Checksums
+
+          | File | SHA256 | MD5 |
+          |------|--------|-----|
+          | ``psnet.exe`` | ``$sha256_exe`` | ``$md5_exe`` |
+          | ``psnet-${version}-x86_64-windows.zip`` | ``$sha256_zip`` | ``$md5_zip`` |
+          "@
+
+          Set-Content -Path checksums.txt -Value $body -Encoding utf8
+          Write-Host $body
+
+      - name: Upload release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            psnet.exe
+            psnet-${{ steps.version.outputs.version }}-x86_64-windows.zip
+            checksums.txt
+
+      - name: Upload build artifacts for downstream jobs
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-binaries
+          retention-days: 1
+          path: |
+            psnet.exe
+            psnet-${{ steps.version.outputs.version }}-x86_64-windows.zip
+            checksums.txt
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # 2. Publish to crates.io
+  # ──────────────────────────────────────────────────────────────────────────
+  publish-crates:
+    name: Publish to crates.io
+    needs: build
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-publish-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Verify crate version matches tag
+        shell: pwsh
+        run: |
+          $tagVersion = "${{ needs.build.outputs.version }}"
+          $cargoVersion = (Select-String -Path Cargo.toml -Pattern '^version\s*=\s*"(.+)"').Matches.Groups[1].Value
+          if ($tagVersion -ne $cargoVersion) {
+            Write-Error "Tag version ($tagVersion) does not match Cargo.toml version ($cargoVersion)"
+            exit 1
+          }
+          Write-Host "Version verified: $tagVersion"
+
+      - name: Publish to crates.io
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: cargo publish
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # 3. Publish to Chocolatey
+  # ──────────────────────────────────────────────────────────────────────────
+  publish-chocolatey:
+    name: Publish to Chocolatey
+    needs: build
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare Chocolatey package
+        shell: pwsh
+        run: |
+          $version  = "${{ needs.build.outputs.version }}"
+          $sha256   = "${{ needs.build.outputs.sha256_zip }}"
+          $tag      = "${{ github.event.release.tag_name }}"
+          $repoUrl  = "https://github.com/${{ github.repository }}"
+          $url      = "${repoUrl}/releases/download/${tag}/psnet-${version}-x86_64-windows.zip"
+
+          Write-Host "Package version : $version"
+          Write-Host "Download URL    : $url"
+          Write-Host "SHA256 checksum : $sha256"
+
+          # ── Update nuspec ──
+          $nuspec = Get-Content choco/psnet.nuspec -Raw
+          $nuspec = $nuspec -replace '\$version\$', $version
+          $nuspec = $nuspec -replace '\$repoUrl\$', $repoUrl
+          Set-Content choco/psnet.nuspec $nuspec -Encoding utf8
+
+          # ── Update install script ──
+          $install = Get-Content choco/tools/chocolateyinstall.ps1 -Raw
+          $install = $install -replace '\$url\$', $url
+          $install = $install -replace '\$checksum\$', $sha256
+          Set-Content choco/tools/chocolateyinstall.ps1 $install -Encoding utf8
+
+          # ── Update uninstall script ──
+          $uninstall = Get-Content choco/tools/chocolateyuninstall.ps1 -Raw
+          $uninstall = $uninstall -replace '\$zipFileName\$', "psnet-${version}-x86_64-windows.zip"
+          Set-Content choco/tools/chocolateyuninstall.ps1 $uninstall -Encoding utf8
+
+          # ── Update VERIFICATION.txt ──
+          $verify = Get-Content choco/tools/VERIFICATION.txt -Raw
+          $verify = $verify -replace '\$version\$', $version
+          $verify = $verify -replace '\$tag\$', $tag
+          $verify = $verify -replace '\$url\$', $url
+          $verify = $verify -replace '\$checksum\$', $sha256
+          $verify = $verify -replace '\$repoUrl\$', $repoUrl
+          Set-Content choco/tools/VERIFICATION.txt $verify -Encoding utf8
+
+          Write-Host "--- nuspec ---"
+          Get-Content choco/psnet.nuspec
+          Write-Host "--- chocolateyinstall.ps1 ---"
+          Get-Content choco/tools/chocolateyinstall.ps1
+          Write-Host "--- VERIFICATION.txt ---"
+          Get-Content choco/tools/VERIFICATION.txt
+
+      - name: Validate & pack Chocolatey package
+        shell: pwsh
+        run: |
+          choco pack choco/psnet.nuspec --output-directory .
+          $nupkg = Get-ChildItem -Filter "psnet.*.nupkg" | Select-Object -First 1
+          Write-Host "Created package: $($nupkg.Name) ($([math]::Round($nupkg.Length / 1KB, 1)) KB)"
+          if (-not $nupkg) { Write-Error "No .nupkg produced"; exit 1 }
+
+      - name: Push to Chocolatey
+        shell: pwsh
+        run: |
+          $nupkg = (Get-ChildItem -Filter "psnet.*.nupkg" | Select-Object -First 1).FullName
+          choco push $nupkg --source https://push.chocolatey.org/ --api-key ${{ secrets.CHOCO_API_KEY }}
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # 4. Publish to WinGet (Windows Package Manager)
+  # ──────────────────────────────────────────────────────────────────────────
+  publish-winget:
+    name: Publish to WinGet
+    needs: build
+    runs-on: windows-latest
+    steps:
+      - name: Download wingetcreate
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri https://aka.ms/wingetcreate/latest -OutFile wingetcreate.exe
+          Write-Host "wingetcreate downloaded"
+
+      - name: Submit manifest to winget-pkgs
+        shell: pwsh
+        env:
+          WINGET_TOKEN: ${{ secrets.WINGET_GITHUB_TOKEN }}
+        run: |
+          $version = "${{ needs.build.outputs.version }}"
+          $tag     = "${{ github.event.release.tag_name }}"
+          $exeUrl  = "https://github.com/${{ github.repository }}/releases/download/${tag}/psnet.exe"
+
+          Write-Host "Version    : $version"
+          Write-Host "Installer  : $exeUrl"
+
+          # Try updating existing manifest first
+          Write-Host "--- Attempting manifest update ---"
+          $proc = Start-Process -FilePath .\wingetcreate.exe -ArgumentList @(
+            "update",
+            "marlocarlo.psnet",
+            "--version", $version,
+            "--urls", $exeUrl,
+            "--token", $env:WINGET_TOKEN,
+            "--submit"
+          ) -NoNewWindow -Wait -PassThru
+
+          if ($proc.ExitCode -ne 0) {
+            Write-Host "Update failed (exit code $($proc.ExitCode)). Trying new package submission..."
+
+            # Fall back to creating a new manifest (first-time submission)
+            $proc2 = Start-Process -FilePath .\wingetcreate.exe -ArgumentList @(
+              "new", $exeUrl,
+              "--version", $version,
+              "--token", $env:WINGET_TOKEN,
+              "--submit"
+            ) -NoNewWindow -Wait -PassThru
+
+            if ($proc2.ExitCode -ne 0) {
+              Write-Warning "WinGet submission failed. You may need to submit the first manifest manually."
+              Write-Host "See: https://github.com/microsoft/winget-pkgs/blob/master/AUTHORING_MANIFESTS.md"
+              exit 1
+            }
+          }
+
+          Write-Host "WinGet manifest PR submitted successfully."
