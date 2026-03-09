@@ -228,7 +228,7 @@ pub struct TrafficEntry {
 
 // ─── Bottom pane tab ─────────────────────────────────────────────────────────
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum BottomTab {
     Dashboard,
     Connections,

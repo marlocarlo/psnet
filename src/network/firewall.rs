@@ -6,6 +6,7 @@
 use std::collections::HashSet;
 use std::path::PathBuf;
 use std::process::Command;
+use std::sync::{Arc, Mutex};
 
 use crate::types::{FirewallAction, FirewallDirection, FirewallMode, FirewallProfile, FirewallRule};
 
@@ -29,6 +30,8 @@ pub struct FirewallManager {
     refresh_tick: u32,
     /// Filter text for rules.
     pub filter_text: String,
+    /// Background refresh result (rules, enabled).
+    refresh_result: Arc<Mutex<Option<(Vec<FirewallRule>, bool)>>>,
     /// Saved firewall profiles.
     pub profiles: Vec<FirewallProfile>,
     /// Currently active profile name.
@@ -52,6 +55,7 @@ impl FirewallManager {
             scroll_offset: 0,
             refresh_tick: 0,
             filter_text: String::new(),
+            refresh_result: Arc::new(Mutex::new(None)),
             profiles,
             active_profile: None,
             profiles_path,
@@ -82,15 +86,33 @@ impl FirewallManager {
         }
     }
 
-    /// Refresh rules from system. Runs every N ticks to avoid overhead.
+    /// Refresh rules from system. Periodic refresh runs on a background thread
+    /// to avoid blocking the UI for 2-5 seconds while netsh executes.
     pub fn tick(&mut self) {
         self.refresh_tick += 1;
+
+        // Poll background refresh result
+        if let Ok(mut r) = self.refresh_result.lock() {
+            if let Some((rules, enabled)) = r.take() {
+                self.rules = rules;
+                self.enabled = enabled;
+            }
+        }
+
+        // Spawn background refresh every 30 ticks
         if self.refresh_tick % 30 == 1 {
-            self.refresh_rules();
+            let result = Arc::clone(&self.refresh_result);
+            std::thread::spawn(move || {
+                let rules = fetch_firewall_rules();
+                let enabled = is_firewall_enabled();
+                if let Ok(mut r) = result.lock() {
+                    *r = Some((rules, enabled));
+                }
+            });
         }
     }
 
-    /// Fetch current firewall rules from the system.
+    /// Fetch current firewall rules from the system (blocking — use for user-initiated refresh).
     pub fn refresh_rules(&mut self) {
         self.rules = fetch_firewall_rules();
         self.enabled = is_firewall_enabled();

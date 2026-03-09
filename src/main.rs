@@ -36,13 +36,13 @@ fn main() -> io::Result<()> {
     // Track active tab to detect switches — a tab change triggers a full clear so that
     // psmux's vt100 parser cursor state (accumulated from dashboard braille/block widgets)
     // is reset before the new tab is drawn.
-    let mut last_tab = app.bottom_tab.clone();
+    let mut last_tab = app.bottom_tab;
 
     // Event loop
     loop {
         if app.bottom_tab != last_tab {
             terminal.clear()?;
-            last_tab = app.bottom_tab.clone();
+            last_tab = app.bottom_tab;
         }
         terminal.draw(|f| ui::draw(f, &app))?;
 

@@ -190,11 +190,13 @@ impl BandwidthTracker {
 
         apps.sort_by(|a, b| {
             let ord = match col {
-                0 => b.total_bytes().cmp(&a.total_bytes()),      // Total (desc default)
-                1 => b.download_bytes.cmp(&a.download_bytes),     // Download
-                2 => b.upload_bytes.cmp(&a.upload_bytes),          // Upload
-                3 => b.active_connections.cmp(&a.active_connections), // Connections
-                4 => a.process_name.to_lowercase().cmp(&b.process_name.to_lowercase()), // Name
+                0 => b.total_bytes().cmp(&a.total_bytes()),
+                1 => b.download_bytes.cmp(&a.download_bytes),
+                2 => b.upload_bytes.cmp(&a.upload_bytes),
+                3 => b.active_connections.cmp(&a.active_connections),
+                // Case-insensitive without allocation
+                4 => a.process_name.bytes().map(|b| b.to_ascii_lowercase())
+                    .cmp(b.process_name.bytes().map(|b| b.to_ascii_lowercase())),
                 _ => std::cmp::Ordering::Equal,
             };
             if asc { ord.reverse() } else { ord }

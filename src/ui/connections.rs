@@ -105,15 +105,16 @@ pub fn draw_connections(f: &mut Frame, area: Rect, app: &App) {
             let remote_bold = conn.dns_hostname.is_some()
                 && conn.dns_hostname.as_deref() != Some("localhost");
 
-            // ── Service (port + label + protocol) ──
+            // ── Service (port + label + protocol) — single lookup ──
             let port = conn.remote_port.unwrap_or(conn.local_port);
             let proto = conn.proto.label();
-            let service_str = if let Some(svc) = port_service_name(port) {
+            let svc_name = port_service_name(port);
+            let service_str = if let Some(svc) = svc_name {
                 format!("{}/{}", svc, proto)
             } else {
                 format!("{}/{}", port, proto)
             };
-            let service_color = match port_service_name(port) {
+            let service_color = match svc_name {
                 Some("HTTPS") => Color::Rgb(80, 200, 120),
                 Some("HTTP") => Color::Rgb(220, 180, 60),
                 Some("DNS") => Color::Rgb(100, 180, 255),

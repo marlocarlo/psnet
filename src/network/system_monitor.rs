@@ -88,6 +88,12 @@ fn fnv1a_hash(data: &[u8]) -> u64 {
 /// Tracks hosts file changes, proxy setting mutations, WiFi evil twin
 /// attacks, and application binary integrity. Each category runs on its
 /// own tick interval to avoid excessive I/O on every frame.
+/// Result from background proxy/WiFi check.
+enum BgCheckResult {
+    Proxy(ProxyState),
+    Wifi(Vec<WifiNetwork>),
+}
+
 pub struct SystemMonitor {
     /// FNV hash of the last-read hosts file content.
     hosts_hash: Option<u64>,
@@ -105,6 +111,8 @@ pub struct SystemMonitor {
     connectivity_result: Arc<Mutex<Option<bool>>>,
     /// Whether a connectivity check is in progress
     connectivity_checking: Arc<Mutex<bool>>,
+    /// Background check results (proxy, WiFi) — avoid blocking main thread
+    bg_check_results: Arc<Mutex<Vec<BgCheckResult>>>,
 }
 
 impl SystemMonitor {
@@ -118,6 +126,7 @@ impl SystemMonitor {
             internet_available: None,
             connectivity_result: Arc::new(Mutex::new(None)),
             connectivity_checking: Arc::new(Mutex::new(false)),
+            bg_check_results: Arc::new(Mutex::new(Vec::new())),
         }
     }
 
@@ -134,21 +143,54 @@ impl SystemMonitor {
         let tick = self.tick_count;
         self.tick_count = self.tick_count.wrapping_add(1);
 
-        // Hosts file + proxy — every 30 ticks
+        // Poll background proxy/WiFi results first — drain into local vec to avoid borrow conflict
+        let bg_results: Vec<BgCheckResult> = if let Ok(mut results) = self.bg_check_results.lock() {
+            results.drain(..).collect()
+        } else {
+            Vec::new()
+        };
+        for result in bg_results {
+            match result {
+                BgCheckResult::Proxy(current) => {
+                    if let Some(desc) = self.process_proxy_result(current) {
+                        events.push(SystemEvent::ProxyChanged(desc));
+                    }
+                }
+                BgCheckResult::Wifi(networks) => {
+                    for warning in self.process_wifi_result(&networks) {
+                        events.push(SystemEvent::EvilTwinDetected(warning));
+                    }
+                }
+            }
+        }
+
+        // Hosts file — every 30 ticks (fast fs::read, OK on main thread)
         if tick % 30 == 0 {
             if let Some(desc) = self.check_hosts_file() {
                 events.push(SystemEvent::HostsFileChanged(desc));
             }
-            if let Some(desc) = self.check_proxy_settings() {
-                events.push(SystemEvent::ProxyChanged(desc));
-            }
         }
 
-        // WiFi evil twin — every 60 ticks
+        // Proxy settings — every 30 ticks, on background thread (spawns `reg query`)
+        if tick % 30 == 0 {
+            let bg = Arc::clone(&self.bg_check_results);
+            thread::spawn(move || {
+                let state = read_proxy_state();
+                if let Ok(mut results) = bg.lock() {
+                    results.push(BgCheckResult::Proxy(state));
+                }
+            });
+        }
+
+        // WiFi evil twin — every 60 ticks, on background thread (spawns `netsh wlan`)
         if tick % 60 == 0 {
-            for warning in self.check_wifi_security() {
-                events.push(SystemEvent::EvilTwinDetected(warning));
-            }
+            let bg = Arc::clone(&self.bg_check_results);
+            thread::spawn(move || {
+                let networks = scan_wifi_networks();
+                if let Ok(mut results) = bg.lock() {
+                    results.push(BgCheckResult::Wifi(networks));
+                }
+            });
         }
 
         // App binary integrity — every 120 ticks
@@ -207,10 +249,13 @@ impl SystemMonitor {
     /// previously stored state. Returns a description if anything changed.
     pub fn check_proxy_settings(&mut self) -> Option<String> {
         let current = read_proxy_state();
+        self.process_proxy_result(current)
+    }
 
+    /// Process a proxy state result (from background thread or direct call).
+    fn process_proxy_result(&mut self, current: ProxyState) -> Option<String> {
         match &self.proxy_state {
             None => {
-                // First read — establish baseline, no alert.
                 self.proxy_state = Some(current);
                 None
             }
@@ -263,13 +308,18 @@ impl SystemMonitor {
     /// Returns a list of warning strings (empty if nothing suspicious).
     pub fn check_wifi_security(&mut self) -> Vec<String> {
         let networks = scan_wifi_networks();
+        self.process_wifi_result(&networks)
+    }
+
+    /// Process WiFi scan results (from background thread or direct call).
+    fn process_wifi_result(&mut self, networks: &[WifiNetwork]) -> Vec<String> {
         if networks.is_empty() {
             return Vec::new();
         }
 
         let mut warnings = Vec::new();
 
-        for net in &networks {
+        for net in networks {
             if net.ssid.is_empty() {
                 continue;
             }

@@ -1,3 +1,5 @@
+use std::net::IpAddr;
+use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
 use crossterm::event::KeyCode;
@@ -99,6 +101,10 @@ pub struct App {
     pid_cache: PidCache,
     pub dns_cache: DnsCache,
     dns_tick: u32,
+
+    // Background task results — avoid blocking UI thread
+    bg_dns_servers: Arc<Mutex<Option<Vec<IpAddr>>>>,
+    bg_dns_ipconfig: Arc<Mutex<Option<Vec<(IpAddr, String)>>>>,
 }
 
 impl App {
@@ -161,6 +167,9 @@ impl App {
             pid_cache: PidCache::new(),
             dns_cache: DnsCache::new(),
             dns_tick: 0,
+
+            bg_dns_servers: Arc::new(Mutex::new(None)),
+            bg_dns_ipconfig: Arc::new(Mutex::new(None)),
         }
     }
 
@@ -245,16 +254,29 @@ impl App {
         // Anomaly detection on per-app bandwidth
         self.alert_engine.check_anomalies(&self.bandwidth_tracker.apps);
 
-        // Threat detection
-        let threats = self.threat_detector.scan(&self.connections);
-        if !threats.is_empty() {
-            self.alert_engine.check_suspicious(&self.connections, &threats);
+        // Threat detection — every 3 ticks (threats don't change that fast)
+        if self.tick_count % 3 == 0 {
+            let threats = self.threat_detector.scan(&self.connections);
+            if !threats.is_empty() {
+                self.alert_engine.check_suspicious(&self.connections, &threats);
+            }
         }
 
-        // DNS server change detection (every 10 ticks)
+        // DNS server change detection — background thread every 10 ticks
+        // (netsh blocks for 100-500ms, must not run on UI thread)
+        if let Ok(mut r) = self.bg_dns_servers.lock() {
+            if let Some(servers) = r.take() {
+                self.alert_engine.check_dns_servers(&servers);
+            }
+        }
         if self.dns_tick % 10 == 0 {
-            let dns_servers = crate::network::alerts::get_dns_servers();
-            self.alert_engine.check_dns_servers(&dns_servers);
+            let result = Arc::clone(&self.bg_dns_servers);
+            std::thread::spawn(move || {
+                let servers = crate::network::alerts::get_dns_servers();
+                if let Ok(mut r) = result.lock() {
+                    *r = Some(servers);
+                }
+            });
         }
 
         // Network scanner tick (auto-scans periodically)
@@ -282,11 +304,13 @@ impl App {
             }
         }
 
-        // Usage tracking with per-app data
-        let per_app: std::collections::HashMap<String, (u64, u64)> = self.bandwidth_tracker.apps.iter()
-            .map(|(k, v)| (k.clone(), (v.download_bytes, v.upload_bytes)))
-            .collect();
-        self.usage_tracker.update(self.total_down, self.total_up, &per_app);
+        // Usage tracking — every 5 ticks (reduces HashMap allocation overhead)
+        if self.tick_count % 5 == 0 {
+            let per_app: std::collections::HashMap<String, (u64, u64)> = self.bandwidth_tracker.apps.iter()
+                .map(|(k, v)| (k.clone(), (v.download_bytes, v.upload_bytes)))
+                .collect();
+            self.usage_tracker.update(self.total_down, self.total_up, &per_app);
+        }
 
         // Data plan overage alert
         let (used, limit, _pct) = self.usage_tracker.plan_status();
@@ -309,20 +333,41 @@ impl App {
 
     /// Read DNS cache from OS and apply hostnames to connections.
     fn resolve_dns(&mut self) {
-        // Read from OS DNS cache every tick (API call is fast)
-        let os_cache = dns::read_dns_cache_api();
-        for (ip, hostname) in &os_cache {
-            self.dns_cache.entry(*ip).or_insert_with(|| Some(hostname.clone()));
-        }
-
-        // Supplement with ipconfig parsing every 10 ticks (~10s, it spawns a process)
-        if self.dns_tick % 10 == 0 {
-            let ipconfig_cache = dns::read_dns_cache_ipconfig();
-            for (ip, hostname) in ipconfig_cache {
-                self.dns_cache.entry(ip).or_insert_with(|| Some(hostname));
+        // Read from OS DNS cache every 2 ticks (API call is fast but not free)
+        if self.dns_tick % 2 == 0 {
+            let os_cache = dns::read_dns_cache_api();
+            for (ip, hostname) in &os_cache {
+                self.dns_cache.entry(*ip).or_insert_with(|| Some(hostname.clone()));
             }
         }
+
+        // Poll background ipconfig result
+        if let Ok(mut r) = self.bg_dns_ipconfig.lock() {
+            if let Some(entries) = r.take() {
+                for (ip, hostname) in entries {
+                    self.dns_cache.entry(ip).or_insert_with(|| Some(hostname));
+                }
+            }
+        }
+
+        // Spawn ipconfig parsing on background thread every 10 ticks (avoids 100-500ms block)
+        if self.dns_tick % 10 == 0 {
+            let result = Arc::clone(&self.bg_dns_ipconfig);
+            std::thread::spawn(move || {
+                let cache = dns::read_dns_cache_ipconfig();
+                let entries: Vec<_> = cache.into_iter().collect();
+                if let Ok(mut r) = result.lock() {
+                    *r = Some(entries);
+                }
+            });
+        }
         self.dns_tick = self.dns_tick.wrapping_add(1);
+
+        // Cap DNS cache to prevent unbounded growth in long sessions
+        if self.dns_cache.len() > 10_000 {
+            // Keep most recent entries by clearing and re-populating on next tick
+            self.dns_cache.clear();
+        }
 
         // Apply cached DNS names to connections
         for conn in &mut self.connections {
@@ -349,16 +394,13 @@ impl App {
         self.connections.sort_by(|a, b| {
             let ord = match col {
                 0 => a.proto.label().cmp(b.proto.label()),
-                1 => a.local_addr.to_string().cmp(&b.local_addr.to_string()),
+                // Compare IpAddr directly (numeric order) — no .to_string() allocation
+                1 => a.local_addr.cmp(&b.local_addr),
                 2 => a.local_port.cmp(&b.local_port),
-                3 => {
-                    let ra = a.remote_addr.map(|i| i.to_string()).unwrap_or_default();
-                    let rb = b.remote_addr.map(|i| i.to_string()).unwrap_or_default();
-                    ra.cmp(&rb)
-                }
+                // Compare Option<IpAddr> directly — None < Some(_)
+                3 => a.remote_addr.cmp(&b.remote_addr),
                 4 => a.remote_port.unwrap_or(0).cmp(&b.remote_port.unwrap_or(0)),
                 5 => {
-                    // Custom state ordering: ESTABLISHED first, then active, then passive
                     fn state_rank(s: Option<&TcpState>) -> u8 {
                         match s {
                             Some(TcpState::Established) => 0,
@@ -374,12 +416,14 @@ impl App {
                             Some(TcpState::Closed) => 10,
                             Some(TcpState::DeleteTcb) => 11,
                             Some(TcpState::Unknown(_)) => 12,
-                            None => 13, // UDP
+                            None => 13,
                         }
                     }
                     state_rank(a.state.as_ref()).cmp(&state_rank(b.state.as_ref()))
                 }
-                6 => a.process_name.to_lowercase().cmp(&b.process_name.to_lowercase()),
+                // Case-insensitive byte-by-byte comparison — no .to_lowercase() allocation
+                6 => a.process_name.bytes().map(|b| b.to_ascii_lowercase())
+                    .cmp(b.process_name.bytes().map(|b| b.to_ascii_lowercase())),
                 _ => std::cmp::Ordering::Equal,
             };
             if asc { ord } else { ord.reverse() }
@@ -434,30 +478,53 @@ impl App {
     }
 
     pub fn filtered_connections(&self) -> Vec<&Connection> {
+        // Pre-compute lowercase filter once (not per-connection)
+        let ft = if self.filter_text.is_empty() { None } else { Some(self.filter_text.to_lowercase()) };
+        let hide_local = self.hide_localhost_conn;
+        let show_listen = self.show_listen;
+
         self.connections.iter().filter(|c| {
-            // Hide localhost ↔ localhost connections when enabled
-            if self.hide_localhost_conn {
+            if hide_local {
                 if c.local_addr.is_loopback()
                     && c.remote_addr.map(|a| a.is_loopback()).unwrap_or(false)
                 {
                     return false;
                 }
             }
-            if !self.show_listen {
+            if !show_listen {
                 if matches!(c.state.as_ref(), Some(TcpState::Listen)) {
                     return false;
                 }
             }
-            if !self.filter_text.is_empty() {
-                let ft = self.filter_text.to_lowercase();
-                return c.process_name.to_lowercase().contains(&ft)
-                    || c.local_addr.to_string().contains(&ft)
-                    || c.local_port.to_string().contains(&ft)
-                    || c.remote_addr.map(|a| a.to_string().contains(&ft)).unwrap_or(false)
-                    || c.remote_port.map(|p| p.to_string().contains(&ft)).unwrap_or(false)
-                    || c.state.as_ref().map(|s| s.label().to_lowercase().contains(&ft)).unwrap_or(false)
-                    || c.proto.label().to_lowercase().contains(&ft)
-                    || c.dns_hostname.as_ref().map(|n| n.to_lowercase().contains(&ft)).unwrap_or(false);
+            if let Some(ft) = &ft {
+                // Use a reusable buffer to avoid per-field String allocations
+                let mut buf = String::with_capacity(64);
+                use std::fmt::Write;
+
+                if c.process_name.to_lowercase().contains(ft.as_str()) { return true; }
+
+                buf.clear(); write!(buf, "{}", c.local_addr).unwrap();
+                if buf.contains(ft.as_str()) { return true; }
+
+                buf.clear(); write!(buf, "{}", c.local_port).unwrap();
+                if buf.contains(ft.as_str()) { return true; }
+
+                if let Some(a) = c.remote_addr {
+                    buf.clear(); write!(buf, "{}", a).unwrap();
+                    if buf.contains(ft.as_str()) { return true; }
+                }
+                if let Some(p) = c.remote_port {
+                    buf.clear(); write!(buf, "{}", p).unwrap();
+                    if buf.contains(ft.as_str()) { return true; }
+                }
+                if let Some(s) = c.state.as_ref() {
+                    if s.label().to_lowercase().contains(ft.as_str()) { return true; }
+                }
+                if c.proto.label().to_lowercase().contains(ft.as_str()) { return true; }
+                if let Some(n) = c.dns_hostname.as_ref() {
+                    if n.to_lowercase().contains(ft.as_str()) { return true; }
+                }
+                return false;
             }
             true
         }).collect()

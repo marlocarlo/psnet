@@ -146,19 +146,11 @@ fn draw_traffic_graph(f: &mut Frame, area: Rect, app: &App) {
     let range_samples = app.dashboard_time_range.samples();
     let history = &app.traffic_history;
 
-    // Get recent samples up to the selected range
+    // Get recent samples up to the selected range — single allocation, no double-collect
     let len = history.samples.len();
     let take = range_samples.min(len);
-    let data: Vec<(f64, f64)> = history
-        .samples
-        .iter()
-        .rev()
-        .take(take)
-        .copied()
-        .collect::<Vec<_>>()
-        .into_iter()
-        .rev()
-        .collect();
+    let start = len.saturating_sub(take);
+    let data: Vec<(f64, f64)> = history.samples.iter().skip(start).copied().collect();
 
     draw_traffic_chart(
         f,
