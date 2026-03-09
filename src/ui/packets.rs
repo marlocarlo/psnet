@@ -31,7 +31,7 @@ pub fn draw_packet_preview(f: &mut Frame, area: Rect, sniffer: &PacketSniffer) {
 
         let block = Block::default()
             .title(wire_title(false))
-            .borders(Borders::ALL)
+            .borders(Borders::TOP | Borders::LEFT | Borders::RIGHT)
             .border_style(Style::default().fg(Color::Rgb(30, 50, 85)))
             .style(Style::default().bg(Color::Rgb(8, 12, 24)));
 
@@ -99,7 +99,7 @@ pub fn draw_packet_preview(f: &mut Frame, area: Rect, sniffer: &PacketSniffer) {
 
     let block = Block::default()
         .title(wire_title(true))
-        .borders(Borders::ALL)
+        .borders(Borders::TOP | Borders::LEFT | Borders::RIGHT)
         .border_style(Style::default().fg(Color::Rgb(30, 50, 85)))
         .style(Style::default().bg(Color::Rgb(6, 10, 20)));
 

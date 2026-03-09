@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::net::IpAddr;
 
 use chrono::NaiveTime;
+use serde::{Serialize, Deserialize};
 
 // ─── DNS cache ───────────────────────────────────────────────────────────────
 
@@ -229,15 +230,140 @@ pub struct TrafficEntry {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum BottomTab {
-    Traffic,
+    Dashboard,
     Connections,
+    Traffic,
+    Alerts,
+    Usage,
+    Firewall,
+    Devices,
 }
 
 impl BottomTab {
     pub fn next(&self) -> Self {
         match self {
-            Self::Traffic => Self::Connections,
+            Self::Dashboard => Self::Connections,
             Self::Connections => Self::Traffic,
+            Self::Traffic => Self::Alerts,
+            Self::Alerts => Self::Usage,
+            Self::Usage => Self::Firewall,
+            Self::Firewall => Self::Devices,
+            Self::Devices => Self::Dashboard,
+        }
+    }
+
+    pub fn prev(&self) -> Self {
+        match self {
+            Self::Dashboard => Self::Devices,
+            Self::Connections => Self::Dashboard,
+            Self::Traffic => Self::Connections,
+            Self::Alerts => Self::Traffic,
+            Self::Usage => Self::Alerts,
+            Self::Firewall => Self::Usage,
+            Self::Devices => Self::Firewall,
+        }
+    }
+
+    pub fn label(&self) -> &str {
+        match self {
+            Self::Dashboard => "Dashboard",
+            Self::Connections => "Connections",
+            Self::Traffic => "Traffic",
+            Self::Alerts => "Alerts",
+            Self::Usage => "Usage",
+            Self::Firewall => "Firewall",
+            Self::Devices => "Devices",
+        }
+    }
+
+    pub fn index(&self) -> usize {
+        match self {
+            Self::Dashboard => 0,
+            Self::Connections => 1,
+            Self::Traffic => 2,
+            Self::Alerts => 3,
+            Self::Usage => 4,
+            Self::Firewall => 5,
+            Self::Devices => 6,
+        }
+    }
+
+    pub fn from_index(i: usize) -> Option<Self> {
+        match i {
+            0 => Some(Self::Dashboard),
+            1 => Some(Self::Connections),
+            2 => Some(Self::Traffic),
+            3 => Some(Self::Alerts),
+            4 => Some(Self::Usage),
+            5 => Some(Self::Firewall),
+            6 => Some(Self::Devices),
+            _ => None,
+        }
+    }
+}
+
+/// Time range for the dashboard traffic graph.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum DashboardTimeRange {
+    Minutes5,
+    Minutes15,
+    Hour1,
+    Hours24,
+}
+
+impl DashboardTimeRange {
+    pub fn label(&self) -> &str {
+        match self {
+            Self::Minutes5 => "5m",
+            Self::Minutes15 => "15m",
+            Self::Hour1 => "1h",
+            Self::Hours24 => "24h",
+        }
+    }
+    pub fn samples(&self) -> usize {
+        match self {
+            Self::Minutes5 => 300,
+            Self::Minutes15 => 900,
+            Self::Hour1 => 3600,
+            Self::Hours24 => 86400,
+        }
+    }
+}
+
+/// Extended traffic history for dashboard graph (stores per-second samples).
+pub struct TrafficHistory {
+    pub samples: std::collections::VecDeque<(f64, f64)>,
+    pub max_samples: usize,
+}
+
+impl TrafficHistory {
+    pub fn new(max: usize) -> Self {
+        Self {
+            samples: std::collections::VecDeque::with_capacity(max.min(8192)),
+            max_samples: max,
+        }
+    }
+    pub fn push(&mut self, down_bps: f64, up_bps: f64) {
+        self.samples.push_back((down_bps, up_bps));
+        while self.samples.len() > self.max_samples {
+            self.samples.pop_front();
+        }
+    }
+    pub fn recent(&self, n: usize) -> &[(f64, f64)] {
+        let len = self.samples.len();
+        let (a, b) = self.samples.as_slices();
+        if n >= len {
+            // Return all - but as_slices returns two slices, caller needs contiguous
+            // Just return the back slice if it has enough, else all
+            if b.len() >= n.min(len) { b } else if a.is_empty() { b } else { b }
+        } else {
+            let skip = len - n;
+            if skip >= a.len() {
+                &b[skip - a.len()..]
+            } else {
+                // spans both slices, return just the back portion
+                b
+            }
         }
     }
 }
@@ -268,4 +394,388 @@ pub struct PacketSnippet {
 pub enum PacketDirection {
     Inbound,
     Outbound,
+}
+
+// ─── Alert types (GlassWire-style) ──────────────────────────────────────────
+
+#[derive(Clone, Debug)]
+pub enum AlertSeverity {
+    Info,
+    Warning,
+    Critical,
+}
+
+impl AlertSeverity {
+    pub fn label(&self) -> &str {
+        match self {
+            Self::Info => "INFO",
+            Self::Warning => "WARN",
+            Self::Critical => "CRIT",
+        }
+    }
+
+    pub fn color(&self) -> ratatui::style::Color {
+        use ratatui::style::Color;
+        match self {
+            Self::Info => Color::Rgb(80, 180, 255),
+            Self::Warning => Color::Rgb(255, 200, 60),
+            Self::Critical => Color::Rgb(255, 80, 80),
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub enum AlertKind {
+    /// First time an application connects to the network
+    NewAppFirstConnection { process_name: String, remote: String },
+    /// DNS server configuration changed
+    DnsServerChanged { old_servers: Vec<IpAddr>, new_servers: Vec<IpAddr> },
+    /// Suspicious host contacted (known bad IP)
+    SuspiciousHost { process_name: String, ip: IpAddr, reason: String },
+    /// RDP connection detected
+    RdpConnection { remote_addr: IpAddr, inbound: bool },
+    /// Bandwidth spike detected
+    BandwidthSpike { direction: String, speed_bps: f64, threshold_bps: f64 },
+    /// New device appeared on LAN
+    NewDevice { ip: IpAddr, mac: String, hostname: Option<String> },
+    /// Device left the LAN
+    DeviceLeft { ip: IpAddr, mac: String },
+    /// ARP spoofing: multiple IPs claiming same MAC, or IP changed MAC
+    ArpAnomaly { ip: IpAddr, expected_mac: String, actual_mac: String },
+    /// Bandwidth overage: data plan limit exceeded
+    BandwidthOverage { used_bytes: u64, limit_bytes: u64 },
+    /// Application info changed (binary modified)
+    AppChanged { process_name: String, detail: String },
+    /// Connection blocked by firewall
+    ConnectionBlocked { process_name: String, remote: String },
+    /// Traffic anomaly: app traffic significantly above baseline
+    TrafficAnomaly { process_name: String, current_bytes: u64, baseline_bytes: u64 },
+    /// Hosts file was modified
+    HostsFileChanged { detail: String },
+    /// Proxy settings changed
+    ProxyChanged { detail: String },
+    /// Evil twin WiFi detected
+    EvilTwinDetected { detail: String },
+    /// Internet connectivity lost
+    InternetLost { detail: String },
+    /// Internet connectivity restored
+    InternetRestored,
+}
+
+impl AlertKind {
+    pub fn label(&self) -> &str {
+        match self {
+            Self::NewAppFirstConnection { .. } => "New App",
+            Self::DnsServerChanged { .. } => "DNS Changed",
+            Self::SuspiciousHost { .. } => "Suspicious Host",
+            Self::RdpConnection { .. } => "RDP Detected",
+            Self::BandwidthSpike { .. } => "Bandwidth Spike",
+            Self::NewDevice { .. } => "New Device",
+            Self::DeviceLeft { .. } => "Device Left",
+            Self::ArpAnomaly { .. } => "ARP Anomaly",
+            Self::BandwidthOverage { .. } => "Data Overage",
+            Self::AppChanged { .. } => "App Changed",
+            Self::ConnectionBlocked { .. } => "Blocked",
+            Self::TrafficAnomaly { .. } => "Anomaly",
+            Self::HostsFileChanged { .. } => "Hosts Changed",
+            Self::ProxyChanged { .. } => "Proxy Changed",
+            Self::EvilTwinDetected { .. } => "Evil Twin",
+            Self::InternetLost { .. } => "No Internet",
+            Self::InternetRestored => "Internet OK",
+        }
+    }
+
+    pub fn severity(&self) -> AlertSeverity {
+        match self {
+            Self::NewAppFirstConnection { .. } => AlertSeverity::Info,
+            Self::DnsServerChanged { .. } => AlertSeverity::Warning,
+            Self::SuspiciousHost { .. } => AlertSeverity::Critical,
+            Self::RdpConnection { .. } => AlertSeverity::Warning,
+            Self::BandwidthSpike { .. } => AlertSeverity::Info,
+            Self::NewDevice { .. } => AlertSeverity::Info,
+            Self::DeviceLeft { .. } => AlertSeverity::Info,
+            Self::ArpAnomaly { .. } => AlertSeverity::Critical,
+            Self::BandwidthOverage { .. } => AlertSeverity::Warning,
+            Self::AppChanged { .. } => AlertSeverity::Warning,
+            Self::ConnectionBlocked { .. } => AlertSeverity::Warning,
+            Self::TrafficAnomaly { .. } => AlertSeverity::Warning,
+            Self::HostsFileChanged { .. } => AlertSeverity::Critical,
+            Self::ProxyChanged { .. } => AlertSeverity::Warning,
+            Self::EvilTwinDetected { .. } => AlertSeverity::Critical,
+            Self::InternetLost { .. } => AlertSeverity::Critical,
+            Self::InternetRestored => AlertSeverity::Info,
+        }
+    }
+
+    pub fn description(&self) -> String {
+        match self {
+            Self::NewAppFirstConnection { process_name, remote } => {
+                format!("{} connected to {} for the first time", process_name, remote)
+            }
+            Self::DnsServerChanged { old_servers, new_servers } => {
+                format!("DNS servers changed: {:?} → {:?}", old_servers, new_servers)
+            }
+            Self::SuspiciousHost { process_name, ip, reason } => {
+                format!("{} connected to suspicious host {} ({})", process_name, ip, reason)
+            }
+            Self::RdpConnection { remote_addr, inbound } => {
+                let dir = if *inbound { "Inbound" } else { "Outbound" };
+                format!("{} RDP connection from {}", dir, remote_addr)
+            }
+            Self::BandwidthSpike { direction, speed_bps, .. } => {
+                format!("{} spike: {}/s", direction, crate::utils::format_bytes(*speed_bps as u64))
+            }
+            Self::NewDevice { ip, mac, hostname } => {
+                let name = hostname.as_deref().unwrap_or("unknown");
+                format!("New device: {} ({}) - {}", ip, mac, name)
+            }
+            Self::DeviceLeft { ip, mac } => {
+                format!("Device left: {} ({})", ip, mac)
+            }
+            Self::ArpAnomaly { ip, expected_mac, actual_mac } => {
+                format!("ARP anomaly: {} changed MAC {} → {}", ip, expected_mac, actual_mac)
+            }
+            Self::BandwidthOverage { used_bytes, limit_bytes } => {
+                format!("Data plan exceeded: {} / {} used",
+                    crate::utils::format_bytes(*used_bytes),
+                    crate::utils::format_bytes(*limit_bytes))
+            }
+            Self::AppChanged { process_name, detail } => {
+                format!("{}: {}", process_name, detail)
+            }
+            Self::ConnectionBlocked { process_name, remote } => {
+                format!("Blocked {} → {}", process_name, remote)
+            }
+            Self::TrafficAnomaly { process_name, current_bytes, baseline_bytes } => {
+                format!("{}: traffic {}x above baseline ({} vs {})",
+                    process_name,
+                    if *baseline_bytes > 0 { current_bytes / baseline_bytes } else { 0 },
+                    crate::utils::format_bytes(*current_bytes),
+                    crate::utils::format_bytes(*baseline_bytes))
+            }
+            Self::HostsFileChanged { detail } => {
+                format!("Hosts file modified: {}", detail)
+            }
+            Self::ProxyChanged { detail } => {
+                format!("Proxy settings changed: {}", detail)
+            }
+            Self::EvilTwinDetected { detail } => {
+                format!("Evil twin WiFi detected: {}", detail)
+            }
+            Self::InternetLost { detail } => {
+                format!("Internet connectivity lost: {}", detail)
+            }
+            Self::InternetRestored => {
+                "Internet connectivity restored".to_string()
+            }
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct Alert {
+    pub timestamp: NaiveTime,
+    pub kind: AlertKind,
+    pub read: bool,
+}
+
+// ─── Per-app bandwidth tracking ─────────────────────────────────────────────
+
+#[derive(Clone, Debug)]
+pub struct AppBandwidth {
+    pub process_name: String,
+    pub download_bytes: u64,
+    pub upload_bytes: u64,
+    pub active_connections: usize,
+    pub last_seen: NaiveTime,
+    /// Recent speed samples for mini-sparkline
+    pub recent_down: std::collections::VecDeque<f64>,
+    pub recent_up: std::collections::VecDeque<f64>,
+}
+
+impl AppBandwidth {
+    pub fn new(name: String) -> Self {
+        Self {
+            process_name: name,
+            download_bytes: 0,
+            upload_bytes: 0,
+            active_connections: 0,
+            last_seen: chrono::Local::now().time(),
+            recent_down: std::collections::VecDeque::from(vec![0.0; 20]),
+            recent_up: std::collections::VecDeque::from(vec![0.0; 20]),
+        }
+    }
+
+    pub fn total_bytes(&self) -> u64 {
+        self.download_bytes + self.upload_bytes
+    }
+}
+
+// ─── LAN device (scanner) ───────────────────────────────────────────────────
+
+#[derive(Clone, Debug)]
+pub struct LanDevice {
+    pub ip: IpAddr,
+    pub mac: String,
+    pub hostname: Option<String>,
+    pub vendor: Option<String>,
+    pub first_seen: NaiveTime,
+    pub last_seen: NaiveTime,
+    pub is_online: bool,
+    /// User-assigned custom label for this device.
+    pub custom_name: Option<String>,
+}
+
+// ─── Firewall rule ──────────────────────────────────────────────────────────
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum FirewallAction {
+    Allow,
+    Block,
+}
+
+impl FirewallAction {
+    pub fn label(&self) -> &str {
+        match self {
+            Self::Allow => "ALLOW",
+            Self::Block => "BLOCK",
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum FirewallDirection {
+    Inbound,
+    Outbound,
+    Both,
+}
+
+impl FirewallDirection {
+    pub fn label(&self) -> &str {
+        match self {
+            Self::Inbound => "IN",
+            Self::Outbound => "OUT",
+            Self::Both => "BOTH",
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct FirewallRule {
+    pub name: String,
+    pub process_name: Option<String>,
+    pub action: FirewallAction,
+    pub direction: FirewallDirection,
+    pub enabled: bool,
+    pub profile: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum FirewallMode {
+    Normal,
+    AskToConnect,
+    Lockdown,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct FirewallProfile {
+    pub name: String,
+    pub blocked_apps: Vec<String>,
+    pub allowed_apps: Vec<String>,
+    pub mode: FirewallMode,
+}
+
+impl FirewallMode {
+    pub fn label(&self) -> &str {
+        match self {
+            Self::Normal => "Normal",
+            Self::AskToConnect => "Ask to Connect",
+            Self::Lockdown => "Lockdown",
+        }
+    }
+}
+
+// ─── Data plan / usage persistence ──────────────────────────────────────────
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct DataPlan {
+    pub limit_bytes: u64,
+    pub reset_day: u8,       // Day of month to reset (1-28)
+    pub alert_pct: u8,       // Alert when usage hits this % (e.g., 80)
+}
+
+impl Default for DataPlan {
+    fn default() -> Self {
+        Self {
+            limit_bytes: 0, // 0 = no limit
+            reset_day: 1,
+            alert_pct: 80,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct UsageRecord {
+    pub date: String, // YYYY-MM-DD
+    pub download_bytes: u64,
+    pub upload_bytes: u64,
+    pub per_app: HashMap<String, (u64, u64)>, // process_name -> (down, up)
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct UsageStore {
+    pub data_plan: DataPlan,
+    pub daily_records: Vec<UsageRecord>,
+}
+
+impl Default for UsageStore {
+    fn default() -> Self {
+        Self {
+            data_plan: DataPlan::default(),
+            daily_records: Vec::new(),
+        }
+    }
+}
+
+// ─── Threat intelligence ────────────────────────────────────────────────────
+
+#[derive(Clone, Debug)]
+pub struct ThreatInfo {
+    pub ip: IpAddr,
+    pub reason: String,
+    pub category: ThreatCategory,
+}
+
+#[derive(Clone, Debug)]
+pub enum ThreatCategory {
+    Bogon,         // Private/reserved IP in unexpected context
+    KnownMalware,  // Known malware C2 range
+    TorExit,       // Tor exit node
+    Scanner,       // Known scanner/attacker
+    Proxy,         // Known open proxy
+}
+
+impl ThreatCategory {
+    pub fn label(&self) -> &str {
+        match self {
+            Self::Bogon => "Bogon",
+            Self::KnownMalware => "Malware",
+            Self::TorExit => "Tor Exit",
+            Self::Scanner => "Scanner",
+            Self::Proxy => "Proxy",
+        }
+    }
+}
+
+// ─── Detail popup ─────────────────────────────────────────────────────────────
+
+/// What is currently being shown in the detail popup overlay.
+#[derive(Clone, Debug)]
+pub enum DetailKind {
+    Connection(Connection),
+    TrafficEvent(TrafficEntry),
+    Alert(Alert),
+    AppBandwidth(AppBandwidth),
+    Device(LanDevice),
+    FirewallRule(FirewallRule),
 }

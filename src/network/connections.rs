@@ -121,32 +121,39 @@ const PROCESS_QUERY_LIMITED_INFORMATION: u32 = 0x1000;
 
 // ─── Process name resolution ─────────────────────────────────────────────────
 
-pub fn get_process_name(pid: u32) -> String {
-    if pid == 0 {
-        return "[Kernel]".to_string();
-    }
-    if pid == 4 {
-        return "System".to_string();
-    }
-
+/// Returns (full_path, exe_name) for a PID, or None if unavailable.
+fn query_process_image(pid: u32) -> Option<(String, String)> {
     unsafe {
         let handle = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid);
         if handle.is_null() {
-            return format!("PID:{}", pid);
+            return None;
         }
         let mut buf = [0u16; 1024];
         let mut size: u32 = 1024;
         let ok = QueryFullProcessImageNameW(handle, 0, buf.as_mut_ptr(), &mut size);
         CloseHandle(handle);
         if ok == 0 || size == 0 {
-            return format!("PID:{}", pid);
+            return None;
         }
-        let path = String::from_utf16_lossy(&buf[..size as usize]);
-        path.rsplit('\\')
-            .next()
-            .unwrap_or(&path)
-            .to_string()
+        let full_path = String::from_utf16_lossy(&buf[..size as usize]);
+        let exe_name = full_path.rsplit('\\').next().unwrap_or(&full_path).to_string();
+        Some((full_path, exe_name))
     }
+}
+
+pub fn get_process_name(pid: u32) -> String {
+    if pid == 0 { return "[Kernel]".to_string(); }
+    if pid == 4 { return "System".to_string(); }
+    query_process_image(pid)
+        .map(|(_, name)| name)
+        .unwrap_or_else(|| format!("PID:{}", pid))
+}
+
+/// Returns the full executable path for a PID (e.g. C:\...\chrome.exe).
+/// Used by the firewall to create rules that actually match the process.
+pub fn get_process_full_path(pid: u32) -> Option<String> {
+    if pid == 0 || pid == 4 { return None; }
+    query_process_image(pid).map(|(path, _)| path)
 }
 
 // ─── Fetch all connections ───────────────────────────────────────────────────

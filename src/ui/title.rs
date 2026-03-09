@@ -24,17 +24,18 @@ pub fn draw_title_bar(f: &mut Frame, area: Rect, app: &App) {
         .filter(|c| matches!(c.state.as_ref(), Some(crate::types::TcpState::Established)))
         .count();
 
-    // Activity indicator — pulses based on current throughput
+    // Activity indicator — pulses based on current throughput + tick
+    let pulse = app.tick_count % 2 == 0;
     let activity = if app.current_down_speed > 500_000.0 || app.current_up_speed > 500_000.0 {
         Span::styled(
-            " \u{26A1} ",
+            if pulse { " \u{26A1} " } else { " \u{25CF} " },
             Style::default()
                 .fg(Color::Rgb(255, 220, 80))
                 .add_modifier(Modifier::BOLD),
         )
     } else if app.current_down_speed > 5_000.0 || app.current_up_speed > 5_000.0 {
         Span::styled(
-            " \u{25CF} ",
+            if pulse { " \u{25CF} " } else { " \u{25CB} " },
             Style::default().fg(Color::Rgb(80, 200, 120)),
         )
     } else {
@@ -44,7 +45,18 @@ pub fn draw_title_bar(f: &mut Frame, area: Rect, app: &App) {
         )
     };
 
-    let title = Line::from(vec![
+    let incognito_span = if app.incognito {
+        Some(Span::styled(
+            " [INCOGNITO] ",
+            Style::default()
+                .fg(Color::Rgb(255, 220, 80))
+                .add_modifier(Modifier::BOLD),
+        ))
+    } else {
+        None
+    };
+
+    let mut title_parts = vec![
         Span::styled(
             " \u{25C8} PSNET ",
             Style::default()
@@ -56,6 +68,11 @@ pub fn draw_title_bar(f: &mut Frame, area: Rect, app: &App) {
             Style::default().fg(Color::Rgb(130, 150, 190)),
         ),
         activity,
+    ];
+    if let Some(span) = incognito_span {
+        title_parts.push(span);
+    }
+    title_parts.extend(vec![
         Span::styled(
             " \u{2502} ",
             Style::default().fg(Color::Rgb(35, 50, 75)),
@@ -97,5 +114,5 @@ pub fn draw_title_bar(f: &mut Frame, area: Rect, app: &App) {
         .border_style(Style::default().fg(Color::Rgb(30, 50, 85)))
         .style(Style::default().bg(Color::Rgb(8, 12, 24)));
 
-    f.render_widget(Paragraph::new(title).block(block), area);
+    f.render_widget(Paragraph::new(Line::from(title_parts)).block(block), area);
 }

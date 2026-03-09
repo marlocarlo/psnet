@@ -9,7 +9,6 @@ use ratatui::Frame;
 use crate::app::App;
 use crate::network::dns::port_service_name;
 use crate::types::TrafficEventKind;
-use crate::ui::connections::tab_title_spans;
 
 pub fn draw_traffic(f: &mut Frame, area: Rect, app: &App) {
     let tracker = &app.traffic_tracker;
@@ -143,11 +142,16 @@ pub fn draw_traffic(f: &mut Frame, area: Rect, app: &App) {
     let pause_info = if tracker.paused { " ⏸ PAUSED " } else { "" };
     let localhost_info = if tracker.hide_localhost { " 🌐 WAN" } else { " 🔗 ALL" };
 
-    let mut title_spans = tab_title_spans(&app.bottom_tab);
-    title_spans.push(Span::styled(
-        format!("  {}/{} ", tracker.log.len(), tracker.max_log_size),
-        Style::default().fg(Color::Rgb(110, 130, 160)),
-    ));
+    let mut title_spans = vec![
+        Span::styled(
+            " Traffic ",
+            Style::default().fg(Color::Rgb(160, 180, 220)).add_modifier(Modifier::BOLD),
+        ),
+        Span::styled(
+            format!(" {}/{} ", tracker.log.len(), tracker.max_log_size),
+            Style::default().fg(Color::Rgb(110, 130, 160)),
+        ),
+    ];
     let usage_pct = (tracker.log.len() as f64 / tracker.max_log_size as f64 * 100.0) as u8;
     let usage_color = if usage_pct > 90 {
         Color::Red
