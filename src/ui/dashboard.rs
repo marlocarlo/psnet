@@ -1,8 +1,6 @@
 //! Dashboard tab — GlassWire-style overview with traffic graph, world map,
 //! top apps bar chart, and network health summary.
 
-use std::collections::HashMap;
-
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
@@ -16,7 +14,9 @@ use crate::utils::{format_bytes, format_speed};
 use super::widgets::bar_chart::{draw_bar_chart, BarEntry};
 use super::widgets::health_gauge::{compute_health_score, draw_health_gauge};
 use super::widgets::traffic_chart::draw_traffic_chart;
-use super::widgets::world_map::{draw_world_map, CountryMarker};
+use super::widgets::world_map::{
+    draw_world_map_dots, fade_brightness, ip_to_seed, ConnectionDot,
+};
 
 /// Palette of colors for top-app bar chart entries.
 const APP_COLORS: [ratatui::style::Color; 8] = [
@@ -31,6 +31,41 @@ const APP_COLORS: [ratatui::style::Color; 8] = [
 ];
 
 pub fn draw_dashboard(f: &mut Frame, area: Rect, app: &App) {
+    if app.map_fullscreen {
+        // Full-screen map mode (toggle with 'm')
+        let main_split = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Length(3), // Live summary strip
+                Constraint::Min(10),  // Full map
+                Constraint::Length(1), // Footer hint
+            ])
+            .split(area);
+
+        draw_summary_strip(f, main_split[0], app);
+        draw_country_map(f, main_split[1], app);
+
+        let hint = Line::from(vec![
+            Span::styled(
+                " m:Exit Map  ",
+                Style::default().fg(Color::Yellow),
+            ),
+            Span::styled(
+                "1-4:Time Range  ",
+                Style::default().fg(Color::Rgb(60, 80, 110)),
+            ),
+            Span::styled(
+                "Tab:Next tab",
+                Style::default().fg(Color::Rgb(60, 80, 110)),
+            ),
+        ]);
+        f.render_widget(
+            Paragraph::new(hint).style(Style::default().bg(Color::Rgb(12, 16, 30))),
+            main_split[2],
+        );
+        return;
+    }
+
     // ── Layout: summary strip → traffic graph → bottom panels ──
     let main_split = Layout::default()
         .direction(Direction::Vertical)
@@ -161,34 +196,59 @@ fn draw_traffic_graph(f: &mut Frame, area: Rect, app: &App) {
     );
 }
 
-/// Render the world map with country markers from live connections.
+/// Render the world map with per-connection glowing dots.
 fn draw_country_map(f: &mut Frame, area: Rect, app: &App) {
-    // Aggregate connections by country
-    let mut country_data: HashMap<&'static str, (usize, &'static str, bool)> = HashMap::new();
+    let mut dots: Vec<ConnectionDot> = Vec::new();
 
+    // Color for a connection based on its TCP state
+    fn conn_color(state: Option<&TcpState>, is_threat: bool) -> Color {
+        if is_threat {
+            return Color::Rgb(255, 60, 60); // CLR_THREAT
+        }
+        match state {
+            Some(TcpState::Established) => Color::Rgb(80, 200, 120),   // green
+            Some(TcpState::SynSent) | Some(TcpState::SynReceived) => Color::Rgb(60, 180, 255), // cyan
+            Some(TcpState::TimeWait) | Some(TcpState::FinWait1) | Some(TcpState::FinWait2) => Color::Rgb(200, 120, 255), // purple
+            Some(TcpState::CloseWait) | Some(TcpState::Closing) | Some(TcpState::LastAck) => Color::Rgb(255, 100, 60), // orange
+            Some(TcpState::Listen) => Color::Rgb(60, 180, 255),
+            _ => Color::Rgb(120, 140, 170), // gray for unknown
+        }
+    }
+
+    // Live connections → full brightness dots
     for conn in &app.connections {
         if let Some(ip) = conn.remote_addr {
             if ip.is_loopback() || ip.is_unspecified() {
                 continue;
             }
             if let Some(info) = app.geoip.lookup(ip) {
-                let entry = country_data.entry(info.code).or_insert((0, info.name, false));
-                entry.0 += 1;
+                let is_threat = app.threat_detector.check_ip(ip).is_some();
+                dots.push(ConnectionDot {
+                    country_code: info.code,
+                    color: conn_color(conn.state.as_ref(), is_threat),
+                    brightness: 1.0,
+                    jitter_seed: ip_to_seed(ip),
+                    pulse: matches!(conn.state.as_ref(), Some(TcpState::Established)),
+                });
             }
         }
     }
 
-    let markers: Vec<CountryMarker> = country_data
-        .into_iter()
-        .map(|(code, (count, name, has_threat))| CountryMarker {
-            code,
-            name,
-            count,
-            has_threat,
-        })
-        .collect();
+    // Recently-closed connections → fading dots
+    for &(ip, code, close_tick) in &app.map_fading_dots {
+        let b = fade_brightness(app.tick_count, close_tick);
+        if b > 0.0 {
+            dots.push(ConnectionDot {
+                country_code: code,
+                color: Color::Rgb(255, 100, 60), // closing color
+                brightness: b,
+                jitter_seed: ip_to_seed(ip),
+                pulse: false,
+            });
+        }
+    }
 
-    draw_world_map(f, area, &markers);
+    draw_world_map_dots(f, area, &dots, app.tick_count);
 }
 
 /// Render the health gauge with computed score.

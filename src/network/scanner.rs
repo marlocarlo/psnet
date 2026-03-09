@@ -371,28 +371,5 @@ impl NetworkScanner {
 // ─── MAC vendor lookup (common prefixes) ────────────────────────────────────
 
 fn mac_vendor_prefix(mac: &str) -> Option<String> {
-    let prefix = mac.get(..8)?.to_uppercase();
-    let vendor = match prefix.as_str() {
-        "00:50:56" | "00:0C:29" => "VMware",
-        "08:00:27" => "VirtualBox",
-        "DC:A6:32" | "B8:27:EB" | "E4:5F:01" => "Raspberry Pi",
-        "00:1A:79" | "78:7B:8A" => "Apple",
-        "3C:22:FB" | "A4:83:E7" | "F8:75:A4" => "Apple",
-        "F0:18:98" | "70:56:81" | "50:ED:3C" => "Apple",
-        "00:15:5D" => "Hyper-V",
-        "00:03:FF" | "00:04:5A" => "HP",
-        "00:1B:63" | "00:24:36" | "28:6E:D4" => "Dell",
-        "00:1C:BF" | "44:39:C4" | "E4:F0:04" => "Intel",
-        "00:25:00" | "AC:22:0B" | "08:62:66" => "Apple",
-        "B4:2E:99" | "00:1E:C2" | "00:0E:C6" => "Samsung",
-        "48:5D:36" | "34:C9:F0" | "44:D9:E7" => "Google",
-        "FC:F5:28" | "60:57:18" => "ZTE",
-        "00:18:0A" | "00:1D:AA" => "D-Link",
-        "00:14:6C" | "00:0C:43" | "20:CF:30" => "Netgear",
-        "00:23:69" | "14:CC:20" | "E8:94:F6" => "Cisco",
-        "00:1F:1F" | "B0:95:75" | "00:E0:67" => "Linksys",
-        "00:24:01" | "C8:3A:35" | "60:A4:4C" => "TP-Link",
-        _ => return None,
-    };
-    Some(vendor.to_string())
+    super::oui::lookup(mac).map(|s| s.to_string())
 }

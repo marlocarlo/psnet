@@ -11,3 +11,4 @@ pub mod threats;
 pub mod system_monitor;
 pub mod usage;
 pub mod geoip;
+pub mod oui;

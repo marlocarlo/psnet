@@ -200,6 +200,54 @@ pub fn read_dns_cache_ipconfig() -> HashMap<IpAddr, String> {
     reverse_map
 }
 
+// ─── System DNS server detection ──────────────────────────────────────────────
+
+/// Get the system-configured DNS servers by parsing `ipconfig /all`.
+pub fn get_system_dns_servers() -> Vec<IpAddr> {
+    let output = std::process::Command::new("ipconfig")
+        .arg("/all")
+        .output();
+
+    let output = match output {
+        Ok(o) if o.status.success() => o,
+        _ => return Vec::new(),
+    };
+
+    let text = String::from_utf8_lossy(&output.stdout);
+    let mut servers = Vec::new();
+    let mut in_dns_section = false;
+
+    for line in text.lines() {
+        let trimmed = line.trim();
+
+        // "DNS Servers . . . . . . . . . . . : 192.168.1.1"
+        if trimmed.contains("DNS Servers") || trimmed.contains("DNS-Server") {
+            in_dns_section = true;
+            if let Some(val) = trimmed.splitn(2, ':').nth(1) {
+                let ip_str = val.trim();
+                if let Ok(ip) = ip_str.parse::<IpAddr>() {
+                    if !servers.contains(&ip) {
+                        servers.push(ip);
+                    }
+                }
+            }
+        } else if in_dns_section {
+            // Continuation lines (indented IPs without a label)
+            if trimmed.is_empty() || trimmed.contains(". .") || trimmed.contains(":") && trimmed.contains(". ") {
+                in_dns_section = false;
+            } else if let Ok(ip) = trimmed.parse::<IpAddr>() {
+                if !servers.contains(&ip) {
+                    servers.push(ip);
+                }
+            } else {
+                in_dns_section = false;
+            }
+        }
+    }
+
+    servers
+}
+
 // ─── Well-known port → service name mapping ──────────────────────────────────
 
 pub fn port_service_name(port: u16) -> Option<&'static str> {

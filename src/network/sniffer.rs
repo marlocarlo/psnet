@@ -326,7 +326,12 @@ fn parse_packet(pkt: &[u8], local_ip: u32) -> Option<PacketSnippet> {
         return None;
     }
 
-    let (src_port, dst_port, payload_offset) = match protocol {
+    // Extract additional IP header fields
+    let ttl = pkt[8];
+    let ip_total_len = u16::from_be_bytes([pkt[2], pkt[3]]);
+    let ip_id = u16::from_be_bytes([pkt[4], pkt[5]]);
+
+    let (src_port, dst_port, payload_offset, tcp_flags, tcp_seq, tcp_ack_num, tcp_window) = match protocol {
         6 => {
             // TCP
             if pkt.len() < ihl + 20 {
@@ -335,7 +340,11 @@ fn parse_packet(pkt: &[u8], local_ip: u32) -> Option<PacketSnippet> {
             let sp = u16::from_be_bytes([pkt[ihl], pkt[ihl + 1]]);
             let dp = u16::from_be_bytes([pkt[ihl + 2], pkt[ihl + 3]]);
             let tcp_hdr_len = ((pkt[ihl + 12] >> 4) & 0xF) as usize * 4;
-            (sp, dp, ihl + tcp_hdr_len)
+            let flags = pkt[ihl + 13];
+            let seq = u32::from_be_bytes([pkt[ihl + 4], pkt[ihl + 5], pkt[ihl + 6], pkt[ihl + 7]]);
+            let ack = u32::from_be_bytes([pkt[ihl + 8], pkt[ihl + 9], pkt[ihl + 10], pkt[ihl + 11]]);
+            let win = u16::from_be_bytes([pkt[ihl + 14], pkt[ihl + 15]]);
+            (sp, dp, ihl + tcp_hdr_len, flags, seq, ack, win)
         }
         17 => {
             // UDP
@@ -344,25 +353,47 @@ fn parse_packet(pkt: &[u8], local_ip: u32) -> Option<PacketSnippet> {
             }
             let sp = u16::from_be_bytes([pkt[ihl], pkt[ihl + 1]]);
             let dp = u16::from_be_bytes([pkt[ihl + 2], pkt[ihl + 3]]);
-            (sp, dp, ihl + 8)
+            (sp, dp, ihl + 8, 0u8, 0u32, 0u32, 0u16)
         }
         _ => return None, // Skip ICMP, IGMP, etc.
     };
 
-    // Extract payload
-    if payload_offset >= pkt.len() {
-        return None; // No payload (SYN, ACK, etc.)
-    }
-    let payload = &pkt[payload_offset..];
-    if payload.is_empty() {
-        return None;
-    }
+    // Extract payload and snippet
+    let has_payload = payload_offset < pkt.len() && pkt.len() > payload_offset;
+    let payload = if has_payload { &pkt[payload_offset..] } else { &[] as &[u8] };
+    let payload_size = payload.len();
 
     // Extract printable ASCII snippet (up to 200 chars)
-    let snippet = extract_best_snippet(payload, 200);
+    let snippet = if !payload.is_empty() {
+        extract_best_snippet(payload, 200)
+    } else {
+        String::new()
+    };
+
+    // For TCP: show SYN, FIN, RST packets even without readable payload.
+    // Skip pure ACK-only packets without payload (too noisy).
     if snippet.is_empty() {
-        return None; // Nothing readable
+        if protocol == 6 {
+            let is_syn = tcp_flags & 0x02 != 0;
+            let is_fin = tcp_flags & 0x01 != 0;
+            let is_rst = tcp_flags & 0x04 != 0;
+            if !is_syn && !is_fin && !is_rst {
+                return None; // Pure ACK or PSH without readable payload — skip
+            }
+        } else {
+            // UDP with no readable payload
+            if payload.is_empty() {
+                return None;
+            }
+        }
     }
+
+    // Extract raw payload bytes (up to 256 bytes) for hex dump
+    let raw_payload = if payload_offset < pkt.len() {
+        pkt[payload_offset..pkt.len().min(payload_offset + 256)].to_vec()
+    } else {
+        Vec::new()
+    };
 
     // Determine direction
     let src_raw = u32::from_ne_bytes(src_ip_bytes);
@@ -385,7 +416,15 @@ fn parse_packet(pkt: &[u8], local_ip: u32) -> Option<PacketSnippet> {
             ConnProto::Udp
         },
         snippet,
-        payload_size: payload.len(),
+        payload_size,
+        ttl,
+        ip_total_len,
+        ip_id,
+        tcp_flags,
+        tcp_seq,
+        tcp_ack_num,
+        tcp_window,
+        raw_payload,
     })
 }
 

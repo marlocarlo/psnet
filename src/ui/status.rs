@@ -13,6 +13,8 @@ pub fn draw_tab_menu(f: &mut Frame, area: Rect, app: &App) {
         BottomTab::Dashboard,
         BottomTab::Connections,
         BottomTab::Traffic,
+        BottomTab::Packets,
+        BottomTab::Topology,
         BottomTab::Alerts,
         BottomTab::Usage,
         BottomTab::Firewall,
@@ -107,6 +109,16 @@ pub fn draw_key_hints(f: &mut Frame, area: Rect, app: &App) {
         BottomTab::Devices => vec![
             key_span("s", "Scan Now"),
             key_span("r", "Rename"),
+        ],
+        BottomTab::Packets => vec![
+            key_span("Space", &format!("{}", if app.packets_paused { "Resume" } else { "Pause" })),
+            key_span("d", "Detail"),
+            key_span("c", "Clear"),
+            key_span("f", "Filter"),
+            key_span("Esc", "Clear"),
+        ],
+        BottomTab::Topology => vec![
+            key_span("\u{2191}\u{2193}", "Navigate"),
         ],
     };
 

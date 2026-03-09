@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::net::IpAddr;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
@@ -90,12 +91,32 @@ pub struct App {
     /// Selected row in Usage tab.
     pub usage_scroll: usize,
 
+    // Packets tab state
+    pub packets_scroll: usize,
+    pub packets_filter: String,
+    pub packets_paused: bool,
+    pub packets_detail_open: bool,
+
+    // Topology tab state
+    pub topology_scroll: usize,
+
     /// Whether incognito mode is active (no disk writes).
     pub incognito: bool,
     /// Device rename state — Some(device_index) when renaming.
     pub renaming_device: Option<usize>,
     /// Text buffer for device rename.
     pub device_rename_text: String,
+
+    // World map: recently-closed connections shown as fading dots.
+    // (remote_addr, country_code, tick_when_closed)
+    pub map_fading_dots: Vec<(IpAddr, &'static str, u64)>,
+    /// Previous tick's set of mapped remote IPs (for detecting closures).
+    map_prev_remote_ips: HashSet<IpAddr>,
+    /// Dashboard map fullscreen toggle.
+    pub map_fullscreen: bool,
+
+    /// System-configured DNS servers (detected from ipconfig /all).
+    pub dns_servers: Vec<IpAddr>,
 
     // Internal
     pid_cache: PidCache,
@@ -141,7 +162,7 @@ impl App {
             connection_count_history: std::collections::VecDeque::with_capacity(300),
 
             sniffer: {
-                let mut s = PacketSniffer::new(200);
+                let mut s = PacketSniffer::new(5000);
                 s.start();
                 s
             },
@@ -160,9 +181,22 @@ impl App {
             tick_count: 0,
             usage_scroll: 0,
 
+            packets_scroll: 0,
+            packets_filter: String::new(),
+            packets_paused: false,
+            packets_detail_open: false,
+
+            topology_scroll: 0,
+
             incognito: false,
             renaming_device: None,
             device_rename_text: String::new(),
+
+            map_fading_dots: Vec::new(),
+            map_prev_remote_ips: HashSet::new(),
+            map_fullscreen: false,
+
+            dns_servers: Vec::new(),
 
             pid_cache: PidCache::new(),
             dns_cache: DnsCache::new(),
@@ -222,6 +256,29 @@ impl App {
         self.resolve_dns();
 
         self.sort_connections();
+
+        // ─── World map: track closed connections for fading dots ─────
+        {
+            let mut current_ips = HashSet::new();
+            for conn in &self.connections {
+                if let Some(ip) = conn.remote_addr {
+                    if !ip.is_loopback() && !ip.is_unspecified() {
+                        current_ips.insert(ip);
+                    }
+                }
+            }
+            // IPs that were on the map last tick but are gone now → fading
+            for ip in &self.map_prev_remote_ips {
+                if !current_ips.contains(ip) {
+                    if let Some(info) = self.geoip.lookup(*ip) {
+                        self.map_fading_dots.push((*ip, info.code, self.tick_count));
+                    }
+                }
+            }
+            // Expire old fading dots (>10 ticks)
+            self.map_fading_dots.retain(|&(_, _, t)| self.tick_count.saturating_sub(t) < 10);
+            self.map_prev_remote_ips = current_ips;
+        }
 
         // Update traffic tracker
         self.traffic_tracker.update(&self.connections, &self.dns_cache);
@@ -353,13 +410,26 @@ impl App {
         // Spawn ipconfig parsing on background thread every 10 ticks (avoids 100-500ms block)
         if self.dns_tick % 10 == 0 {
             let result = Arc::clone(&self.bg_dns_ipconfig);
+            let dns_srv = Arc::clone(&self.bg_dns_servers);
             std::thread::spawn(move || {
                 let cache = dns::read_dns_cache_ipconfig();
                 let entries: Vec<_> = cache.into_iter().collect();
                 if let Ok(mut r) = result.lock() {
                     *r = Some(entries);
                 }
+                // Also detect system DNS servers
+                let servers = dns::get_system_dns_servers();
+                if let Ok(mut s) = dns_srv.lock() {
+                    *s = Some(servers);
+                }
             });
+        }
+
+        // Poll DNS server detection results
+        if let Ok(mut s) = self.bg_dns_servers.lock() {
+            if let Some(servers) = s.take() {
+                self.dns_servers = servers;
+            }
         }
         self.dns_tick = self.dns_tick.wrapping_add(1);
 
@@ -579,6 +649,8 @@ impl App {
                     BottomTab::Dashboard => self.handle_dashboard_key(code),
                     BottomTab::Connections => self.handle_connections_key(code),
                     BottomTab::Traffic => self.handle_traffic_key(code),
+                    BottomTab::Packets => self.handle_packets_key(code),
+                    BottomTab::Topology => self.handle_topology_key(code),
                     BottomTab::Alerts => self.handle_alerts_key(code),
                     BottomTab::Usage => self.handle_usage_key(code),
                     BottomTab::Firewall => self.handle_firewall_key(code),
@@ -657,6 +729,12 @@ impl App {
                 }
                 return;
             }
+            BottomTab::Packets => {
+                // Enter toggles the detail pane instead of opening a popup
+                self.packets_detail_open = !self.packets_detail_open;
+                return;
+            }
+            BottomTab::Topology => None,
             BottomTab::Dashboard => None,
         };
     }
@@ -843,12 +921,45 @@ impl App {
         }
     }
 
+    fn handle_packets_key(&mut self, code: KeyCode) {
+        match code {
+            KeyCode::Char(' ') => {
+                self.packets_paused = !self.packets_paused;
+            }
+            KeyCode::Char('d') | KeyCode::Char('D') => {
+                self.packets_detail_open = !self.packets_detail_open;
+            }
+            KeyCode::Char('c') | KeyCode::Char('C') => {
+                if let Ok(mut lock) = self.sniffer.snippets.lock() {
+                    lock.clear();
+                }
+            }
+            KeyCode::Backspace => { self.packets_filter.pop(); }
+            KeyCode::Esc => {
+                if !self.packets_filter.is_empty() {
+                    self.packets_filter.clear();
+                } else {
+                    self.packets_detail_open = false;
+                }
+            }
+            KeyCode::Char(c) => {
+                self.packets_filter.push(c);
+            }
+            _ => {}
+        }
+    }
+
+    fn handle_topology_key(&mut self, _code: KeyCode) {
+        // Topology tab currently only uses scroll (handled by scroll_up/scroll_down)
+    }
+
     fn handle_dashboard_key(&mut self, code: KeyCode) {
         match code {
             KeyCode::Char('1') => self.dashboard_time_range = DashboardTimeRange::Minutes5,
             KeyCode::Char('2') => self.dashboard_time_range = DashboardTimeRange::Minutes15,
             KeyCode::Char('3') => self.dashboard_time_range = DashboardTimeRange::Hour1,
             KeyCode::Char('4') => self.dashboard_time_range = DashboardTimeRange::Hours24,
+            KeyCode::Char('m') | KeyCode::Char('M') => self.map_fullscreen = !self.map_fullscreen,
             _ => {}
         }
     }
@@ -873,6 +984,12 @@ impl App {
             }
             BottomTab::Devices => {
                 self.device_scroll = self.device_scroll.saturating_sub(n);
+            }
+            BottomTab::Packets => {
+                self.packets_scroll = self.packets_scroll.saturating_sub(n);
+            }
+            BottomTab::Topology => {
+                self.topology_scroll = self.topology_scroll.saturating_sub(n);
             }
             _ => {}
         }
@@ -902,6 +1019,12 @@ impl App {
             BottomTab::Devices => {
                 self.device_scroll += n;
             }
+            BottomTab::Packets => {
+                self.packets_scroll += n;
+            }
+            BottomTab::Topology => {
+                self.topology_scroll += n;
+            }
             _ => {}
         }
     }
@@ -923,6 +1046,12 @@ impl App {
             BottomTab::Devices => {
                 self.device_scroll = 0;
             }
+            BottomTab::Packets => {
+                self.packets_scroll = 0;
+            }
+            BottomTab::Topology => {
+                self.topology_scroll = 0;
+            }
             _ => {}
         }
     }
@@ -943,6 +1072,14 @@ impl App {
             }
             BottomTab::Devices => {
                 self.device_scroll = self.network_scanner.devices.len();
+            }
+            BottomTab::Packets => {
+                let total = self.sniffer.recent(2000).len();
+                self.packets_scroll = total.saturating_sub(1);
+            }
+            BottomTab::Topology => {
+                // scroll to last remote host
+                self.topology_scroll = self.connections.len();
             }
             _ => {}
         }

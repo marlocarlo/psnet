@@ -233,6 +233,8 @@ pub enum BottomTab {
     Dashboard,
     Connections,
     Traffic,
+    Packets,
+    Topology,
     Alerts,
     Usage,
     Firewall,
@@ -244,7 +246,9 @@ impl BottomTab {
         match self {
             Self::Dashboard => Self::Connections,
             Self::Connections => Self::Traffic,
-            Self::Traffic => Self::Alerts,
+            Self::Traffic => Self::Packets,
+            Self::Packets => Self::Topology,
+            Self::Topology => Self::Alerts,
             Self::Alerts => Self::Usage,
             Self::Usage => Self::Firewall,
             Self::Firewall => Self::Devices,
@@ -257,7 +261,9 @@ impl BottomTab {
             Self::Dashboard => Self::Devices,
             Self::Connections => Self::Dashboard,
             Self::Traffic => Self::Connections,
-            Self::Alerts => Self::Traffic,
+            Self::Packets => Self::Traffic,
+            Self::Topology => Self::Packets,
+            Self::Alerts => Self::Topology,
             Self::Usage => Self::Alerts,
             Self::Firewall => Self::Usage,
             Self::Devices => Self::Firewall,
@@ -269,6 +275,8 @@ impl BottomTab {
             Self::Dashboard => "Dashboard",
             Self::Connections => "Connections",
             Self::Traffic => "Traffic",
+            Self::Packets => "Packets",
+            Self::Topology => "Topology",
             Self::Alerts => "Alerts",
             Self::Usage => "Usage",
             Self::Firewall => "Firewall",
@@ -281,10 +289,12 @@ impl BottomTab {
             Self::Dashboard => 0,
             Self::Connections => 1,
             Self::Traffic => 2,
-            Self::Alerts => 3,
-            Self::Usage => 4,
-            Self::Firewall => 5,
-            Self::Devices => 6,
+            Self::Packets => 3,
+            Self::Topology => 4,
+            Self::Alerts => 5,
+            Self::Usage => 6,
+            Self::Firewall => 7,
+            Self::Devices => 8,
         }
     }
 
@@ -293,10 +303,12 @@ impl BottomTab {
             0 => Some(Self::Dashboard),
             1 => Some(Self::Connections),
             2 => Some(Self::Traffic),
-            3 => Some(Self::Alerts),
-            4 => Some(Self::Usage),
-            5 => Some(Self::Firewall),
-            6 => Some(Self::Devices),
+            3 => Some(Self::Packets),
+            4 => Some(Self::Topology),
+            5 => Some(Self::Alerts),
+            6 => Some(Self::Usage),
+            7 => Some(Self::Firewall),
+            8 => Some(Self::Devices),
             _ => None,
         }
     }
@@ -388,6 +400,37 @@ pub struct PacketSnippet {
     pub snippet: String,
     /// Total payload size in bytes
     pub payload_size: usize,
+    // Wireshark-style fields:
+    pub ttl: u8,
+    pub ip_total_len: u16,
+    pub ip_id: u16,
+    /// TCP flags byte: FIN=0x01, SYN=0x02, RST=0x04, PSH=0x08, ACK=0x10, URG=0x20
+    pub tcp_flags: u8,
+    pub tcp_seq: u32,
+    pub tcp_ack_num: u32,
+    pub tcp_window: u16,
+    /// First 256 bytes of actual payload for hex dump
+    pub raw_payload: Vec<u8>,
+}
+
+impl PacketSnippet {
+    pub fn tcp_flags_str(&self) -> String {
+        if self.protocol != ConnProto::Tcp {
+            return String::new();
+        }
+        let mut flags = Vec::new();
+        if self.tcp_flags & 0x02 != 0 { flags.push("SYN"); }
+        if self.tcp_flags & 0x10 != 0 { flags.push("ACK"); }
+        if self.tcp_flags & 0x01 != 0 { flags.push("FIN"); }
+        if self.tcp_flags & 0x04 != 0 { flags.push("RST"); }
+        if self.tcp_flags & 0x08 != 0 { flags.push("PSH"); }
+        if self.tcp_flags & 0x20 != 0 { flags.push("URG"); }
+        if flags.is_empty() {
+            String::new()
+        } else {
+            format!("[{}]", flags.join(","))
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]

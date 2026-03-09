@@ -3,9 +3,11 @@ pub mod connections;
 pub mod dashboard;
 pub mod detail_popup;
 pub mod packets;
+pub mod packets_tab;
 pub mod speed;
 pub mod status;
 pub mod title;
+pub mod topology;
 pub mod alerts;
 pub mod devices;
 pub mod firewall;
@@ -40,6 +42,8 @@ pub fn draw(f: &mut Frame, app: &App) {
         BottomTab::Dashboard => dashboard::draw_dashboard(f, main_layout[3], app),
         BottomTab::Connections => connections::draw_connections(f, main_layout[3], app),
         BottomTab::Traffic => capture::draw_traffic(f, main_layout[3], app),
+        BottomTab::Packets => packets_tab::draw_packets_tab(f, main_layout[3], app),
+        BottomTab::Topology => topology::draw_topology(f, main_layout[3], app),
         BottomTab::Alerts => alerts::draw_alerts(f, main_layout[3], app),
         BottomTab::Usage => usage::draw_usage(f, main_layout[3], app),
         BottomTab::Firewall => firewall::draw_firewall(f, main_layout[3], app),

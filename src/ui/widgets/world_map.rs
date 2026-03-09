@@ -5,6 +5,8 @@
 //! as a set of (x, y) coastline points in a normalized coordinate system
 //! and rendered at whatever terminal size is available.
 
+use std::net::IpAddr;
+
 use ratatui::layout::Rect;
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
@@ -21,13 +23,45 @@ const CLR_MODERATE: Color = Color::Rgb(255, 200, 80);
 const CLR_HIGH: Color = Color::Rgb(255, 130, 60);
 const CLR_THREAT: Color = Color::Rgb(255, 60, 60);
 
+// Activity-based colors
+const CLR_CONNECTING: Color = Color::Rgb(60, 180, 255);    // cyan-blue for new connections
+const CLR_RECEIVING: Color = Color::Rgb(50, 255, 130);     // bright green for inbound data
+const CLR_SENDING: Color = Color::Rgb(200, 120, 255);      // purple/magenta for outbound data
+const CLR_DISCONNECTING: Color = Color::Rgb(255, 100, 60); // red-orange for disconnections
+const CLR_MIXED: Color = Color::Rgb(220, 230, 255);        // bright white-blue for mixed activity
+
+/// Fade duration for closed connections (in ticks, 1 tick = 1s).
+const FADE_TICKS: u64 = 10;
+
 // ── Public types ──────────────────────────────────────────────────────────
+
+/// Activity happening at a country in the current tick.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct CountryActivity {
+    pub connecting: bool,
+    pub receiving: bool,
+    pub sending: bool,
+    pub disconnecting: bool,
+}
 
 pub struct CountryMarker {
     pub code: &'static str,
     pub name: &'static str,
     pub count: usize,
     pub has_threat: bool,
+    pub activity: CountryActivity,
+}
+
+/// A single per-connection dot on the world map.
+pub struct ConnectionDot {
+    pub country_code: &'static str,
+    pub color: Color,
+    /// 1.0 = fully visible, 0.0 = invisible (used for fading closed connections).
+    pub brightness: f32,
+    /// Deterministic jitter seed (e.g. hash of remote IP) to offset dots within a country.
+    pub jitter_seed: u32,
+    /// Whether this dot should pulse (active connection).
+    pub pulse: bool,
 }
 
 // ── Country coordinates (longitude, latitude) ─────────────────────────────
@@ -386,10 +420,37 @@ impl BrailleCanvas {
 
 // ── Marker color logic ────────────────────────────────────────────────────
 
-fn marker_color(count: usize, has_threat: bool) -> Color {
+fn marker_color(count: usize, has_threat: bool, activity: &CountryActivity, tick: u64) -> Color {
     if has_threat {
-        CLR_THREAT
-    } else if count > 20 {
+        return CLR_THREAT;
+    }
+
+    // Activity-based colors take priority when active
+    let has_activity = activity.connecting || activity.receiving || activity.sending || activity.disconnecting;
+
+    if has_activity {
+        // Mixed send+receive = white pulse
+        if activity.sending && activity.receiving {
+            return if tick % 2 == 0 { CLR_MIXED } else { Color::Rgb(180, 200, 230) };
+        }
+        if activity.connecting {
+            // Pulse cyan
+            return if tick % 2 == 0 { CLR_CONNECTING } else { Color::Rgb(40, 140, 200) };
+        }
+        if activity.receiving {
+            return CLR_RECEIVING;
+        }
+        if activity.sending {
+            return CLR_SENDING;
+        }
+        if activity.disconnecting {
+            // Fade effect - dimmer red
+            return if tick % 2 == 0 { CLR_DISCONNECTING } else { Color::Rgb(180, 70, 40) };
+        }
+    }
+
+    // Fall back to count-based coloring
+    if count > 20 {
         CLR_HIGH
     } else if count >= 6 {
         CLR_MODERATE
@@ -398,98 +459,160 @@ fn marker_color(count: usize, has_threat: bool) -> Color {
     }
 }
 
-// ── Main draw function ───────────────────────────────────────────────────
+/// Produce a dimmed version of a color for the glow effect.
+fn dim_color(c: Color) -> Color {
+    match c {
+        Color::Rgb(r, g, b) => Color::Rgb(r / 3, g / 3, b / 3),
+        other => other,
+    }
+}
 
-pub fn draw_world_map(f: &mut Frame, area: Rect, countries: &[CountryMarker]) {
+/// Scale a color's brightness by a factor (0.0–1.0).
+fn scale_color(c: Color, factor: f32) -> Color {
+    match c {
+        Color::Rgb(r, g, b) => Color::Rgb(
+            (r as f32 * factor) as u8,
+            (g as f32 * factor) as u8,
+            (b as f32 * factor) as u8,
+        ),
+        other => other,
+    }
+}
+
+/// Simple hash for IP-based jitter so dots spread within a country.
+fn ip_jitter(seed: u32) -> (i32, i32) {
+    // Use different bit ranges for x and y to get varied offsets
+    let x = ((seed.wrapping_mul(2654435761)) >> 24) as i32 % 7 - 3; // -3..3
+    let y = ((seed.wrapping_mul(2246822519)) >> 24) as i32 % 5 - 2; // -2..2
+    (x, y)
+}
+
+/// Convert an IP address to a u32 seed for jitter.
+pub fn ip_to_seed(ip: IpAddr) -> u32 {
+    match ip {
+        IpAddr::V4(v4) => u32::from(v4),
+        IpAddr::V6(v6) => {
+            let octets = v6.octets();
+            u32::from_be_bytes([octets[12], octets[13], octets[14], octets[15]])
+        }
+    }
+}
+
+/// Compute brightness for a closed connection based on ticks since close.
+pub fn fade_brightness(current_tick: u64, close_tick: u64) -> f32 {
+    let elapsed = current_tick.saturating_sub(close_tick);
+    if elapsed >= FADE_TICKS {
+        0.0
+    } else {
+        1.0 - (elapsed as f32 / FADE_TICKS as f32)
+    }
+}
+
+// ── Shared map setup ────────────────────────────────────────────────────
+
+struct MapSetup {
+    canvas: BrailleCanvas,
+    dot_w: usize,
+    dot_h: usize,
+    y_top: f64,
+    y_bot: f64,
+}
+
+fn setup_map(inner_w: usize, map_h: usize) -> MapSetup {
+    let dot_w = inner_w * 2;
+    let dot_h = map_h * 4;
+    let mut canvas = BrailleCanvas::new(inner_w, map_h);
+
+    let (_, y_top) = mercator(0.0, 78.0);
+    let (_, y_bot) = mercator(0.0, -58.0);
+
+    let coastlines = world_coastlines();
+    for polyline in &coastlines {
+        for i in 1..polyline.len() {
+            let (lon0, lat0) = polyline[i - 1];
+            let (lon1, lat1) = polyline[i];
+            let (mx0, my0) = mercator(lon0, lat0);
+            let (mx1, my1) = mercator(lon1, lat1);
+            if (mx1 - mx0).abs() > 0.4 {
+                continue;
+            }
+            let px0 = (mx0 * dot_w as f64) as i32;
+            let py0 = (((my0 - y_top) / (y_bot - y_top)) * dot_h as f64) as i32;
+            let px1 = (mx1 * dot_w as f64) as i32;
+            let py1 = (((my1 - y_top) / (y_bot - y_top)) * dot_h as f64) as i32;
+            canvas.line(px0, py0, px1, py1, CLR_LAND);
+        }
+    }
+
+    MapSetup { canvas, dot_w, dot_h, y_top, y_bot }
+}
+
+fn early_exit_block(f: &mut Frame, area: Rect) -> bool {
     if area.width < 6 || area.height < 5 {
         let block = Block::default()
             .borders(Borders::ALL)
             .border_style(Style::default().fg(CLR_BORDER))
             .style(Style::default().bg(CLR_OCEAN));
         f.render_widget(block, area);
+        return true;
+    }
+    false
+}
+
+// ── Main draw function (country-aggregated mode) ────────────────────────
+
+#[allow(dead_code)]
+pub fn draw_world_map(f: &mut Frame, area: Rect, countries: &[CountryMarker], tick: u64) {
+    if early_exit_block(f, area) {
         return;
     }
 
-    // Inner dimensions (accounting for border + legend row)
     let inner_w = (area.width - 2) as usize;
     let legend_rows = 1usize;
     let inner_h = (area.height - 2) as usize;
     let map_h = inner_h.saturating_sub(legend_rows);
 
     if inner_w < 4 || map_h < 2 {
-        let block = Block::default()
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(CLR_BORDER))
-            .style(Style::default().bg(CLR_OCEAN));
-        f.render_widget(block, area);
+        early_exit_block(f, area);
         return;
     }
 
-    // Braille resolution: each cell = 2 dots wide, 4 dots tall
-    let dot_w = inner_w * 2;
-    let dot_h = map_h * 4;
-
-    let mut canvas = BrailleCanvas::new(inner_w, map_h);
-
-    // Determine visible map bounds (Mercator projection)
-    // Clip latitude to ~-60..80 for reasonable Mercator
-    let (_, y_top) = mercator(0.0, 78.0);
-    let (_, y_bot) = mercator(0.0, -58.0);
-
-    let coastlines = world_coastlines();
-
-    // Draw coastlines
-    for polyline in &coastlines {
-        for i in 1..polyline.len() {
-            let (lon0, lat0) = polyline[i - 1];
-            let (lon1, lat1) = polyline[i];
-
-            let (mx0, my0) = mercator(lon0, lat0);
-            let (mx1, my1) = mercator(lon1, lat1);
-
-            // Skip lines that wrap around the date line
-            if (mx1 - mx0).abs() > 0.4 {
-                continue;
-            }
-
-            let px0 = (mx0 * dot_w as f64) as i32;
-            let py0 = (((my0 - y_top) / (y_bot - y_top)) * dot_h as f64) as i32;
-            let px1 = (mx1 * dot_w as f64) as i32;
-            let py1 = (((my1 - y_top) / (y_bot - y_top)) * dot_h as f64) as i32;
-
-            canvas.line(px0, py0, px1, py1, CLR_LAND);
-        }
-    }
+    let mut ms = setup_map(inner_w, map_h);
 
     // Draw country markers
     for cm in countries {
         if let Some(&(_, lon, lat)) = COUNTRY_COORDS.iter().find(|(c, _, _)| *c == cm.code) {
             let (mx, my) = mercator(lon, lat);
-            let px = (mx * dot_w as f64) as i32;
-            let py = (((my - y_top) / (y_bot - y_top)) * dot_h as f64) as i32;
-            let color = marker_color(cm.count, cm.has_threat);
+            let px = (mx * ms.dot_w as f64) as i32;
+            let py = (((my - ms.y_top) / (ms.y_bot - ms.y_top)) * ms.dot_h as f64) as i32;
+            let color = marker_color(cm.count, cm.has_threat, &cm.activity, tick);
             let r = if cm.count > 10 { 3 } else { 2 };
-            canvas.filled_circle(px, py, r, color);
+
+            let has_activity = cm.activity.connecting || cm.activity.receiving
+                || cm.activity.sending || cm.activity.disconnecting;
+            if has_activity {
+                ms.canvas.filled_circle(px, py, r + 2, dim_color(color));
+            }
+            ms.canvas.filled_circle(px, py, r, color);
         }
     }
 
-    // Render braille to lines
-    let mut lines = canvas.render();
+    let mut lines = ms.canvas.render();
 
-    // Legend row
     let legend = Line::from(vec![
-        Span::styled(" \u{25CF}", Style::default().fg(CLR_NORMAL).bg(CLR_OCEAN)),
-        Span::styled(" Low ", Style::default().fg(Color::Rgb(100, 120, 150)).bg(CLR_OCEAN)),
-        Span::styled("\u{25CF}", Style::default().fg(CLR_MODERATE).bg(CLR_OCEAN)),
-        Span::styled(" Med ", Style::default().fg(Color::Rgb(100, 120, 150)).bg(CLR_OCEAN)),
-        Span::styled("\u{25CF}", Style::default().fg(CLR_HIGH).bg(CLR_OCEAN)),
-        Span::styled(" High ", Style::default().fg(Color::Rgb(100, 120, 150)).bg(CLR_OCEAN)),
+        Span::styled(" \u{25CF}", Style::default().fg(CLR_CONNECTING).bg(CLR_OCEAN)),
+        Span::styled(" New ", Style::default().fg(Color::Rgb(100, 120, 150)).bg(CLR_OCEAN)),
+        Span::styled("\u{25CF}", Style::default().fg(CLR_RECEIVING).bg(CLR_OCEAN)),
+        Span::styled(" Recv ", Style::default().fg(Color::Rgb(100, 120, 150)).bg(CLR_OCEAN)),
+        Span::styled("\u{25CF}", Style::default().fg(CLR_SENDING).bg(CLR_OCEAN)),
+        Span::styled(" Send ", Style::default().fg(Color::Rgb(100, 120, 150)).bg(CLR_OCEAN)),
+        Span::styled("\u{25CF}", Style::default().fg(CLR_DISCONNECTING).bg(CLR_OCEAN)),
+        Span::styled(" Close ", Style::default().fg(Color::Rgb(100, 120, 150)).bg(CLR_OCEAN)),
         Span::styled("\u{25CF}", Style::default().fg(CLR_THREAT).bg(CLR_OCEAN)),
         Span::styled(" Threat", Style::default().fg(Color::Rgb(100, 120, 150)).bg(CLR_OCEAN)),
     ]);
     lines.push(legend);
 
-    // Title
     let active = countries.len();
     let threat_count = countries.iter().filter(|c| c.has_threat).count();
 
@@ -503,6 +626,129 @@ pub fn draw_world_map(f: &mut Frame, area: Rect, countries: &[CountryMarker]) {
             Style::default().fg(Color::Rgb(100, 120, 150)),
         ),
     ];
+    if threat_count > 0 {
+        title_spans.push(Span::styled(
+            format!(" {} threats ", threat_count),
+            Style::default().fg(CLR_THREAT).add_modifier(Modifier::BOLD),
+        ));
+    }
+
+    let block = Block::default()
+        .title(Line::from(title_spans))
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(CLR_BORDER))
+        .style(Style::default().bg(CLR_OCEAN));
+
+    let paragraph = Paragraph::new(lines).block(block);
+    f.render_widget(paragraph, area);
+}
+
+// ── Per-connection dot mode ─────────────────────────────────────────────
+
+pub fn draw_world_map_dots(
+    f: &mut Frame,
+    area: Rect,
+    dots: &[ConnectionDot],
+    tick: u64,
+) {
+    if early_exit_block(f, area) {
+        return;
+    }
+
+    let inner_w = (area.width - 2) as usize;
+    let legend_rows = 1usize;
+    let inner_h = (area.height - 2) as usize;
+    let map_h = inner_h.saturating_sub(legend_rows);
+
+    if inner_w < 4 || map_h < 2 {
+        early_exit_block(f, area);
+        return;
+    }
+
+    let mut ms = setup_map(inner_w, map_h);
+
+    let mut live_count = 0u32;
+    let mut fading_count = 0u32;
+    let mut threat_count = 0u32;
+
+    // Draw each connection as its own dot
+    for dot in dots {
+        if dot.brightness <= 0.0 {
+            continue;
+        }
+
+        let Some(&(_, lon, lat)) = COUNTRY_COORDS.iter().find(|(c, _, _)| *c == dot.country_code)
+        else {
+            continue;
+        };
+
+        let (mx, my) = mercator(lon, lat);
+        let base_px = (mx * ms.dot_w as f64) as i32;
+        let base_py = (((my - ms.y_top) / (ms.y_bot - ms.y_top)) * ms.dot_h as f64) as i32;
+
+        // Apply jitter to spread dots within a country
+        let (jx, jy) = ip_jitter(dot.jitter_seed);
+        let px = base_px + jx;
+        let py = base_py + jy;
+
+        let color = scale_color(dot.color, dot.brightness);
+
+        if dot.brightness >= 1.0 {
+            live_count += 1;
+
+            // Glow: dim outer ring
+            let glow = scale_color(dot.color, 0.3);
+            ms.canvas.filled_circle(px, py, 3, glow);
+
+            // Pulse: alternate radius on even/odd ticks for active dots
+            let r = if dot.pulse && tick % 2 == 0 { 2 } else { 1 };
+            ms.canvas.filled_circle(px, py, r, color);
+        } else {
+            fading_count += 1;
+            // Fading dot — smaller, dimmer
+            let r = if dot.brightness > 0.5 { 1 } else { 0 };
+            ms.canvas.filled_circle(px, py, r, color);
+        }
+
+        if dot.color == CLR_THREAT {
+            threat_count += 1;
+        }
+    }
+
+    let mut lines = ms.canvas.render();
+
+    // Legend
+    let legend = Line::from(vec![
+        Span::styled(" \u{25CF}", Style::default().fg(CLR_NORMAL).bg(CLR_OCEAN)),
+        Span::styled(" Est ", Style::default().fg(Color::Rgb(100, 120, 150)).bg(CLR_OCEAN)),
+        Span::styled("\u{25CF}", Style::default().fg(CLR_CONNECTING).bg(CLR_OCEAN)),
+        Span::styled(" Syn ", Style::default().fg(Color::Rgb(100, 120, 150)).bg(CLR_OCEAN)),
+        Span::styled("\u{25CF}", Style::default().fg(CLR_SENDING).bg(CLR_OCEAN)),
+        Span::styled(" Wait ", Style::default().fg(Color::Rgb(100, 120, 150)).bg(CLR_OCEAN)),
+        Span::styled("\u{25CF}", Style::default().fg(CLR_DISCONNECTING).bg(CLR_OCEAN)),
+        Span::styled(" Close ", Style::default().fg(Color::Rgb(100, 120, 150)).bg(CLR_OCEAN)),
+        Span::styled("\u{25CF}", Style::default().fg(CLR_THREAT).bg(CLR_OCEAN)),
+        Span::styled(" Threat", Style::default().fg(Color::Rgb(100, 120, 150)).bg(CLR_OCEAN)),
+    ]);
+    lines.push(legend);
+
+    // Title
+    let mut title_spans = vec![
+        Span::styled(
+            " Connection Map ",
+            Style::default().fg(Color::Rgb(160, 180, 220)).add_modifier(Modifier::BOLD),
+        ),
+        Span::styled(
+            format!(" {} live", live_count),
+            Style::default().fg(CLR_NORMAL),
+        ),
+    ];
+    if fading_count > 0 {
+        title_spans.push(Span::styled(
+            format!(" {} fading", fading_count),
+            Style::default().fg(Color::Rgb(100, 120, 150)),
+        ));
+    }
     if threat_count > 0 {
         title_spans.push(Span::styled(
             format!(" {} threats ", threat_count),
