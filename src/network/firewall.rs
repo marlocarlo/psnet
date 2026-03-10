@@ -3,12 +3,12 @@
 //! Provides: rule enumeration, block/allow per-app, lockdown mode,
 //! and ask-to-connect mode tracking.
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::process::Command;
 use std::sync::{Arc, Mutex};
 
-use crate::types::{FirewallAction, FirewallDirection, FirewallMode, FirewallProfile, FirewallRule};
+use crate::types::{FirewallAction, FirewallAppAction, FirewallDirection, FirewallMode, FirewallProfile, FirewallRule};
 
 /// Manages firewall state and rules.
 pub struct FirewallManager {
@@ -38,6 +38,10 @@ pub struct FirewallManager {
     pub active_profile: Option<String>,
     /// Path to the profiles persistence file.
     profiles_path: PathBuf,
+    /// Per-app actions managed by PSNET (persisted to disk).
+    pub app_actions: HashMap<String, FirewallAppAction>,
+    /// Path to the app action state file.
+    state_path: PathBuf,
 }
 
 impl FirewallManager {
@@ -45,11 +49,22 @@ impl FirewallManager {
         let enabled = is_firewall_enabled();
         let profiles_path = Self::default_profiles_path();
         let profiles = Self::load_profiles_from_disk(&profiles_path);
+        let state_path = Self::default_state_path();
+        let app_actions = Self::load_state_from_disk(&state_path);
+        // Rebuild blocked_apps from persisted state
+        let blocked_apps: HashSet<String> = app_actions.iter()
+            .filter(|(_, a)| matches!(a, FirewallAppAction::Deny | FirewallAppAction::Drop))
+            .map(|(name, _)| name.clone())
+            .collect();
+        let approved_apps: HashSet<String> = app_actions.iter()
+            .filter(|(_, a)| matches!(a, FirewallAppAction::Allow))
+            .map(|(name, _)| name.clone())
+            .collect();
         Self {
             rules: Vec::new(),
             mode: FirewallMode::Normal,
-            approved_apps: HashSet::new(),
-            blocked_apps: HashSet::new(),
+            approved_apps,
+            blocked_apps,
             pending_apps: Vec::new(),
             enabled,
             scroll_offset: 0,
@@ -59,6 +74,8 @@ impl FirewallManager {
             profiles,
             active_profile: None,
             profiles_path,
+            app_actions,
+            state_path,
         }
     }
 
@@ -70,6 +87,30 @@ impl FirewallManager {
             dir.join("firewall_profiles.json")
         } else {
             PathBuf::from("psnet_firewall_profiles.json")
+        }
+    }
+
+    /// Default path: %APPDATA%/psnet/firewall_state.json
+    fn default_state_path() -> PathBuf {
+        if let Some(data_dir) = dirs::data_dir() {
+            let dir = data_dir.join("psnet");
+            let _ = std::fs::create_dir_all(&dir);
+            dir.join("firewall_state.json")
+        } else {
+            PathBuf::from("psnet_firewall_state.json")
+        }
+    }
+
+    fn load_state_from_disk(path: &PathBuf) -> HashMap<String, FirewallAppAction> {
+        match std::fs::read_to_string(path) {
+            Ok(content) => serde_json::from_str(&content).unwrap_or_default(),
+            Err(_) => HashMap::new(),
+        }
+    }
+
+    fn save_state_to_disk(&self) {
+        if let Ok(json) = serde_json::to_string_pretty(&self.app_actions) {
+            let _ = std::fs::write(&self.state_path, json);
         }
     }
 
@@ -125,60 +166,20 @@ impl FirewallManager {
     /// Windows Firewall silently ignores the `program=` filter when only
     /// a filename is given — the full path is required for the rule to match.
     pub fn block_app(&mut self, process_path: &str) -> bool {
-        let app_name = process_path.rsplit('\\').next().unwrap_or(process_path);
-        let rule_out = format!("PSNET_Block_{}", app_name);
-        let rule_in  = format!("PSNET_Block_{}_In", app_name);
-
-        let add = |name: &str, dir: &str| -> bool {
-            Command::new("netsh")
-                .args([
-                    "advfirewall", "firewall", "add", "rule",
-                    &format!("name={}", name),
-                    &format!("dir={}", dir),
-                    "action=block",
-                    &format!("program={}", process_path),
-                    "enable=yes",
-                    "profile=any",
-                ])
-                .output()
-                .map(|o| o.status.success())
-                .unwrap_or(false)
-        };
-
-        let ok = add(&rule_out, "out");
-        let _ = add(&rule_in, "in"); // inbound best-effort
-
-        if ok {
-            self.blocked_apps.insert(app_name.to_lowercase());
-            self.refresh_rules();
-        }
-        ok
+        self.apply_action(process_path, Some(process_path), FirewallAppAction::Deny)
     }
 
-    /// Unblock an application (removes both PSNET outbound and inbound rules).
+    /// Unblock an application (removes all PSNET rules for this app).
     pub fn unblock_app(&mut self, app_name: &str) -> bool {
-        let rule_out = format!("PSNET_Block_{}", app_name);
-        let rule_in  = format!("PSNET_Block_{}_In", app_name);
-
-        let del = |name: &str| -> bool {
-            Command::new("netsh")
-                .args([
-                    "advfirewall", "firewall", "delete", "rule",
-                    &format!("name={}", name),
-                ])
-                .output()
-                .map(|o| o.status.success())
-                .unwrap_or(false)
-        };
-
-        let ok = del(&rule_out);
-        let _ = del(&rule_in); // remove inbound rule too, ignore if missing
-
-        if ok {
-            self.blocked_apps.remove(&app_name.to_lowercase());
-            self.refresh_rules();
-        }
-        ok
+        let base = app_name.rsplit('\\').next().unwrap_or(app_name);
+        let key = base.to_lowercase();
+        self.remove_psnet_rules(base);
+        self.blocked_apps.remove(&key);
+        self.approved_apps.remove(&key);
+        self.app_actions.remove(&key);
+        self.save_state_to_disk();
+        self.refresh_rules();
+        true
     }
 
     /// Enable lockdown mode — block all outbound except approved.
@@ -314,11 +315,17 @@ impl FirewallManager {
         &self.profiles
     }
 
-    /// Check if an app is blocked by a PSNET-created rule.
+    /// Check if an app is blocked by a PSNET-created rule (Deny or Drop).
     pub fn is_psnet_blocked(&self, app_name: &str) -> bool {
-        let rule_name = format!("PSNET_Block_{}", app_name);
-        self.blocked_apps.contains(&app_name.to_lowercase())
-            || self.rules.iter().any(|r| r.name.eq_ignore_ascii_case(&rule_name) && r.enabled)
+        let key = app_name.to_lowercase();
+        if self.blocked_apps.contains(&key) {
+            return true;
+        }
+        let block_name = format!("PSNET_Block_{}", app_name);
+        let drop_name = format!("PSNET_Drop_{}", app_name);
+        self.rules.iter().any(|r| {
+            r.enabled && (r.name.eq_ignore_ascii_case(&block_name) || r.name.eq_ignore_ascii_case(&drop_name))
+        })
     }
 
     /// Toggle block/unblock for an app.
@@ -330,6 +337,99 @@ impl FirewallManager {
         } else {
             self.block_app(process_path.unwrap_or(app_name))
         }
+    }
+
+    /// Apply a firewall action (Allow / Deny / Drop) for an app.
+    /// Removes any previous PSNET rules for this app first, then creates new ones.
+    pub fn apply_action(&mut self, app_name: &str, process_path: Option<&str>, action: FirewallAppAction) -> bool {
+        let base = app_name.rsplit('\\').next().unwrap_or(app_name);
+        let key = base.to_lowercase();
+
+        // Remove any existing PSNET rules for this app
+        self.remove_psnet_rules(base);
+
+        let path = process_path.unwrap_or(app_name);
+
+        let ok = match &action {
+            FirewallAppAction::Allow => {
+                // Create explicit allow rules
+                let rule_out = format!("PSNET_Allow_{}", base);
+                let rule_in = format!("PSNET_Allow_{}_In", base);
+                let ok = netsh_add_rule(&rule_out, "out", "allow", path);
+                let _ = netsh_add_rule(&rule_in, "in", "allow", path);
+                ok
+            }
+            FirewallAppAction::Deny => {
+                let rule_out = format!("PSNET_Block_{}", base);
+                let rule_in = format!("PSNET_Block_{}_In", base);
+                let ok = netsh_add_rule(&rule_out, "out", "block", path);
+                let _ = netsh_add_rule(&rule_in, "in", "block", path);
+                ok
+            }
+            FirewallAppAction::Drop => {
+                let rule_out = format!("PSNET_Drop_{}", base);
+                let rule_in = format!("PSNET_Drop_{}_In", base);
+                let ok = netsh_add_rule(&rule_out, "out", "block", path);
+                let _ = netsh_add_rule(&rule_in, "in", "block", path);
+                ok
+            }
+        };
+
+        if ok {
+            // Update in-memory tracking
+            self.blocked_apps.remove(&key);
+            self.approved_apps.remove(&key);
+            match &action {
+                FirewallAppAction::Deny | FirewallAppAction::Drop => {
+                    self.blocked_apps.insert(key.clone());
+                }
+                FirewallAppAction::Allow => {
+                    self.approved_apps.insert(key.clone());
+                }
+            }
+            self.app_actions.insert(key, action);
+            self.save_state_to_disk();
+            self.refresh_rules();
+        }
+        ok
+    }
+
+    /// Remove all PSNET-created rules (Block, Allow, Drop) for a specific app.
+    fn remove_psnet_rules(&mut self, app_name: &str) {
+        for prefix in &["PSNET_Block_", "PSNET_Allow_", "PSNET_Drop_"] {
+            let rule = format!("{}{}", prefix, app_name);
+            let rule_in = format!("{}{}_In", prefix, app_name);
+            let _ = netsh_delete_rule(&rule);
+            let _ = netsh_delete_rule(&rule_in);
+        }
+    }
+
+    /// Remove ALL PSNET firewall rules and reset state to defaults.
+    pub fn reset_all_psnet_rules(&mut self) {
+        // Collect app names before clearing
+        let apps: Vec<String> = self.app_actions.keys().cloned().collect();
+        for key in &apps {
+            // Try to find the original-case name from rules
+            let base = key.rsplit('\\').next().unwrap_or(key);
+            self.remove_psnet_rules(base);
+        }
+        // Also scan rules for any PSNET_* rules we might have missed
+        for rule in &self.rules {
+            if rule.name.starts_with("PSNET_") {
+                let _ = netsh_delete_rule(&rule.name);
+            }
+        }
+        self.app_actions.clear();
+        self.blocked_apps.clear();
+        self.approved_apps.clear();
+        self.mode = FirewallMode::Normal;
+        self.save_state_to_disk();
+        self.refresh_rules();
+    }
+
+    /// Get the current PSNET action for an app, if any.
+    pub fn get_app_action(&self, app_name: &str) -> Option<&FirewallAppAction> {
+        self.app_actions.get(&app_name.to_lowercase())
     }
 
     /// Filter rules for display.
@@ -348,6 +448,35 @@ impl FirewallManager {
                 .collect()
         }
     }
+}
+
+// ─── Netsh helpers ───────────────────────────────────────────────────────────
+
+fn netsh_add_rule(name: &str, dir: &str, action: &str, program: &str) -> bool {
+    Command::new("netsh")
+        .args([
+            "advfirewall", "firewall", "add", "rule",
+            &format!("name={}", name),
+            &format!("dir={}", dir),
+            &format!("action={}", action),
+            &format!("program={}", program),
+            "enable=yes",
+            "profile=any",
+        ])
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false)
+}
+
+fn netsh_delete_rule(name: &str) -> bool {
+    Command::new("netsh")
+        .args([
+            "advfirewall", "firewall", "delete", "rule",
+            &format!("name={}", name),
+        ])
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false)
 }
 
 // ─── System queries ──────────────────────────────────────────────────────────

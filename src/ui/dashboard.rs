@@ -66,20 +66,27 @@ pub fn draw_dashboard(f: &mut Frame, area: Rect, app: &App) {
         return;
     }
 
-    // ── Layout: summary strip → traffic graph → bottom panels ──
+    // ── Layout: summary strip → middle row (graph + countries) → bottom panels ──
     let main_split = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
             Constraint::Length(3),      // Live summary strip
-            Constraint::Percentage(47), // Traffic graph
+            Constraint::Percentage(47), // Traffic graph + top countries
             Constraint::Percentage(50), // Bottom panels
         ])
         .split(area);
 
     draw_summary_strip(f, main_split[0], app);
 
-    // Remap remaining layout to sub-slices
-    let traffic_area = main_split[1];
+    // Middle row: traffic graph on left, top countries on right
+    let mid_split = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([
+            Constraint::Percentage(70), // Traffic graph
+            Constraint::Percentage(30), // Top 10 countries
+        ])
+        .split(main_split[1]);
+
     let bottom_area = main_split[2];
 
     let bottom_split = Layout::default()
@@ -99,15 +106,18 @@ pub fn draw_dashboard(f: &mut Frame, area: Rect, app: &App) {
         .split(bottom_split[1]);
 
     // ── 1. Traffic Graph ──
-    draw_traffic_graph(f, traffic_area, app);
+    draw_traffic_graph(f, mid_split[0], app);
 
-    // ── 2. World Map ──
+    // ── 2. Top 10 Countries ──
+    draw_top_countries(f, mid_split[1], app);
+
+    // ── 3. World Map ──
     draw_country_map(f, bottom_split[0], app);
 
-    // ── 3. Health Gauge ──
+    // ── 4. Health Gauge ──
     draw_health(f, right_split[0], app);
 
-    // ── 4. Top Apps Bar Chart ──
+    // ── 5. Top Apps Bar Chart ──
     draw_top_apps(f, right_split[1], app);
 }
 
@@ -292,6 +302,110 @@ fn draw_health(f: &mut Frame, area: Rect, app: &App) {
         threat_count,
     );
 }
+
+/// Render the top 10 countries by connection count with country code badges.
+fn draw_top_countries(f: &mut Frame, area: Rect, app: &App) {
+    // Tally connections per country
+    let mut counts: std::collections::HashMap<&str, (/* code */ &str, /* name */ &str, usize)> =
+        std::collections::HashMap::new();
+    for conn in &app.connections {
+        if let Some(ip) = conn.remote_addr {
+            if ip.is_loopback() || ip.is_unspecified() {
+                continue;
+            }
+            if let Some(info) = app.geoip.lookup(ip) {
+                let entry = counts.entry(info.code).or_insert((info.code, info.name, 0));
+                entry.2 += 1;
+            }
+        }
+    }
+
+    let mut sorted: Vec<_> = counts.into_values().collect();
+    sorted.sort_by(|a, b| b.2.cmp(&a.2));
+
+    let block = Block::default()
+        .title(Span::styled(
+            " Top Countries ",
+            Style::default()
+                .fg(Color::Rgb(160, 180, 220))
+                .add_modifier(Modifier::BOLD),
+        ))
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(Color::Rgb(30, 50, 85)))
+        .style(Style::default().bg(Color::Rgb(8, 12, 24)));
+
+    let inner = block.inner(area);
+    f.render_widget(block, area);
+
+    let max_count = sorted.first().map(|e| e.2).unwrap_or(1).max(1);
+    // code(2) + space + name(12) + space + count(3) + space + bar
+    let bar_budget = inner.width.saturating_sub(21) as usize;
+
+    for (i, (code, name, count)) in sorted.iter().take(10).enumerate() {
+        if i as u16 >= inner.height {
+            break;
+        }
+        let row_area = Rect::new(inner.x, inner.y + i as u16, inner.width, 1);
+
+        // Mini bar proportional to max
+        let bar_len = if bar_budget > 0 {
+            ((*count as f64 / max_count as f64) * bar_budget as f64).ceil() as usize
+        } else {
+            0
+        };
+
+        let color = COUNTRY_COLORS[i % COUNTRY_COLORS.len()];
+        let bar_str: String = "█".repeat(bar_len);
+
+        let line = Line::from(vec![
+            Span::styled(
+                format!(" {} ", code),
+                Style::default().fg(Color::Rgb(20, 20, 30)).bg(color),
+            ),
+            Span::styled(" ", Style::default()),
+            Span::styled(
+                format!("{:<12}", truncate_name(name, 12)),
+                Style::default().fg(Color::Rgb(160, 175, 200)),
+            ),
+            Span::styled(
+                format!("{:>3} ", count),
+                Style::default().fg(color).add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(bar_str, Style::default().fg(color)),
+        ]);
+
+        f.render_widget(Paragraph::new(line), row_area);
+    }
+
+    if sorted.is_empty() {
+        let msg = Line::from(Span::styled(
+            "  No geo data yet",
+            Style::default().fg(Color::Rgb(60, 75, 100)),
+        ));
+        f.render_widget(Paragraph::new(msg), inner);
+    }
+}
+
+fn truncate_name(s: &str, max: usize) -> String {
+    if s.len() > max {
+        format!("{}…", &s[..max.saturating_sub(1)])
+    } else {
+        s.to_string()
+    }
+}
+
+const COUNTRY_COLORS: [Color; 10] = [
+    Color::Rgb(80, 200, 255),   // cyan
+    Color::Rgb(120, 220, 140),  // green
+    Color::Rgb(255, 200, 80),   // gold
+    Color::Rgb(200, 140, 255),  // lavender
+    Color::Rgb(255, 140, 100),  // coral
+    Color::Rgb(100, 220, 200),  // teal
+    Color::Rgb(255, 160, 200),  // pink
+    Color::Rgb(180, 200, 130),  // lime
+    Color::Rgb(140, 180, 255),  // periwinkle
+    Color::Rgb(220, 180, 140),  // sand
+];
 
 /// Render the top apps by bandwidth as a bar chart.
 fn draw_top_apps(f: &mut Frame, area: Rect, app: &App) {

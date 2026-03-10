@@ -26,9 +26,20 @@ fn draw_sparklines(f: &mut Frame, area: Rect, app: &App) {
         .split(area);
 
     // ── Download sparkline ──
-    let down_data: Vec<u64> = app.speed_history.download.iter()
-        .map(|&v| v.max(0.0) as u64)
-        .collect();
+    let down_inner_w = chunks[0].width.saturating_sub(2) as usize;
+    let down_data: Vec<u64> = {
+        let raw: Vec<u64> = app.speed_history.download.iter()
+            .map(|&v| v.max(0.0) as u64)
+            .collect();
+        // Right-align: pad with zeros so the graph fills the full width
+        if raw.len() < down_inner_w {
+            let mut padded = vec![0u64; down_inner_w - raw.len()];
+            padded.extend(raw);
+            padded
+        } else {
+            raw[raw.len() - down_inner_w..].to_vec()
+        }
+    };
     let down_max = down_data.iter().copied().max().unwrap_or(1).max(1);
     let down_color = speed_color(app.current_down_speed);
 
@@ -63,9 +74,19 @@ fn draw_sparklines(f: &mut Frame, area: Rect, app: &App) {
     f.render_widget(down_sparkline, chunks[0]);
 
     // ── Upload sparkline ──
-    let up_data: Vec<u64> = app.speed_history.upload.iter()
-        .map(|&v| v.max(0.0) as u64)
-        .collect();
+    let up_inner_w = chunks[1].width.saturating_sub(2) as usize;
+    let up_data: Vec<u64> = {
+        let raw: Vec<u64> = app.speed_history.upload.iter()
+            .map(|&v| v.max(0.0) as u64)
+            .collect();
+        if raw.len() < up_inner_w {
+            let mut padded = vec![0u64; up_inner_w - raw.len()];
+            padded.extend(raw);
+            padded
+        } else {
+            raw[raw.len() - up_inner_w..].to_vec()
+        }
+    };
     let up_max = up_data.iter().copied().max().unwrap_or(1).max(1);
     let up_color = speed_color_warm(app.current_up_speed);
 

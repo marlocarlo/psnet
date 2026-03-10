@@ -14,6 +14,8 @@ use std::time::Instant;
 
 use chrono::Local;
 
+use dns_lookup::lookup_addr;
+
 use crate::types::LanDevice;
 
 // ─── Win32 FFI ───────────────────────────────────────────────────────────────
@@ -170,7 +172,7 @@ pub struct NetworkScanner {
     /// Known devices by MAC address (authoritative map).
     pub devices: Vec<LanDevice>,
     /// Shared result buffer from background scan thread.
-    scan_result: Arc<Mutex<Option<Vec<(Ipv4Addr, String)>>>>,
+    scan_result: Arc<Mutex<Option<Vec<(Ipv4Addr, String, Option<String>)>>>>,
     /// Whether a scan is in progress.
     scanning: Arc<AtomicBool>,
     /// Last scan timestamp.
@@ -249,7 +251,27 @@ impl NetworkScanner {
                 });
             }
 
-            let found = found.into_inner().unwrap();
+            let arp_results = found.into_inner().unwrap();
+
+            // Resolve hostnames in parallel for discovered devices
+            let hostnames: Mutex<Vec<(Ipv4Addr, String, Option<String>)>> = Mutex::new(Vec::new());
+            for chunk in arp_results.chunks(64) {
+                thread::scope(|s| {
+                    for (target_ip, mac) in chunk {
+                        let hostnames = &hostnames;
+                        s.spawn(move || {
+                            let addr = IpAddr::V4(*target_ip);
+                            let hostname = lookup_addr(&addr).ok().filter(|name| {
+                                // Filter out results that are just the IP repeated back
+                                name != &addr.to_string()
+                            });
+                            hostnames.lock().unwrap().push((*target_ip, mac.clone(), hostname));
+                        });
+                    }
+                });
+            }
+
+            let found = hostnames.into_inner().unwrap();
             if let Ok(mut r) = result.lock() {
                 *r = Some(found);
             }
@@ -278,18 +300,21 @@ impl NetworkScanner {
         // Build new map — update existing, add new, mark offline
         let mut seen_macs: std::collections::HashSet<String> = std::collections::HashSet::new();
 
-        for (ip, mac) in scan_results {
+        for (ip, mac, hostname) in scan_results {
             seen_macs.insert(mac.clone());
             if let Some(existing) = self.devices.iter_mut().find(|d| d.mac == mac) {
                 existing.ip = IpAddr::V4(ip);
                 existing.last_seen = now;
                 existing.is_online = true;
                 existing.custom_name = self.custom_labels.get(&mac).cloned();
+                if hostname.is_some() {
+                    existing.hostname = hostname;
+                }
             } else {
                 self.devices.push(LanDevice {
                     ip: IpAddr::V4(ip),
                     mac: mac.clone(),
-                    hostname: None,
+                    hostname,
                     vendor: mac_vendor_prefix(&mac),
                     first_seen: now,
                     last_seen: now,

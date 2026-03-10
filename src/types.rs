@@ -738,6 +738,34 @@ impl FirewallMode {
     }
 }
 
+/// Action for an app managed by PSNET firewall rules.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum FirewallAppAction {
+    /// Explicit allow rule (override any other blocks).
+    Allow,
+    /// Block (connection refused / dropped).
+    Deny,
+    /// Silent drop (identical to Deny on Windows Firewall, tracked separately).
+    Drop,
+}
+
+impl FirewallAppAction {
+    pub fn label(&self) -> &str {
+        match self {
+            Self::Allow => "ALLOW",
+            Self::Deny  => "DENY",
+            Self::Drop  => "DROP",
+        }
+    }
+}
+
+/// State for the floating firewall action menu.
+pub struct FirewallMenuState {
+    pub app_name: String,
+    pub app_path: Option<String>,
+    pub selected: usize, // 0=Allow, 1=Deny, 2=Drop
+}
+
 // ─── Data plan / usage persistence ──────────────────────────────────────────
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

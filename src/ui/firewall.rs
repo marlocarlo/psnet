@@ -7,14 +7,15 @@ use ratatui::layout::{Constraint, Direction, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{
-    Block, Borders, Cell, Paragraph, Row, Scrollbar, ScrollbarOrientation, ScrollbarState, Table,
+    Block, Borders, Cell, Clear, Paragraph, Row, Scrollbar, ScrollbarOrientation, ScrollbarState, Table,
 };
 use ratatui::Frame;
 
 use crate::app::App;
-use crate::types::FirewallMode;
+use crate::types::{FirewallAppAction, FirewallMode};
 
 pub fn draw_firewall(f: &mut Frame, area: Rect, app: &App) {
+    let fw_area = area; // Save for menu overlay
     let apps = app.firewall_app_list_filtered();
     let blocked_count = apps.iter().filter(|(_, b, _)| *b).count();
 
@@ -62,6 +63,11 @@ pub fn draw_firewall(f: &mut Frame, area: Rect, app: &App) {
 
     draw_firewall_status(f, chunks[0], app);
     draw_firewall_apps(f, chunks[1], app, &apps);
+
+    // Floating action menu overlay
+    if app.firewall_menu.is_some() {
+        draw_firewall_menu(f, fw_area, app);
+    }
 }
 
 fn draw_firewall_status(f: &mut Frame, area: Rect, app: &App) {
@@ -205,10 +211,13 @@ fn draw_firewall_apps(
                 DisplayItem::App(idx, (name, is_blocked, conn_count)) => {
                     let is_selected = *idx == selected;
 
-                    let (status_str, status_color) = if *is_blocked {
-                        ("BLOCKED", Color::Rgb(255, 80, 80))
-                    } else {
-                        ("ALLOWED", Color::Rgb(80, 200, 120))
+                    let action = app.firewall_manager.get_app_action(name);
+                    let (status_str, status_color) = match action {
+                        Some(FirewallAppAction::Deny) => ("DENY", Color::Rgb(255, 80, 80)),
+                        Some(FirewallAppAction::Drop) => ("DROP", Color::Rgb(255, 140, 40)),
+                        Some(FirewallAppAction::Allow) => ("ALLOW", Color::Rgb(80, 200, 255)),
+                        None if *is_blocked => ("BLOCKED", Color::Rgb(255, 80, 80)),
+                        None => ("ALLOWED", Color::Rgb(80, 200, 120)),
                     };
 
                     let prefix = if is_selected { "▶ " } else { "  " };
@@ -255,13 +264,7 @@ fn draw_firewall_apps(
     };
 
     // Bottom hint — context-aware based on selected app
-    let hint_line = if let Some((name, is_blocked, _)) = apps.get(selected) {
-        let action = if *is_blocked { "Unblock" } else { "Block" };
-        let action_color = if *is_blocked {
-            Color::Rgb(80, 200, 120)
-        } else {
-            Color::Rgb(255, 120, 80)
-        };
+    let hint_line = if let Some((name, _, _)) = apps.get(selected) {
         Line::from(vec![
             Span::styled(
                 " Enter ",
@@ -269,13 +272,10 @@ fn draw_firewall_apps(
                     .fg(Color::Rgb(255, 200, 80))
                     .add_modifier(Modifier::BOLD),
             ),
+            Span::styled("Action ", Style::default().fg(Color::Rgb(140, 170, 210))),
+            Span::styled(truncate_str(name, 24), Style::default().fg(Color::Rgb(160, 180, 220))),
             Span::styled(
-                format!("{} ", action),
-                Style::default().fg(action_color).add_modifier(Modifier::BOLD),
-            ),
-            Span::styled(name.clone(), Style::default().fg(Color::Rgb(160, 180, 220))),
-            Span::styled(
-                "  |  f: filter  |  r: refresh",
+                "  |  f: filter  |  r: refresh  |  x: reset all",
                 Style::default().fg(Color::Rgb(55, 70, 100)),
             ),
         ])
@@ -329,5 +329,75 @@ fn truncate_str(s: &str, max_len: usize) -> String {
         format!("{}…", &s[..max_len.saturating_sub(1)])
     } else {
         s.to_string()
+    }
+}
+
+fn draw_firewall_menu(f: &mut Frame, parent_area: Rect, app: &App) {
+    let Some(ref menu) = app.firewall_menu else { return };
+
+    // Compact floating box — centered in the firewall area
+    let menu_w: u16 = 28;
+    let menu_h: u16 = 7; // border + 3 items + title + border
+    let x = parent_area.x + parent_area.width.saturating_sub(menu_w) / 2;
+    let y = parent_area.y + parent_area.height.saturating_sub(menu_h) / 2;
+    let area = Rect::new(x, y, menu_w.min(parent_area.width), menu_h.min(parent_area.height));
+
+    f.render_widget(Clear, area);
+
+    let title = truncate_str(&menu.app_name, 22);
+    let block = Block::default()
+        .title(Line::from(Span::styled(
+            format!(" {} ", title),
+            Style::default().fg(Color::Rgb(200, 210, 230)).add_modifier(Modifier::BOLD),
+        )))
+        .title_bottom(Line::from(Span::styled(
+            " Esc:cancel ",
+            Style::default().fg(Color::Rgb(55, 70, 100)),
+        )))
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(Color::Rgb(80, 130, 200)))
+        .style(Style::default().bg(Color::Rgb(16, 22, 40)));
+
+    let inner = block.inner(area);
+    f.render_widget(block, area);
+
+    let options: [(usize, &str, Color); 3] = [
+        (0, " Allow ", Color::Rgb(80, 200, 120)),
+        (1, " Deny  ", Color::Rgb(255, 80, 80)),
+        (2, " Drop  ", Color::Rgb(255, 140, 40)),
+    ];
+
+    // Current action marker
+    let current = app.firewall_manager.get_app_action(&menu.app_name);
+
+    for (i, (idx, label, color)) in options.iter().enumerate() {
+        if i as u16 >= inner.height { break; }
+        let row_area = Rect::new(inner.x, inner.y + i as u16, inner.width, 1);
+        let is_sel = menu.selected == *idx;
+        let is_current = match (current, idx) {
+            (Some(FirewallAppAction::Allow), 0) => true,
+            (Some(FirewallAppAction::Deny), 1) => true,
+            (Some(FirewallAppAction::Drop), 2) => true,
+            _ => false,
+        };
+
+        let prefix = if is_sel { "▶ " } else { "  " };
+        let suffix = if is_current { " ●" } else { "" };
+
+        let bg = if is_sel {
+            Color::Rgb(30, 55, 100)
+        } else {
+            Color::Rgb(16, 22, 40)
+        };
+
+        let line = Line::from(vec![
+            Span::styled(prefix, Style::default().fg(Color::Rgb(255, 200, 80))),
+            Span::styled(*label, Style::default().fg(*color).add_modifier(Modifier::BOLD)),
+            Span::styled(suffix, Style::default().fg(Color::Rgb(80, 200, 120))),
+        ]);
+        f.render_widget(
+            Paragraph::new(line).style(Style::default().bg(bg)),
+            row_area,
+        );
     }
 }

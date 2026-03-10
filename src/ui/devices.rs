@@ -40,6 +40,7 @@ pub fn draw_devices(f: &mut Frame, area: Rect, app: &App) {
     let header = Row::new(vec![
         Cell::from(Span::styled("Status", hdr_style)),
         Cell::from(Span::styled("IP Address", hdr_style)),
+        Cell::from(Span::styled("Hostname", hdr_style)),
         Cell::from(Span::styled("MAC Address", hdr_style)),
         Cell::from(Span::styled("Name / Vendor", hdr_style)),
         Cell::from(Span::styled("First Seen", hdr_style)),
@@ -61,8 +62,14 @@ pub fn draw_devices(f: &mut Frame, area: Rect, app: &App) {
                 ("○ OFFLINE", Color::Rgb(100, 100, 120))
             };
 
+            let hostname_display = device.hostname.as_deref().unwrap_or("—");
+            let hostname_color = if device.hostname.is_some() {
+                Color::Rgb(130, 200, 180)
+            } else {
+                Color::Rgb(60, 65, 80)
+            };
+
             let vendor = device.custom_name.as_deref()
-                .or(device.hostname.as_deref())
                 .or(device.vendor.as_deref())
                 .unwrap_or("Unknown");
             let vendor_color = if device.custom_name.is_some() {
@@ -103,6 +110,10 @@ pub fn draw_devices(f: &mut Frame, area: Rect, app: &App) {
                     } else {
                         Color::Rgb(100, 180, 255)
                     }),
+                )),
+                Cell::from(Span::styled(
+                    hostname_display,
+                    Style::default().fg(hostname_color),
                 )),
                 Cell::from(Span::styled(
                     device.mac.clone(),
@@ -184,8 +195,9 @@ pub fn draw_devices(f: &mut Frame, area: Rect, app: &App) {
         [
             Constraint::Length(10),  // Status
             Constraint::Length(22),  // IP Address
+            Constraint::Min(16),     // Hostname
             Constraint::Length(18),  // MAC Address
-            Constraint::Min(16),     // Vendor
+            Constraint::Length(16),  // Vendor
             Constraint::Length(10),  // First Seen
             Constraint::Length(10),  // Last Seen
         ],

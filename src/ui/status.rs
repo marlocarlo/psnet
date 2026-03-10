@@ -101,9 +101,10 @@ pub fn draw_key_hints(f: &mut Frame, area: Rect, app: &App) {
             key_span("e", "Export CSV"),
         ],
         BottomTab::Firewall => vec![
-            key_span("Enter", "Block/Allow"),
+            key_span("Enter", "Action"),
             key_span("r", "Refresh"),
             key_span("f", "Filter"),
+            key_span("x", "Reset All"),
             key_span("Esc", "Clear"),
         ],
         BottomTab::Devices => vec![

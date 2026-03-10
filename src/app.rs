@@ -102,6 +102,8 @@ pub struct App {
 
     /// Whether incognito mode is active (no disk writes).
     pub incognito: bool,
+    /// Floating action menu on firewall tab.
+    pub firewall_menu: Option<FirewallMenuState>,
     /// Device rename state — Some(device_index) when renaming.
     pub renaming_device: Option<usize>,
     /// Text buffer for device rename.
@@ -189,6 +191,7 @@ impl App {
             topology_scroll: 0,
 
             incognito: false,
+            firewall_menu: None,
             renaming_device: None,
             device_rename_text: String::new(),
 
@@ -526,9 +529,9 @@ impl App {
             let entry = map.entry(key).or_insert((conn.process_name.clone(), 0));
             entry.1 += 1;
         }
-        // Include apps that were blocked but aren't currently connecting
-        for blocked in &self.firewall_manager.blocked_apps {
-            map.entry(blocked.clone()).or_insert((blocked.clone(), 0));
+        // Include apps with any PSNET action (blocked, allowed, dropped) even if not connecting
+        for (key, _) in &self.firewall_manager.app_actions {
+            map.entry(key.clone()).or_insert((key.clone(), 0));
         }
         // Apply filter
         let ft = self.firewall_manager.filter_text.to_lowercase();
@@ -615,6 +618,12 @@ impl App {
                 }
                 _ => {}
             }
+            return false;
+        }
+
+        // If firewall action menu is open, handle it
+        if self.firewall_menu.is_some() {
+            self.handle_firewall_menu_key(code);
             return false;
         }
 
@@ -716,7 +725,7 @@ impl App {
                 devices.get(selected).map(|d| DetailKind::Device(d.clone()))
             }
             BottomTab::Firewall => {
-                // Enter toggles block/unblock for the selected app — no detail popup
+                // Enter opens the action menu (Allow / Deny / Drop)
                 let apps = self.firewall_app_list_filtered();
                 if apps.is_empty() { return; }
                 let selected = self.firewall_manager.scroll_offset.min(apps.len() - 1);
@@ -725,7 +734,18 @@ impl App {
                     let path = self.connections.iter()
                         .find(|c| c.process_name.to_lowercase() == name.to_lowercase())
                         .and_then(|c| crate::network::connections::get_process_full_path(c.pid));
-                    self.firewall_manager.toggle_block(&name, path.as_deref());
+                    // Pre-select current action if one exists
+                    let preselect = match self.firewall_manager.get_app_action(&name) {
+                        Some(FirewallAppAction::Allow) => 0,
+                        Some(FirewallAppAction::Deny) => 1,
+                        Some(FirewallAppAction::Drop) => 2,
+                        None => 0,
+                    };
+                    self.firewall_menu = Some(FirewallMenuState {
+                        app_name: name,
+                        app_path: path,
+                        selected: preselect,
+                    });
                 }
                 return;
             }
@@ -865,10 +885,40 @@ impl App {
             KeyCode::Char('a') | KeyCode::Char('A') => {
                 self.firewall_manager.toggle_ask_to_connect();
             }
+            KeyCode::Char('x') | KeyCode::Char('X') => {
+                self.firewall_manager.reset_all_psnet_rules();
+            }
             KeyCode::Backspace => { self.firewall_manager.filter_text.pop(); }
             KeyCode::Esc => { self.firewall_manager.filter_text.clear(); }
             KeyCode::Char(c) => {
                 self.firewall_manager.filter_text.push(c);
+            }
+            _ => {}
+        }
+    }
+
+    fn handle_firewall_menu_key(&mut self, code: KeyCode) {
+        let Some(ref mut menu) = self.firewall_menu else { return };
+        match code {
+            KeyCode::Up => {
+                menu.selected = menu.selected.saturating_sub(1);
+            }
+            KeyCode::Down => {
+                if menu.selected < 2 { menu.selected += 1; }
+            }
+            KeyCode::Enter => {
+                let name = menu.app_name.clone();
+                let path = menu.app_path.clone();
+                let action = match menu.selected {
+                    0 => FirewallAppAction::Allow,
+                    1 => FirewallAppAction::Deny,
+                    _ => FirewallAppAction::Drop,
+                };
+                self.firewall_menu = None;
+                self.firewall_manager.apply_action(&name, path.as_deref(), action);
+            }
+            KeyCode::Esc | KeyCode::Char('q') => {
+                self.firewall_menu = None;
             }
             _ => {}
         }
