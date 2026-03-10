@@ -3,7 +3,8 @@ use std::net::IpAddr;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
-use crossterm::event::KeyCode;
+use crossterm::event::{KeyCode, MouseEventKind};
+use ratatui::layout::Rect;
 use sysinfo::Networks;
 
 use crate::network::alerts::AlertEngine;
@@ -120,6 +121,9 @@ pub struct App {
     /// System-configured DNS servers (detected from ipconfig /all).
     pub dns_servers: Vec<IpAddr>,
 
+    /// Last rendered frame size, used for mouse click coordinate mapping.
+    pub last_frame_size: Rect,
+
     // Internal
     pid_cache: PidCache,
     pub dns_cache: DnsCache,
@@ -200,6 +204,7 @@ impl App {
             map_fullscreen: false,
 
             dns_servers: Vec::new(),
+            last_frame_size: Rect::default(),
 
             pid_cache: PidCache::new(),
             dns_cache: DnsCache::new(),
@@ -1133,5 +1138,103 @@ impl App {
             }
             _ => {}
         }
+    }
+
+    /// Handle mouse events. Returns true if the app should quit (always false).
+    pub fn handle_mouse(&mut self, kind: MouseEventKind, col: u16, row: u16) -> bool {
+        match kind {
+            // ── Mouse wheel: scroll 3 lines at a time ──────────────────
+            MouseEventKind::ScrollUp => {
+                self.scroll_up(3);
+            }
+            MouseEventKind::ScrollDown => {
+                self.scroll_down(3);
+            }
+
+            // ── Left click ─────────────────────────────────────────────
+            MouseEventKind::Down(crossterm::event::MouseButton::Left) => {
+                let _frame_h = self.last_frame_size.height;
+
+                // Tab bar is at y == 14 (after title:3 + speed:11)
+                if row == 14 {
+                    // Close any open popups/menus when switching tabs
+                    self.detail_popup = None;
+                    self.firewall_menu = None;
+
+                    // Tab labels rendered as " {n} {label} " with " │ " separators (3 chars).
+                    // E.g.: " 1 Dashboard  │  2 Connections  │ ..."
+                    let tab_labels: &[(&str, BottomTab)] = &[
+                        ("1 Dashboard",   BottomTab::Dashboard),
+                        ("2 Connections", BottomTab::Connections),
+                        ("3 Traffic",     BottomTab::Traffic),
+                        ("4 Packets",     BottomTab::Packets),
+                        ("5 Topology",    BottomTab::Topology),
+                        ("6 Alerts",      BottomTab::Alerts),
+                        ("7 Usage",       BottomTab::Usage),
+                        ("8 Firewall",    BottomTab::Firewall),
+                        ("9 Devices",     BottomTab::Devices),
+                    ];
+
+                    let x = col as usize;
+                    let mut cursor = 0_usize;
+                    for (label, tab) in tab_labels {
+                        // Each rendered span is " {label} " = 1 + label.len() + 1
+                        let span_len = 1 + label.len() + 1;
+                        if x >= cursor && x < cursor + span_len {
+                            self.bottom_tab = *tab;
+                            break;
+                        }
+                        // Move past span + " │ " separator (3 chars)
+                        cursor += span_len + 3;
+                    }
+                }
+                // Content area click: data rows start at y == 17
+                // (title:3 + speed:11 + tabs:1 = 15, then 2 rows for border+header)
+                // Content area ends before wire preview (frame_h - 8)
+                else if row >= 17 {
+                    let content_end = _frame_h.saturating_sub(8);
+                    if row < content_end {
+                        let clicked_row = (row - 17) as usize;
+                        match self.bottom_tab {
+                            BottomTab::Connections => {
+                                let max = self.filtered_connections().len().saturating_sub(1);
+                                self.conn_scroll = clicked_row.min(max);
+                            }
+                            BottomTab::Usage => {
+                                self.usage_scroll = clicked_row;
+                            }
+                            BottomTab::Firewall => {
+                                let max = self.firewall_app_list_filtered().len().saturating_sub(1);
+                                self.firewall_manager.scroll_offset = clicked_row.min(max);
+                            }
+                            BottomTab::Devices => {
+                                let max = self.network_scanner.devices.len().saturating_sub(1);
+                                self.device_scroll = clicked_row.min(max);
+                            }
+                            BottomTab::Packets => {
+                                self.packets_scroll = clicked_row;
+                            }
+                            BottomTab::Alerts => {
+                                self.alert_engine.scroll_offset = clicked_row;
+                            }
+                            BottomTab::Traffic => {
+                                // Traffic uses offset-from-end; clicking a visible row
+                                // selects it but we just set scroll_offset for now.
+                                self.traffic_tracker.auto_scroll = false;
+                                self.traffic_tracker.scroll_offset = clicked_row;
+                            }
+                            BottomTab::Topology => {
+                                self.topology_scroll = clicked_row;
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+            }
+
+            // All other mouse events (right click, drag, move, etc.) — ignore
+            _ => {}
+        }
+        false
     }
 }

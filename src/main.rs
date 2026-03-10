@@ -7,7 +7,7 @@ mod utils;
 use std::io;
 use std::time::{Duration, Instant};
 
-use crossterm::event::{self, Event, KeyEventKind, KeyCode, KeyModifiers};
+use crossterm::event::{self, Event, KeyEventKind, KeyCode, KeyModifiers, EnableMouseCapture, DisableMouseCapture, MouseEventKind, MouseButton};
 use crossterm::terminal::{
     disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
 };
@@ -20,6 +20,7 @@ fn main() -> io::Result<()> {
     // Setup terminal
     enable_raw_mode()?;
     io::stdout().execute(EnterAlternateScreen)?;
+    io::stdout().execute(EnableMouseCapture)?;
     let backend = ratatui::backend::CrosstermBackend::new(io::stdout());
     let mut terminal = Terminal::new(backend)?;
 
@@ -44,25 +45,36 @@ fn main() -> io::Result<()> {
             terminal.clear()?;
             last_tab = app.bottom_tab;
         }
-        terminal.draw(|f| ui::draw(f, &app))?;
+        terminal.draw(|f| {
+            app.last_frame_size = f.area();
+            ui::draw(f, &app);
+        })?;
 
         let timeout = tick_rate
             .checked_sub(last_tick.elapsed())
             .unwrap_or(Duration::ZERO);
 
         if event::poll(timeout)? {
-            if let Event::Key(key) = event::read()? {
-                if key.kind == KeyEventKind::Press {
-                    // Ctrl+C quits
-                    if key.modifiers.contains(KeyModifiers::CONTROL)
-                        && (key.code == KeyCode::Char('c') || key.code == KeyCode::Char('C'))
-                    {
-                        break;
+            match event::read()? {
+                Event::Key(key) => {
+                    if key.kind == KeyEventKind::Press {
+                        // Ctrl+C quits
+                        if key.modifiers.contains(KeyModifiers::CONTROL)
+                            && (key.code == KeyCode::Char('c') || key.code == KeyCode::Char('C'))
+                        {
+                            break;
+                        }
+                        if app.handle_key(key.code) {
+                            break;
+                        }
                     }
-                    if app.handle_key(key.code) {
+                }
+                Event::Mouse(mouse) => {
+                    if app.handle_mouse(mouse.kind, mouse.column, mouse.row) {
                         break;
                     }
                 }
+                _ => {}
             }
         }
 
@@ -74,6 +86,7 @@ fn main() -> io::Result<()> {
 
     // Restore terminal
     disable_raw_mode()?;
+    io::stdout().execute(DisableMouseCapture)?;
     io::stdout().execute(LeaveAlternateScreen)?;
     Ok(())
 }
