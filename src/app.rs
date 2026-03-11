@@ -17,6 +17,7 @@ use crate::network::geoip::GeoIpResolver;
 use crate::network::networks::NetworksScanner;
 use crate::network::protocols::ProtocolTracker;
 use crate::network::scanner::NetworkScanner;
+use crate::network::servers::ServersScanner;
 use crate::network::sniffer::PacketSniffer;
 use crate::network::speed::get_network_bytes;
 use crate::network::system_monitor::SystemMonitor;
@@ -87,6 +88,8 @@ pub struct App {
     pub system_monitor: SystemMonitor,
     /// Non-primary networks scanner (VPN, Docker, WSL, secondary adapters)
     pub networks_scanner: NetworksScanner,
+    /// Local servers/listeners scanner (Wappalyzer for PC)
+    pub servers_scanner: ServersScanner,
 
     // Detail popup overlay
     pub detail_popup: Option<DetailKind>,
@@ -114,9 +117,6 @@ pub struct App {
     pub networks_sort_column: usize,
     pub networks_sort_ascending: bool,
     pub bluetooth_expanded: bool,
-    // Sort state for Traffic tab
-    pub traffic_sort_column: Option<usize>,
-    pub traffic_sort_ascending: bool,
     // Sort state for Alerts tab
     pub alert_sort_column: Option<usize>,
     pub alert_sort_ascending: bool,
@@ -205,6 +205,7 @@ impl App {
             alert_engine: AlertEngine::new(1000),
             network_scanner: NetworkScanner::new(),
             networks_scanner: NetworksScanner::new(None), // primary_ip set after first scan
+            servers_scanner: ServersScanner::new(),
             firewall_manager: FirewallManager::new(),
             threat_detector: ThreatDetector::new(),
             usage_tracker: UsageTracker::new(),
@@ -229,8 +230,6 @@ impl App {
             networks_sort_column: 0,
             networks_sort_ascending: false,
             bluetooth_expanded: false,
-            traffic_sort_column: None,
-            traffic_sort_ascending: false,
             alert_sort_column: None,
             alert_sort_ascending: false,
             alert_focused_pane: 0,
@@ -509,6 +508,9 @@ impl App {
         if on_devices_tab || self.tick_count % 30 == 0 {
             self.network_scanner.tick();
         }
+
+        // Servers scanner tick — always tick to collect results, scans internally throttled
+        self.servers_scanner.tick();
 
         // Networks scanner tick — only when on Networks tab
         if self.bottom_tab == BottomTab::Networks {
@@ -891,7 +893,7 @@ impl App {
                 match self.bottom_tab {
                     BottomTab::Dashboard => self.handle_dashboard_key(code),
                     BottomTab::Connections => self.handle_connections_key(code),
-                    BottomTab::Traffic => self.handle_traffic_key(code),
+                    BottomTab::Servers => self.handle_servers_key(code),
                     BottomTab::Packets => self.handle_packets_key(code),
                     BottomTab::Topology => self.handle_topology_key(code),
                     BottomTab::Alerts => self.handle_alerts_key(code),
@@ -914,26 +916,41 @@ impl App {
                 let selected = self.conn_scroll.min(total - 1);
                 filtered.get(selected).map(|c| DetailKind::Connection((*c).clone()))
             }
-            BottomTab::Traffic => {
-                let tracker = &self.traffic_tracker;
-                let filtered: Vec<_> = tracker.filtered_log();
-                let filtered: Vec<_> = if tracker.hide_localhost {
-                    filtered.into_iter().filter(|e| {
-                        !e.local_addr.is_loopback()
-                            && !e.remote_addr.map(|a| a.is_loopback()).unwrap_or(false)
-                    }).collect()
+            BottomTab::Servers => {
+                let filtered = self.servers_scanner.filtered_servers();
+                if filtered.is_empty() { return; }
+                let selected = self.servers_scanner.scroll_offset.min(filtered.len() - 1);
+                if let Some(s) = filtered.get(selected) {
+                    let active = self.connections.iter()
+                        .filter(|c| c.local_port == s.port && !matches!(c.state.as_ref(), Some(TcpState::Listen)))
+                        .count() as u32;
+                    let has_tls = s.details.contains("TLS: yes");
+                    Some(DetailKind::Server {
+                        kind_label: s.server_kind.label().to_string(),
+                        kind_icon: s.server_kind.icon().to_string(),
+                        category: s.server_kind.category().label().to_string(),
+                        port: s.port,
+                        proto: s.proto.label().to_string(),
+                        bind_addr: s.bind_addr.to_string(),
+                        pid: s.pid,
+                        process_name: s.process_name.clone(),
+                        exe_path: s.exe_path.clone(),
+                        cmdline: s.cmdline.clone(),
+                        version: s.version.clone().unwrap_or_default(),
+                        http_title: s.http_title.clone().unwrap_or_default(),
+                        banner: s.banner.clone().unwrap_or_default(),
+                        response_headers: s.response_headers.clone(),
+                        active_connections: active,
+                        first_seen: s.first_seen.format("%H:%M:%S").to_string(),
+                        is_responsive: s.is_responsive,
+                        tls_detected: has_tls,
+                        details: s.details.clone(),
+                        category_color: s.server_kind.category().color(),
+                        detected_techs: s.detected_techs.iter().map(|t| (t.name.clone(), t.category.clone(), t.version.clone())).collect(),
+                    })
                 } else {
-                    filtered
-                };
-                let total = filtered.len();
-                if total == 0 { return; }
-                // scroll_offset 0 = newest entry (end of vec when reversed)
-                let idx = if tracker.auto_scroll || tracker.scroll_offset == 0 {
-                    total.saturating_sub(1)
-                } else {
-                    total.saturating_sub(1).saturating_sub(tracker.scroll_offset)
-                };
-                filtered.get(idx).map(|e| DetailKind::TrafficEvent((*e).clone()))
+                    None
+                }
             }
             BottomTab::Alerts => {
                 // Open detail for selected alert in focused pane
@@ -1080,21 +1097,27 @@ impl App {
         }
     }
 
-    fn handle_traffic_key(&mut self, code: KeyCode) {
+    fn handle_servers_key(&mut self, code: KeyCode) {
         match code {
-            KeyCode::Char('p') | KeyCode::Char('P') => {
-                self.traffic_tracker.paused = !self.traffic_tracker.paused;
+            KeyCode::Char('s') | KeyCode::Char('S') => {
+                self.servers_scanner.start_scan();
             }
-            KeyCode::Char('c') | KeyCode::Char('C') => {
-                self.traffic_tracker.clear();
+            KeyCode::Char('1') => {
+                self.servers_scanner.sort_column = 0;
+                self.servers_scanner.sort_ascending = !self.servers_scanner.sort_ascending;
             }
-            KeyCode::Char('x') | KeyCode::Char('X') => {
-                self.traffic_tracker.hide_localhost = !self.traffic_tracker.hide_localhost;
+            KeyCode::Char('2') => {
+                self.servers_scanner.sort_column = 1;
+                self.servers_scanner.sort_ascending = !self.servers_scanner.sort_ascending;
             }
-            KeyCode::Backspace => { self.traffic_tracker.filter_text.pop(); }
-            KeyCode::Esc => { self.traffic_tracker.filter_text.clear(); }
-            KeyCode::Char(c) => {
-                self.traffic_tracker.filter_text.push(c);
+            KeyCode::Char('3') => {
+                self.servers_scanner.sort_column = 3;
+                self.servers_scanner.sort_ascending = !self.servers_scanner.sort_ascending;
+            }
+            KeyCode::Backspace => { self.servers_scanner.filter_text.pop(); }
+            KeyCode::Esc => { self.servers_scanner.filter_text.clear(); }
+            KeyCode::Char(c) if !c.is_ascii_digit() => {
+                self.servers_scanner.filter_text.push(c);
             }
             _ => {}
         }
@@ -1378,9 +1401,8 @@ impl App {
             BottomTab::Connections => {
                 self.conn_scroll = self.conn_scroll.saturating_sub(n);
             }
-            BottomTab::Traffic => {
-                self.traffic_tracker.auto_scroll = false;
-                self.traffic_tracker.scroll_offset += n;
+            BottomTab::Servers => {
+                self.servers_scanner.scroll_offset = self.servers_scanner.scroll_offset.saturating_sub(n);
             }
             BottomTab::Alerts => {
                 if let Some((cat, _count)) = self.focused_alert_cat() {
@@ -1412,12 +1434,8 @@ impl App {
             BottomTab::Connections => {
                 self.conn_scroll += n;
             }
-            BottomTab::Traffic => {
-                self.traffic_tracker.scroll_offset =
-                    self.traffic_tracker.scroll_offset.saturating_sub(n);
-                if self.traffic_tracker.scroll_offset == 0 {
-                    self.traffic_tracker.auto_scroll = true;
-                }
+            BottomTab::Servers => {
+                self.servers_scanner.scroll_offset += n;
             }
             BottomTab::Alerts => {
                 if let Some((cat, count)) = self.focused_alert_cat() {
@@ -1447,9 +1465,8 @@ impl App {
     fn scroll_home(&mut self) {
         match self.bottom_tab {
             BottomTab::Connections => self.conn_scroll = 0,
-            BottomTab::Traffic => {
-                self.traffic_tracker.auto_scroll = false;
-                self.traffic_tracker.scroll_offset = self.traffic_tracker.log.len();
+            BottomTab::Servers => {
+                self.servers_scanner.scroll_offset = 0;
             }
             BottomTab::Alerts => {
                 if let Some((cat, _)) = self.focused_alert_cat() {
@@ -1478,9 +1495,8 @@ impl App {
     fn scroll_end(&mut self) {
         match self.bottom_tab {
             BottomTab::Connections => self.conn_scroll = self.connections.len(),
-            BottomTab::Traffic => {
-                self.traffic_tracker.auto_scroll = true;
-                self.traffic_tracker.scroll_offset = 0;
+            BottomTab::Servers => {
+                self.servers_scanner.scroll_offset = self.servers_scanner.servers.len().saturating_sub(1);
             }
             BottomTab::Alerts => {
                 if let Some((cat, count)) = self.focused_alert_cat() {
@@ -1541,7 +1557,7 @@ impl App {
                     let tab_labels: &[(&str, BottomTab)] = &[
                         ("1 Dashboard",   BottomTab::Dashboard),
                         ("2 Connections", BottomTab::Connections),
-                        ("3 Traffic",     BottomTab::Traffic),
+                        ("3 Servers",     BottomTab::Servers),
                         ("4 Packets",     BottomTab::Packets),
                         ("5 Topology",    BottomTab::Topology),
                         ("6 Alerts",      BottomTab::Alerts),
@@ -1635,9 +1651,8 @@ impl App {
                                         }
                                     }
                                 }
-                                BottomTab::Traffic => {
-                                    self.traffic_tracker.auto_scroll = false;
-                                    self.traffic_tracker.scroll_offset = clicked_row;
+                                BottomTab::Servers => {
+                                    self.servers_scanner.scroll_offset = clicked_row;
                                 }
                                 BottomTab::Topology => {
                                     self.topology_scroll = clicked_row;
@@ -1660,7 +1675,7 @@ impl App {
         let header_y = match self.bottom_tab {
             // Most tabs: outer block border at y=15, header at y=16
             BottomTab::Connections | BottomTab::Devices | BottomTab::Networks
-            | BottomTab::Packets | BottomTab::Traffic | BottomTab::Alerts => 16,
+            | BottomTab::Packets | BottomTab::Servers | BottomTab::Alerts => 16,
             // Firewall: border(15) + inner(16) + status(3=16,17,18) + data_plan(4=19,20,21,22)
             //           + table_block_border(23) + header(24)
             BottomTab::Firewall => 24,
@@ -1735,15 +1750,15 @@ impl App {
                     }
                 }
             }
-            BottomTab::Traffic => {
-                // Columns: Time(9), Process(16), Host(Min30), Service(14), Event(9), State(Min14)
-                let col = column_from_x(x, &[9, 16, 0, 14, 9, 0], frame_w);
+            BottomTab::Servers => {
+                // Columns: Kind(15), Port(7), Proto(6), Process(16), Bind(12), Version(10), Conns(6), Status(6), Details(Min)
+                let col = column_from_x(x, &[15, 7, 6, 16, 12, 10, 6, 6, 0], frame_w);
                 if let Some(col) = col {
-                    if self.traffic_sort_column == Some(col) {
-                        self.traffic_sort_ascending = !self.traffic_sort_ascending;
+                    if self.servers_scanner.sort_column == col {
+                        self.servers_scanner.sort_ascending = !self.servers_scanner.sort_ascending;
                     } else {
-                        self.traffic_sort_column = Some(col);
-                        self.traffic_sort_ascending = false;
+                        self.servers_scanner.sort_column = col;
+                        self.servers_scanner.sort_ascending = true;
                     }
                 }
             }

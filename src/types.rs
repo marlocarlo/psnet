@@ -232,7 +232,7 @@ pub struct TrafficEntry {
 pub enum BottomTab {
     Dashboard,
     Connections,
-    Traffic,
+    Servers,
     Packets,
     Topology,
     Alerts,
@@ -245,8 +245,8 @@ impl BottomTab {
     pub fn next(&self) -> Self {
         match self {
             Self::Dashboard => Self::Connections,
-            Self::Connections => Self::Traffic,
-            Self::Traffic => Self::Packets,
+            Self::Connections => Self::Servers,
+            Self::Servers => Self::Packets,
             Self::Packets => Self::Topology,
             Self::Topology => Self::Alerts,
             Self::Alerts => Self::Firewall,
@@ -260,8 +260,8 @@ impl BottomTab {
         match self {
             Self::Dashboard => Self::Networks,
             Self::Connections => Self::Dashboard,
-            Self::Traffic => Self::Connections,
-            Self::Packets => Self::Traffic,
+            Self::Servers => Self::Connections,
+            Self::Packets => Self::Servers,
             Self::Topology => Self::Packets,
             Self::Alerts => Self::Topology,
             Self::Firewall => Self::Alerts,
@@ -274,7 +274,7 @@ impl BottomTab {
         match self {
             Self::Dashboard => "Dashboard",
             Self::Connections => "Connections",
-            Self::Traffic => "Traffic",
+            Self::Servers => "Servers",
             Self::Packets => "Packets",
             Self::Topology => "Topology",
             Self::Alerts => "Alerts",
@@ -288,7 +288,7 @@ impl BottomTab {
         match self {
             Self::Dashboard => 0,
             Self::Connections => 1,
-            Self::Traffic => 2,
+            Self::Servers => 2,
             Self::Packets => 3,
             Self::Topology => 4,
             Self::Alerts => 5,
@@ -302,7 +302,7 @@ impl BottomTab {
         match i {
             0 => Some(Self::Dashboard),
             1 => Some(Self::Connections),
-            2 => Some(Self::Traffic),
+            2 => Some(Self::Servers),
             3 => Some(Self::Packets),
             4 => Some(Self::Topology),
             5 => Some(Self::Alerts),
@@ -1017,4 +1017,27 @@ pub enum DetailKind {
     Alert(Alert),
     Device(LanDevice),
     FirewallApp(FirewallAppDetail),
+    Server {
+        kind_label: String,
+        kind_icon: String,
+        category: String,
+        port: u16,
+        proto: String,
+        bind_addr: String,
+        pid: u32,
+        process_name: String,
+        exe_path: String,
+        cmdline: String,
+        version: String,
+        http_title: String,
+        banner: String,
+        response_headers: Vec<(String, String)>,
+        active_connections: u32,
+        first_seen: String,
+        is_responsive: bool,
+        tls_detected: bool,
+        details: String,
+        category_color: (u8, u8, u8),
+        detected_techs: Vec<(String, String, String)>, // (name, category, version)
+    },
 }

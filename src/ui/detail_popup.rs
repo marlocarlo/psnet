@@ -41,6 +41,11 @@ pub fn draw_detail_popup(f: &mut Frame, app: &App) {
             f.render_widget(Clear, area);
             draw_firewall_app_detail(f, area, detail, app);
         }
+        DetailKind::Server { .. } => {
+            let area = centered_rect(75, 85, f.area());
+            f.render_widget(Clear, area);
+            draw_server_detail(f, area, detail);
+        }
     }
 }
 
@@ -464,6 +469,134 @@ fn draw_firewall_app_detail(f: &mut Frame, area: Rect, detail: &crate::types::Fi
         Style::default().fg(Color::Rgb(65, 80, 110)).add_modifier(Modifier::ITALIC),
     )));
 
+    render_popup(f, area, lines);
+}
+
+// ─── Server detail ────────────────────────────────────────────────────────────
+
+fn draw_server_detail(f: &mut Frame, area: Rect, detail: &DetailKind) {
+    let DetailKind::Server {
+        kind_label, kind_icon, category, port, proto, bind_addr,
+        pid, process_name, exe_path, cmdline, version, http_title,
+        banner, response_headers, active_connections, first_seen,
+        is_responsive, tls_detected, details: _, category_color,
+        detected_techs,
+    } = detail else { return };
+
+    let cat_color = Color::Rgb(category_color.0, category_color.1, category_color.2);
+
+    let mut lines = vec![
+        Line::from(vec![
+            Span::styled(
+                format!("  {} {} ", kind_icon, kind_label),
+                Style::default().fg(Color::Rgb(200, 220, 255)).add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(
+                format!(" {} ", category),
+                Style::default().fg(cat_color).add_modifier(Modifier::BOLD),
+            ),
+        ]),
+        Line::from(Span::styled(
+            "  \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}",
+            Style::default().fg(Color::Rgb(35, 50, 80)),
+        )),
+        Line::from(""),
+    ];
+
+    // ─── Network ───
+    lines.push(section_divider("Network"));
+    lines.push(row("Port",         format!("{}", port),         Color::Rgb(100, 220, 255)));
+    lines.push(row("Protocol",     proto.clone(),               Color::Rgb(100, 220, 255)));
+    lines.push(row("Bind Address", bind_addr.clone(),           Color::Rgb(150, 160, 190)));
+
+    let (status_str, status_color) = if *is_responsive {
+        ("\u{25cf} UP".to_string(), Color::Rgb(80, 200, 120))
+    } else {
+        ("\u{25cb} DOWN".to_string(), Color::Rgb(100, 100, 120))
+    };
+    lines.push(row("Status",      status_str,                  status_color));
+
+    if *tls_detected {
+        lines.push(row("TLS",     "\u{1f512} Yes".to_string(), Color::Rgb(80, 200, 120)));
+    } else {
+        lines.push(row("TLS",     "No".to_string(),            Color::Rgb(120, 130, 160)));
+    }
+
+    // ─── Process ───
+    lines.push(section_divider("Process"));
+    lines.push(row("PID",          format!("{}", pid),          Color::Rgb(120, 130, 160)));
+    lines.push(row("Process Name", process_name.clone(),        Color::Rgb(130, 200, 140)));
+    lines.push(row("Executable",   exe_path.clone(),            Color::Rgb(170, 185, 210)));
+
+    let cmd_display = if cmdline.len() > 100 {
+        format!("{}...", &cmdline[..100])
+    } else {
+        cmdline.clone()
+    };
+    lines.push(row("Command Line", cmd_display,                 Color::Rgb(150, 160, 190)));
+
+    // ─── Detection ───
+    lines.push(section_divider("Detection"));
+    lines.push(row("Version",      if version.is_empty() { "\u{2014}".to_string() } else { version.clone() },
+        Color::Rgb(200, 180, 80)));
+
+    if !http_title.is_empty() {
+        lines.push(row("HTTP Title",  http_title.clone(),       Color::Rgb(180, 200, 120)));
+    }
+
+    if !banner.is_empty() {
+        let banner_display = if banner.len() > 80 {
+            format!("{}...", &banner[..80])
+        } else {
+            banner.clone()
+        };
+        lines.push(row("Banner",      banner_display,           Color::Rgb(180, 170, 140)));
+    }
+
+    // ─── HTTP Headers ───
+    if !response_headers.is_empty() {
+        lines.push(section_divider("HTTP Headers"));
+        for (key, value) in response_headers {
+            lines.push(Line::from(vec![
+                Span::styled(
+                    format!("  {:<22}", key),
+                    Style::default().fg(Color::Rgb(100, 140, 180)).add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    value.clone(),
+                    Style::default().fg(Color::Rgb(180, 190, 200)),
+                ),
+            ]));
+        }
+    }
+
+    // ─── Detected Technologies (Wappalyzer) ───
+    if !detected_techs.is_empty() {
+        lines.push(section_divider("Detected Technologies"));
+        for (name, cat, ver) in detected_techs {
+            let display = if ver.is_empty() {
+                format!("{} [{}]", name, cat)
+            } else {
+                format!("{} {} [{}]", name, ver, cat)
+            };
+            lines.push(Line::from(vec![
+                Span::styled("  \u{25B8} ", Style::default().fg(Color::Rgb(80, 200, 120))),
+                Span::styled(
+                    display,
+                    Style::default().fg(Color::Rgb(180, 160, 240)),
+                ),
+            ]));
+        }
+    }
+
+    // ─── Stats ───
+    lines.push(section_divider("Stats"));
+    lines.push(row("Active Conns", format!("{}", active_connections),
+        if *active_connections > 0 { Color::Rgb(80, 200, 120) } else { Color::Rgb(100, 110, 130) }));
+    lines.push(row("First Seen",   first_seen.clone(),          Color::Rgb(120, 130, 160)));
+
+    lines.push(Line::from(""));
+    lines.push(dismiss_line());
     render_popup(f, area, lines);
 }
 

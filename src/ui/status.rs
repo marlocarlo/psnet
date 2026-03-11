@@ -12,7 +12,7 @@ pub fn draw_tab_menu(f: &mut Frame, area: Rect, app: &App) {
     let tabs = [
         BottomTab::Dashboard,
         BottomTab::Connections,
-        BottomTab::Traffic,
+        BottomTab::Servers,
         BottomTab::Packets,
         BottomTab::Topology,
         BottomTab::Alerts,
@@ -84,10 +84,9 @@ pub fn draw_key_hints(f: &mut Frame, area: Rect, app: &App) {
             key_span("f", "Filter"),
             key_span("Esc", "Clear"),
         ],
-        BottomTab::Traffic => vec![
-            key_span("p", &format!("{}", if app.traffic_tracker.paused { "Resume" } else { "Pause" })),
-            key_span("c", "Clear"),
-            key_span("x", &format!("{}", if app.traffic_tracker.hide_localhost { "Show Local" } else { "Hide Local" })),
+        BottomTab::Servers => vec![
+            key_span("s", "Scan Now"),
+            key_span("1-3", "Sort"),
             key_span("f", "Filter"),
             key_span("Esc", "Clear"),
         ],

@@ -1,0 +1,2100 @@
+# Wappalyzer HTTP Header Detection Patterns
+# Source: https://github.com/dochne/wappalyzer
+# Compiled: 2026-03-11
+# Format: TECH / HEADER key=pattern / DESC / CATS
+# Pattern syntax: regex with \;version:\1 for version extraction
+
+# === A ===
+
+TECH: AOLserver
+  HEADER: Server = AOLserver/?([\d.]+)?\;version:\1
+  DESC: NONE
+  CATS: 22
+---
+TECH: Aegea
+  HEADER: X-Powered-By = ^(?:E2\s)?Aegea\s(?:v)?([\d\.]+)\;version:\1
+  DESC: a blog engine created by Ilya Birman
+  CATS: 11
+---
+TECH: Adobe ColdFusion
+  HEADER: Cookie = CFTOKEN=
+  DESC: NONE
+  CATS: 18
+---
+TECH: Acquia Cloud Platform
+  HEADER: X-AH-Environment = ^(next)?.*$\;version:\1?Next:
+  DESC: a Drupal-tuned application lifecycle management suite
+  CATS: 62
+---
+TECH: Acquia Cloud Platform CDN
+  HEADER: via = Acquia Platform CDN (.+)\;version:\1
+  DESC: NONE
+  CATS: 31
+---
+TECH: Acquia Content Hub
+  HEADER: content-security-policy = content-hub\.acquia\.com
+  DESC: a cloud-based, centralized content distribution service
+  CATS: 19
+---
+TECH: AcuityAds
+  HEADER: Content-Security-Policy = \.acuityplatform\.com
+  DESC: automatic solutions to marketers for campaigns
+  CATS: 36
+---
+TECH: Adnegah
+  HEADER: X-Advertising-By = adnegah\.net
+  DESC: a digital marketing and internet advertising agency
+  CATS: 36
+---
+TECH: Adobe Dynamic Media Classic
+  HEADER: Content-Security-Policy = \.scene7\.com
+  DESC: enables customers to manage and deliver dynamic rich media
+  CATS: 95
+---
+TECH: Akaunting
+  HEADER: X-Akaunting = ^Free Accounting Software$
+  DESC: a free and online accounting software
+  CATS: 55
+---
+TECH: Akka HTTP
+  HEADER: Server = akka-http(?:/([\d.]+))?\;version:\1
+  DESC: NONE
+  CATS: 18,22
+---
+TECH: Akamai
+  HEADER: X-Akamai-Transformed =
+  HEADER: X-EdgeConnect-MidMile-RTT =
+  HEADER: X-EdgeConnect-Origin-MEX-Latency =
+  DESC: global content delivery network services provider
+  CATS: 31
+---
+TECH: Algolia
+  HEADER: Content-Security-Policy = \.algolia
+  DESC: hosted web search product delivering real-time results
+  CATS: 29
+---
+TECH: Alibaba Cloud Object Storage Service
+  HEADER: x-oss-object-type =
+  HEADER: x-oss-request-id =
+  HEADER: x-oss-storage-class =
+  DESC: cloud-based object storage service
+  CATS: 63
+---
+TECH: Alpine Linux
+  HEADER: X-Powered-By = Alpine
+  DESC: security-oriented, lightweight Linux distribution
+  CATS: 28
+---
+TECH: Amber
+  HEADER: X-Powered-By = ^Amber$
+  DESC: NONE
+  CATS: 18,22
+---
+TECH: Amazon CloudFront
+  HEADER: Via = \(CloudFront\)$
+  HEADER: X-Amz-Cf-Id =
+  DESC: fast content delivery network service
+  CATS: 31
+---
+TECH: Amazon EC2
+  HEADER: Server = \(Amazon\)
+  DESC: allows users to rent virtual computers
+  CATS: 22
+---
+TECH: Amazon ECS
+  HEADER: Server = ^ECS
+  DESC: NONE
+  CATS: 63
+---
+TECH: Amazon ELB
+  HEADER: Server = awselb
+  DESC: network load balancer service
+  CATS: 65
+---
+TECH: Amazon Web Services
+  HEADER: x-amz-delete-marker =
+  HEADER: x-amz-err-code =
+  HEADER: x-amz-err-message =
+  HEADER: x-amz-id-2 =
+  HEADER: x-amz-req-time-micros =
+  HEADER: x-amz-request-id =
+  HEADER: x-amz-rid =
+  HEADER: x-amz-version-id =
+  DESC: comprehensive cloud services platform
+  CATS: 62
+---
+TECH: Apache APISIX
+  HEADER: X-APISIX-Upstream-Status =
+  HEADER: server = ^APISIX(?:/([\d\.]+))?$\;version:\1
+  DESC: open-source, cloud-native API gateway
+  CATS: 22
+---
+TECH: Apache HTTP Server
+  HEADER: Server = (?:Apache(?:$|/([\d.]+)|[^/-])|(?:^|\b)HTTPD)\;version:\1
+  DESC: free and open-source cross-platform web server
+  CATS: 22
+---
+TECH: Apache Tomcat
+  HEADER: Server = ^Apache-Coyote
+  HEADER: X-Powered-By = \bTomcat\b(?:-([\d.]+))?\;version:\1
+  DESC: open-source implementation of Java Servlet
+  CATS: 22
+---
+TECH: Apache Traffic Server
+  HEADER: Server = ATS/?([\d.]+)?\;version:\1
+  DESC: open-source caching and proxying server
+  CATS: 22
+---
+TECH: ApexPages
+  HEADER: X-Powered-By = Salesforce\.com ApexPages
+  DESC: NONE
+  CATS: 51
+---
+
+# === B ===
+
+TECH: Banshee
+  HEADER: X-Powered-By = Banshee PHP framework v([\d\.]+)\;version:\1
+  DESC: PHP website framework with a main focus on security
+  CATS: 1,18
+---
+TECH: Basic
+  HEADER: WWW-Authenticate = ^Basic
+  DESC: An authentication method used by some web servers
+  CATS: 16
+---
+TECH: Blade
+  HEADER: X-Powered-By = blade-([\w.]+)?\;version:\1
+  DESC: NONE
+  CATS: 18,22
+---
+TECH: Blitz
+  HEADER: X-Powered-By = ^Blitz$
+  DESC: Intelligent static page caching for Craft CMS
+  CATS: 92
+---
+TECH: Blitz.js
+  HEADER: X-Powered-By = ^Blitz\.js?([0-9.]+)?\;version:\1
+  DESC: Web development framework using Next.js and React
+  CATS: 18
+---
+TECH: Bluehost
+  HEADER: host-header = c2hhcmVkLmJsdWVob3N0LmNvbQ==
+  DESC: Large web host known for WordPress expertise
+  CATS: 88
+---
+TECH: Brightspot
+  HEADER: X-Powered-By = ^Brightspot$
+  DESC: NONE
+  CATS: 1
+---
+TECH: BoidCMS
+  HEADER: X-Powered-By = BoidCMS
+  DESC: Free open-source flat file CMS using PHP and JSON
+  CATS: 1
+---
+TECH: Botble CMS
+  HEADER: CMS-Version = ^(.+)$\;version:\1\;confidence:0
+  DESC: NONE
+  CATS: 1,6
+---
+TECH: Brimble
+  HEADER: server = ^Brimble$
+  HEADER: x-brimble-id =
+  DESC: Cloud platform for deploying frontend web applications
+  CATS: 62
+---
+TECH: Bunny
+  HEADER: Server = ^BunnyCDN
+  DESC: NONE
+  CATS: 31
+---
+
+# === C ===
+
+TECH: CDN77
+  HEADER: Server = ^CDN77-Turbo$
+  DESC: CDN77 is a content delivery network (CDN).
+  CATS: 31
+---
+TECH: CacheFly
+  HEADER: Server = ^CFS
+  HEADER: X-CF1 =
+  HEADER: X-CF2 =
+  DESC: CacheFly is a content delivery network (CDN) which offers CDN service that relies solely on IP anycast for routing, rather than DNS based global load balancing.
+  CATS: 31
+---
+TECH: Caddy
+  HEADER: Server = ^Caddy$
+  DESC: NONE
+  CATS: 22
+---
+TECH: CentOS
+  HEADER: Server = CentOS
+  HEADER: X-Powered-By = CentOS
+  DESC: CentOS is a Linux distribution that provides a free, community-supported computing platform functionally compatible with its upstream source, Red Hat Enterprise Linux (RHEL).
+  CATS: 28
+---
+TECH: Centminmod
+  HEADER: X-Powered-By = centminmod
+  DESC: NONE
+  CATS: 22
+---
+TECH: Cendyn
+  HEADER: x-powered-by = ^NextGuest CMS
+  DESC: Cendyn (formerly NextGuest) is a hospitality focused content management system.
+  CATS: 1
+---
+TECH: Chamilo
+  HEADER: X-Powered-By = Chamilo ([\d.]+)\;version:\1
+  DESC: Chamilo is an open-source learning management and collaboration system.
+  CATS: 21
+---
+TECH: Cherokee
+  HEADER: Server = ^Cherokee(?:/([\d.]+))?\;version:\1
+  DESC: NONE
+  CATS: 22
+---
+TECH: CherryPy
+  HEADER: Server = CherryPy(?:/([\d.]+))?\;version:\1
+  DESC: CherryPy is an object-oriented web application framework using the Python programming language.
+  CATS: 22
+---
+TECH: Catberry.js
+  HEADER: X-Powered-By = Catberry
+  DESC: NONE
+  CATS: 12,18
+---
+TECH: CactiveCloud
+  HEADER: server = ^Cactive$
+  DESC: CactiveCloud is a freemium based cloud provider and web server for static deployments of websites with HTML builds and serverless functions.
+  CATS: 22
+---
+TECH: Canny
+  HEADER: Content-Security-Policy = //canny\.io
+  DESC: Canny is a cloud-based solution that helps small to large businesses collect, analyse, prioritise and track user feedback to make informed product decisions.
+  CATS: 13
+---
+TECH: Carrot quest
+  HEADER: Content-Security-Policy = \.carrotquest\.app
+  DESC: Carrot quest is a customer engagement and communication platform that aids businesses in improving interactions with users and customers through targeted messaging, in-app messaging, live chat, email campaigns, and user behavior tracking.
+  CATS: 10,52
+---
+TECH: Centra
+  HEADER: Content-Security-Policy = \.centra(?:cdn)?\.(?:com|net)
+  DESC: Centra is the headless ecommerce platform.
+  CATS: 6
+---
+TECH: Chabokan
+  HEADER: ch-powered-by = Chabokan\s\(chabokan\.net\)
+  DESC: Chabokan is a cloud services provider, offering a wide range of incorporated cloud services including Cloud Object Storage, DBaaS, BaaS, and PaaS.
+  CATS: 62
+---
+TECH: Cloudflare
+  HEADER: Server = ^cloudflare$
+  HEADER: cf-cache-status =
+  HEADER: cf-ray =
+  DESC: Cloudflare is a web-infrastructure and website-security company, providing content-delivery-network services, DDoS mitigation, Internet security, and distributed domain-name-server services.
+  CATS: 31
+---
+TECH: Cloudera
+  HEADER: Server = cloudera
+  DESC: Cloudera is a software platform for data engineering, data warehousing, machine learning and analytics that runs in the cloud or on-premises.
+  CATS: 34
+---
+TECH: Cloudways
+  HEADER: cache-provider = CLOUDWAYS-CACHE-DE
+  DESC: Cloudways offers managed cloud-hosting services for WordPress sites on a cloud server where multiple copies of your content will be replicated throughout your chosen data center.
+  CATS: 62
+---
+TECH: Combahton FlowShield
+  HEADER: Server = antiddos/flowproxy
+  HEADER: X-Flowproxy-Author =
+  DESC: Combahton FlowShield is a network security solution designed to protect networks and servers from various cyber threats, including DDoS attacks, malware, and other types of malicious traffic.
+  CATS: 16
+---
+TECH: Commerce Server
+  HEADER: COMMERCE-SERVER-SOFTWARE =
+  DESC: NONE
+  CATS: 6
+---
+TECH: Commerce.js
+  HEADER: Chec-Version = .*
+  HEADER: X-Powered-By = Commerce.js
+  DESC: Commerce.js is an API-first ecommerce platform for developers and businesses.
+  CATS: 6
+---
+TECH: Ckan
+  HEADER: Access-Control-Allow-Headers = X-CKAN-API-KEY
+  HEADER: Link = <http://ckan\.org/>; rel=shortlink
+  DESC: NONE
+  CATS: 1
+---
+TECH: Clockwork
+  HEADER: x-clockwork-version = ^([\d\.]+)$\;version:\1
+  DESC: Clockwork is a development tool for PHP available right in your browser.
+  CATS: 47
+---
+TECH: Contentful
+  HEADER: x-contentful-request-id =
+  DESC: Contentful is an API-first content management platform to create, manage and publish content on any digital channel.
+  CATS: 1
+---
+TECH: CPG Dragonfly
+  HEADER: X-Powered-By = ^Dragonfly CMS
+  DESC: NONE
+  CATS: 1
+---
+TECH: Canvas LMS
+  HEADER: x-canvas-meta = login/canvas
+  DESC: Canvas LMS is a web-based learning management system, or LMS.
+  CATS: 21
+---
+
+# === D ===
+
+TECH: DDoS-Guard
+  HEADER: server = ^ddos-guard$
+  DESC: DDoS-Guard is a Russian Internet infrastructure company which provides DDoS protection, content delivery network services, and web hosting services.
+  CATS: 16
+---
+TECH: DERAK.CLOUD
+  HEADER: Derak-Umbrage =
+  HEADER: Server = ^DERAK\.CLOUD$
+  DESC: NONE
+  CATS: 31
+---
+TECH: DNN
+  HEADER: Cookie = dnn_IsMobile=
+  HEADER: DNNOutputCache =
+  HEADER: X-Compressed-By = DotNetNuke
+  DESC: NONE
+  CATS: 1
+---
+TECH: Dancer
+  HEADER: Server = Perl Dancer ([\d.]+)\;version:\1
+  HEADER: X-Powered-By = Perl Dancer ([\d.]+)\;version:\1
+  DESC: NONE
+  CATS: 18
+---
+TECH: Danneo CMS
+  HEADER: X-Powered-By = CMS Danneo ([\d.]+)\;version:\1
+  DESC: NONE
+  CATS: 1
+---
+TECH: Daphne
+  HEADER: Server = Daphne
+  DESC: NONE
+  CATS: 22
+---
+TECH: Darwin
+  HEADER: Server = Darwin
+  HEADER: X-Powered-By = Darwin
+  DESC: Darwin is the open-source operating system from Apple that forms the basis for macOS.
+  CATS: 28
+---
+TECH: DataDome
+  HEADER: Server = ^DataDome$
+  HEADER: X-DataDome =
+  HEADER: X-DataDome-CID =
+  DESC: DataDome is a cybersecurity platform specializing in bot protection and mitigation for websites and applications.
+  CATS: 16
+---
+TECH: Debian
+  HEADER: Server = Debian
+  HEADER: X-Powered-By = (?:Debian|dotdeb|(potato|woody|sarge|etch|lenny|squeeze|wheezy|jessie|stretch|buster|sid))\;version:\1
+  DESC: Debian is a Linux software which is a free open-source software.
+  CATS: 28
+---
+TECH: DiamondCDN
+  HEADER: server = ^DiamondCDN$
+  DESC: DiamondCDN is a CDN with DDoS mitigation for free.
+  CATS: 31
+---
+TECH: DirectAdmin
+  HEADER: Server = DirectAdmin Daemon v([\d.]+)\;version:\1
+  DESC: DirectAdmin is a graphical web-based web hosting control panel designed to make administration of websites easier.
+  CATS: 9
+---
+TECH: Directus
+  HEADER: x-powered-by = ^Directus$
+  DESC: Directus is a free and open-source headless CMS framework for managing custom SQL-based databases.
+  CATS: 1
+---
+TECH: Distributor
+  HEADER: x-distributor = yes
+  DESC: Distributor is a WordPress plugin that helps distribute and reuse content across your websites.
+  CATS: 87
+---
+TECH: Deno Deploy
+  HEADER: server = ^deno/*
+  DESC: Deno Deploy is a distributed system that runs JavaScript, TypeScript, and WebAssembly at the edge, worldwide.
+  CATS: 62
+---
+TECH: Deta
+  HEADER: Server = ^Deta$
+  DESC: Deta is a cloud platform for building and deploying apps.
+  CATS: 62
+---
+TECH: DatoCMS
+  HEADER: content-security-policy = \.datocms-assets\.com
+  DESC: DatoCMS is a cloud-based headless Content as a service (CaaS) platform created to work with static websites, mobile apps and server-side applications of any kind.
+  CATS: 1
+---
+
+# === E ===
+
+TECH: ELOG HTTP
+  HEADER: Server = ELOG HTTP ?([\d.-]+)?\;version:\1
+  DESC: NONE
+  CATS: 22
+---
+TECH: EasyEngine
+  HEADER: x-powered-by = ^EasyEngine (.*)$\;version:\1
+  DESC: command-line tool for the Nginx web servers to manage WordPress sites
+  CATS: 47,9
+---
+TECH: Eggplant
+  HEADER: content-security-policy = \.eggplant\.cloud
+  DESC: software testing and monitoring company
+  CATS: 78
+---
+TECH: ElasticPress
+  HEADER: x-elasticpress-query =
+  DESC: hosting service that connects your WordPress site to search hosting
+  CATS: 87
+---
+TECH: Elcodi
+  HEADER: X-Elcodi =
+  DESC: NONE
+  CATS: 6
+---
+TECH: Elementor Cloud
+  HEADER: x-powered-by = Elementor Cloud
+  DESC: platform for creating and hosting WordPress websites with Elementor
+  CATS: 88
+---
+TECH: Endurance Page Cache
+  HEADER: x-endurance-cache-level =
+  DESC: adds basic file-based caching to WordPress
+  CATS: 87,23
+---
+TECH: Engintron
+  HEADER: X-Server-Powered-By = ^Engintron$
+  DESC: plugin that integrates Nginx to cPanel/WHM server
+  CATS: 33
+---
+TECH: Ensi
+  HEADER: X-Ensi-Platform =
+  DESC: open source ecommerce platform based on service oriented architecture
+  CATS: 6
+---
+TECH: Envoy
+  HEADER: Server = ^envoy$
+  HEADER: x-envoy-upstream-service-time =
+  DESC: open-source edge and service proxy, designed for cloud-native applications
+  CATS: 64
+---
+TECH: Erlang
+  HEADER: Server = Erlang( OTP/(?:[\d.ABR-]+))?\;version:\1
+  DESC: concurrent, functional programming language, and garbage-collected runtime
+  CATS: 27
+---
+TECH: ePages
+  HEADER: X-epages-RequestId =
+  DESC: provider of cloud-based online shop solutions
+  CATS: 6
+---
+TECH: Empretienda
+  HEADER: set-cookie = ^EMPRETIENDA_SESSION
+  DESC: platform that allows you to create and manage your own online store
+  CATS: 6
+---
+TECH: EmbedThis Appweb
+  HEADER: Server = Mbedthis-Appweb(?:/([\d.]+))?\;version:\1
+  DESC: NONE
+  CATS: 22
+---
+TECH: eZ Publish
+  HEADER: X-Powered-By = ^eZ Publish
+  DESC: NONE
+  CATS: 1,6
+---
+TECH: enduro.js
+  HEADER: X-Powered-By = ^enduro\.js
+  DESC: NONE
+  CATS: 1
+---
+
+# === F ===
+
+TECH: F5 BigIP
+  HEADER: server = ^big-?ip$
+  DESC: F5's BIG-IP is a family of products covering software and hardware designed around application availability, access control, and security solutions.
+  CATS: 64
+---
+TECH: Fat-Free Framework
+  HEADER: X-Powered-By = ^Fat-Free Framework$
+  DESC: Fat-Free Framework is a PHP web framework
+  CATS: 18
+---
+TECH: Fedora
+  HEADER: Server = Fedora
+  DESC: Fedora is a free open-source Linux-based operating system.
+  CATS: 28
+---
+TECH: Fireblade
+  HEADER: Server = fbs
+  DESC: NONE
+  CATS: 31
+---
+TECH: Fing
+  HEADER: server = ^Fing
+  DESC: Fing is a cloud service to deploy and manage applications without infrastructure concerns.
+  CATS: 62
+---
+TECH: Fastly
+  HEADER: Fastly-Debug-Digest =
+  HEADER: Vary = Fastly-SSL
+  HEADER: X-Fastly-Request-ID =
+  HEADER: server = Fastly
+  HEADER: x-fastly-origin =
+  HEADER: x-fastly-request-id =
+  HEADER: x-via-fastly =
+  DESC: Fastly is a cloud computing services provider offering CDN and security services.
+  CATS: 31
+---
+TECH: Firebase
+  HEADER: vary = x-fh-requested-host
+  DESC: Firebase is a Google-backed application development software for iOS, Android and Web apps.
+  CATS: 34,47
+---
+TECH: Fly.io
+  HEADER: fly-request-id =
+  HEADER: server = ^Fly/[\w]+\s(.*)$
+  HEADER: via = ^.*\sfly\.io$
+  DESC: Fly is a platform for running full stack apps and databases.
+  CATS: 62
+---
+TECH: Flywheel
+  HEADER: x-fw-hash =
+  HEADER: x-fw-serve =
+  HEADER: x-fw-server = ^Flywheel(?:/([\d.]+))?\;version:\1
+  HEADER: x-fw-static =
+  HEADER: x-fw-type =
+  DESC: NONE
+  CATS: 62,88
+---
+TECH: Flask
+  HEADER: Server = Werkzeug/?([\d\.]+)?\;version:\1
+  DESC: Flask is a Python micro web framework for rapidly constructing web applications.
+  CATS: 18,22
+---
+TECH: FlexCMP
+  HEADER: X-Flex-Lang =
+  HEADER: X-Powered-By = FlexCMP.+\[v\. ([\d.]+)\;version:\1
+  DESC: NONE
+  CATS: 1
+---
+TECH: Frontastic
+  HEADER: frontastic-request-id =
+  DESC: Frontastic is a Commerce Frontend Platform uniting business and development teams.
+  CATS: 51
+---
+TECH: FreeBSD
+  HEADER: Server = FreeBSD(?: ([\d.]+))?\;version:\1
+  DESC: FreeBSD is a free and open-source Unix-like operating system.
+  CATS: 28
+---
+
+# === G ===
+
+TECH: Gentoo
+  HEADER: X-Powered-By = gentoo
+  DESC: Gentoo is a free operating system based on Linux.
+  CATS: 28
+---
+TECH: GlassFish
+  HEADER: Server = GlassFish(?: Server)?(?: Open Source Edition)?(?: ?/?([\d.]+))?\;version:\1
+  DESC: GlassFish is a Java application server.
+  CATS: 22
+---
+TECH: GoDaddy Online Store
+  HEADER: via = ^1\.1 mysimplestore\.com$
+  DESC: NONE
+  CATS: 6
+---
+TECH: GoAhead
+  HEADER: Server = GoAhead
+  DESC: NONE
+  CATS: 22
+---
+TECH: GoAnywhere
+  HEADER: Server = goanywhere
+  DESC: GoAnywhere by HelpSystems is a Managed File Transfer system.
+  CATS: 19
+---
+TECH: GoCache
+  HEADER: Server = ^gocache$
+  HEADER: X-GoCache-CacheStatus =
+  DESC: GoCache is an in-memory key-value store/cache.
+  CATS: 31
+---
+TECH: GoDaddy
+  HEADER: NS = \.domaincontrol\.com
+  HEADER: SOA = \.domaincontrol\.com
+  DESC: GoDaddy is used as a web host and domain registrar.
+  CATS: 88
+---
+TECH: Google Cloud CDN
+  HEADER: Via = ^1\.1 google$
+  DESC: Cloud CDN uses Google's global edge network.
+  CATS: 31
+---
+TECH: Google Cloud Storage
+  HEADER: x-goog-storage-class = ^\w+$
+  DESC: Google Cloud Storage allows world-wide data storage.
+  CATS: 19
+---
+TECH: Google Cloud Trace
+  HEADER: x-cloud-trace-context =
+  DESC: Google Cloud Trace collects latency data.
+  CATS: 92
+---
+TECH: Google PageSpeed
+  HEADER: X-Mod-Pagespeed = ([\d.]+)\;version:\1
+  HEADER: X-Page-Speed = (.+)\;version:\1
+  DESC: Google PageSpeed tools aid website performance.
+  CATS: 23,33,92
+---
+TECH: GotiPath
+  HEADER: X-Cache = \.swiftserve\.com
+  DESC: GotiPath is a content delivery network.
+  CATS: 31
+---
+TECH: GuideIT
+  HEADER: platform = ^GuideIT$
+  DESC: GuideIT is a cloud hosting provider.
+  CATS: 88
+---
+TECH: genezio
+  HEADER: X-Powered-By = ^genezio$
+  DESC: Genezio facilitates app logic focus and code generation.
+  CATS: 47
+---
+TECH: gunicorn
+  HEADER: Server = gunicorn(?:/([\d.]+))?\;version:\1
+  DESC: NONE
+  CATS: 22
+---
+
+# === H ===
+
+TECH: H2O
+  HEADER: Server = ^h2o(?:/)?([\d\.]+)?\;version:\1
+  DESC: H2O is a fast and secure HTTP/2 server written in C by Kazuho Oku.
+  CATS: 22
+---
+TECH: HCL Domino
+  HEADER: Server = ^Lotus-Domino$
+  DESC: HCL Domino, formerly called IBM Domino (1995) and Lotus Domino (1989), is an enterprise server application development platform.
+  CATS: 22
+---
+TECH: HHVM
+  HEADER: X-Powered-By = HHVM/?([\d.]+)?\;version:\1
+  DESC: NONE
+  CATS: 22
+---
+TECH: HP Compact Server
+  HEADER: Server = HP_Compact_Server(?:/([\d.]+))?\;version:\1
+  DESC: NONE
+  CATS: 22
+---
+TECH: HP iLO
+  HEADER: Server = HP-iLO-Server(?:/([\d.]+))?\;version:\1
+  DESC: HP iLO is a tool that provides multiple ways to configure, update, monitor, and run servers remotely.
+  CATS: 22,46
+---
+TECH: HSTS
+  HEADER: Strict-Transport-Security =
+  DESC: HTTP Strict Transport Security (HSTS) informs browsers that the site should only be accessed using HTTPS.
+  CATS: 16
+---
+TECH: HTTP/2
+  HEADER: Alt-Svc = h2
+  HEADER: X-Firefox-Spdy = h2
+  DESC: HTTP/2 (originally named HTTP/2.0) is a major revision of the HTTP network protocol used by the World Wide Web.
+  CATS: 19
+---
+TECH: HTTP/3
+  HEADER: Alt-Svc = h3
+  HEADER: X-Firefox-Http3 = h3
+  DESC: HTTP/3 is the third major version of the Hypertext Transfer Protocol used to exchange information on the World Wide Web.
+  CATS: 19
+---
+TECH: HCL Digital Experience
+  HEADER: IBM-Web2-Location =
+  HEADER: Itx-Generated-Timestamp =
+  DESC: HCL Digital Experience software empowers you to create, manage and deliver engaging omni-channel digital experiences to virtually all audiences.
+  CATS: 1
+---
+TECH: HelHost
+  HEADER: x-powered-by = Helhost
+  DESC: Helhost is a web hosting provider and internet domain registrar from Democratic Republic of Congo.
+  CATS: 88
+---
+TECH: HeliumWeb
+  HEADER: X-Powered-By = Adrikikicp Development
+  DESC: HeliumWeb is a server-side (backend) web framework written in PHP & JavaScript
+  CATS: 18
+---
+TECH: Hetzner
+  HEADER: Server = HeRay
+  HEADER: X-Powered-By = Hetzner
+  DESC: Hetzner provides dedicated hosting, shared web hosting, virtual private servers, managed servers, domain names, SSL certificates, storage boxes, and cloud.
+  CATS: 88,62
+---
+TECH: Hiawatha
+  HEADER: Server = Hiawatha v([\d.]+)\;version:\1
+  DESC: NONE
+  CATS: 22
+---
+TECH: Hostinger
+  HEADER: platform = hostinger
+  DESC: Hostinger is an employee-owned Web hosting provider and internet domain registrar.
+  CATS: 88
+---
+TECH: Hostinger CDN
+  HEADER: server = hcdn
+  DESC: Hostinger Content Delivery Network (CDN).
+  CATS: 31
+---
+TECH: Hono
+  HEADER: X-Powered-By = Hono
+  DESC: Hono is a small, simple, and ultrafast web framework for the Edge.
+  CATS: 18
+---
+TECH: Hydra-Shield
+  HEADER: server = ^Hydra-Shield\sV([\d\.]+)$\;version:\1
+  DESC: Hydra-Shield is an anti-DDoS protection reverse proxy that filters and mitigates malicious traffic to safeguard servers from distributed denial-of-service attacks.
+  CATS: 64
+---
+TECH: Hypercorn
+  HEADER: Server = hypercorn
+  DESC: NONE
+  CATS: 22
+---
+TECH: Hydrogen
+  HEADER: powered-by = ^Shopify-Hydrogen$
+  DESC: Hydrogen is a front-end web development framework used for building Shopify custom storefronts.
+  CATS: 12
+---
+TECH: HubSpot CMS Hub
+  HEADER: x-hs-hub-id =
+  HEADER: x-powered-by = HubSpot
+  DESC: CMS Hub is a content management platform by HubSpot for marketers to manage, optimize, and track content performance on websites, blogs, and landing pages.
+  CATS: 1
+---
+TECH: Hyva Themes
+  HEADER: X-Built-With = ^Hyva Themes$
+  DESC: Hyva Themes is a performance-optimised theme for Magento 2 which eliminated the third-party libraries and having only two dependencies Alpine.js and Tailwind CSS.
+  CATS: 108
+---
+
+# === I ===
+
+TECH: IBM DataPower
+  HEADER: X-Backside-Transport =
+  HEADER: X-Global-Transaction-ID =
+  DESC: IBM DataPower Gateway is a single multi-channel gateway designed to help provide security, control, integration and optimized access to a full range of mobile, web, application programming interface (API), service-oriented architecture (SOA), B2B and cloud workloads.
+  CATS: 64
+---
+TECH: IBM HTTP Server
+  HEADER: Server = IBM_HTTP_Server(?:/([\d.]+))?\;version:\1
+  DESC: NONE
+  CATS: 22
+---
+TECH: IIS
+  HEADER: Server = ^(?:Microsoft-)?IIS(?:/([\d.]+))?\;version:\1
+  DESC: Internet Information Services (IIS) is an extensible web server software created by Microsoft for use with the Windows NT family.
+  CATS: 22
+---
+TECH: IPFS
+  HEADER: x-cf-ipfs-cache-status =
+  HEADER: x-ipfs-datasize =
+  HEADER: x-ipfs-gateway-host =
+  HEADER: x-ipfs-lb-pop =
+  HEADER: x-ipfs-path =
+  HEADER: x-ipfs-pop =
+  HEADER: x-ipfs-root =
+  HEADER: x-ipfs-root-cid =
+  HEADER: x-ipfs-roots =
+  DESC: IPFS is a peer-to-peer hypermedia protocol that provides a distributed hypermedia web.
+  CATS: 48
+---
+TECH: Ibexa DXP
+  HEADER: x-powered-by = ^Ibexa\sExperience\sv([\d\.]+)$\;version:\1
+  DESC: Ibexa DXP is an open-source enterprise PHP content management system (CMS) and Digital Experience Platform (DXP) developed by the company Ibexa.
+  CATS: 1
+---
+TECH: Ikas
+  HEADER: server = ^ikas$
+  HEADER: x-powered-by = ^ikas$
+  DESC: Ikas is a new generation ecommerce platform designed for small businesses.
+  CATS: 6
+---
+TECH: Imperva
+  HEADER: X-Iinfo =
+  HEADER: x-cdn = ^Imperva
+  DESC: Imperva is a cyber security software and services company for networking, data, and application security.
+  CATS: 16,31
+---
+TECH: Imunify360
+  HEADER: Server = imunify360-webshield/([\d\.]+)\;version:\1
+  DESC: Imunify360 is a comprehensive security platform for Linux web servers which utilises machine learning technology and other advanced techniques to provide protection against various types of cyber threats.
+  CATS: 16
+---
+TECH: Inertia.js
+  HEADER: Vary = X-Inertia
+  HEADER: X-Inertia =
+  DESC: Inertia.js is a protocol for creating monolithic single-page applications.
+  CATS: 12
+---
+TECH: Intel Active Management Technology
+  HEADER: Server = Intel\(R\) Active Management Technology(?: ([\d.]+))?\;version:\1
+  DESC: Intel Active Management Technology (AMT) is a proprietary remote management and control system for personal computers with Intel CPUs.
+  CATS: 22,46
+---
+TECH: Indy
+  HEADER: Server = Indy(?:/([\d.]+))?\;version:\1
+  DESC: NONE
+  CATS: 22
+---
+TECH: InMoment
+  HEADER: Content-Security-Policy = \.inmoment\.com
+  HEADER: Content-Security-Policy-Report-Only = \.inmoment\.com
+  DESC: InMoment provides SaaS based customer survey and enterprise feedback management solutions.
+  CATS: 10,73
+---
+TECH: Incapsula
+  HEADER: X-CDN = Incapsula
+  DESC: Incapsula is a cloud-based application delivery platform. It uses a global content delivery network to provide web application security, DDoS mitigation, content caching, application delivery, load balancing and failover services.
+  CATS: 31
+---
+TECH: Includable
+  HEADER: X-Includable-Version =
+  DESC: NONE
+  CATS: 18
+---
+
+# === J ===
+
+TECH: JBoss Application Server
+  HEADER: X-Powered-By = JBoss(?:-([\d.]+))?\;version:\1
+  DESC: JBoss is a free and open-source application server written in Java
+  CATS: 22
+---
+TECH: JBoss Web
+  HEADER: X-Powered-By = JBossWeb(?:-([\d.]+))?\;version:\1
+  DESC: NONE
+  CATS: 22
+---
+TECH: Java Servlet
+  HEADER: X-Powered-By = Servlet(?:\/([\d.]+))?\;version:\1
+  DESC: NONE
+  CATS: 18
+---
+TECH: JavaServer Faces
+  HEADER: X-Powered-By = JSF(?:/([\d.]+))?\;version:\1
+  DESC: NONE
+  CATS: 18
+---
+TECH: JavaServer Pages
+  HEADER: X-Powered-By = JSP(?:/([\d.]+))?\;version:\1
+  DESC: NONE
+  CATS: 18
+---
+TECH: Jenkins
+  HEADER: X-Jenkins = ([\d.]+)\;version:\1
+  DESC: Jenkins is an open-source automation tool written in Java with plugins built for Continuous Integration (CI) purposes
+  CATS: 44
+---
+TECH: Jetty
+  HEADER: Server = Jetty(?:\(([\d\.]*\d+))?\;version:\1
+  DESC: NONE
+  CATS: 22
+---
+TECH: Jibres
+  HEADER: X-Powered-By = Jibres
+  DESC: Jibres is an ecommerce solution with an online store builder and Point-of-Sale (PoS) software
+  CATS: 6,55
+---
+TECH: Jimdo
+  HEADER: X-Jimdo-Instance =
+  HEADER: X-Jimdo-Wid =
+  DESC: Jimdo is a website-builder and all-in-one hosting solution, designed to enable users to build their own websites
+  CATS: 1
+---
+TECH: Joomla
+  HEADER: X-Content-Encoded-By = Joomla! ([\d.]+)\;version:\1
+  DESC: Joomla is a free and open-source content management system for publishing web content
+  CATS: 1
+---
+
+# === K ===
+
+TECH: KPHP
+  HEADER: x-powered-by = ^KPHP/([\d\.]+)$\;version:\1
+  DESC: KPHP (kPHP or KittenPHP) is a free PHP-to-C++ source-to-source translator
+  CATS: 27
+---
+TECH: Kemal
+  HEADER: X-Powered-By = Kemal
+  DESC: NONE
+  CATS: 18,22
+---
+TECH: Kestrel
+  HEADER: Server = ^Kestrel
+  DESC: NONE
+  CATS: 22
+---
+TECH: KeyCDN
+  HEADER: Server = ^keycdn-engine$
+  DESC: KeyCDN is a content delivery network (CDN)
+  CATS: 31
+---
+TECH: Kibana
+  HEADER: kbn-name = kibana
+  HEADER: kbn-version = ^([\d.]+)$\;version:\1
+  DESC: Kibana is an open-source data visualisation dashboard for Elasticsearch
+  CATS: 29,25
+---
+TECH: Kohana
+  HEADER: X-Powered-By = Kohana Framework ([\d.]+)\;version:\1
+  DESC: NONE
+  CATS: 18
+---
+TECH: Kong
+  HEADER: via = ^kong/([\d\.]+)(?:.+)?$\;version:\1
+  DESC: Kong is an open-source API gateway and platform
+  CATS: 64
+---
+TECH: Kontent.ai
+  HEADER: content-security-policy = \.kc-usercontent\.com
+  DESC: Kontent.ai is a SaaS-based modular content platform
+  CATS: 1
+---
+TECH: Kooboo CMS
+  HEADER: X-KoobooCMS-Version = ^(.+)$\;version:\1
+  DESC: NONE
+  CATS: 1
+---
+TECH: Ktor
+  HEADER: server = ^Ktor/debug$
+  HEADER: x-engine = ^Ktor$
+  DESC: Ktor is a Kotlin framework for asynchronous applications
+  CATS: 18
+---
+TECH: Koa
+  HEADER: X-Powered-By = ^koa$
+  DESC: NONE
+  CATS: 18,22
+---
+TECH: Klarna Checkout
+  HEADER: content-security-policy = \.klarna(?:cdn|services)\.(?:net|com)
+  DESC: Klarna Checkout is a complete payment solution
+  CATS: 41,91
+---
+TECH: Kerberos
+  HEADER: WWW-Authenticate = ^Kerberos
+  DESC: Kerberos is an authentication method commonly used by Windows servers
+  CATS: 16
+---
+
+# === L ===
+
+TECH: Leadfeeder
+  HEADER: Content-Security-Policy = \.(?:lfeeder|leadfeeder)\.com
+  DESC: B2B visitor identification software that tracks and identifies companies visiting websites
+  CATS: 10
+---
+TECH: Lever
+  HEADER: Content-Security-Policy = \.lever\.co
+  DESC: Applicant tracking system for hiring
+  CATS: 101
+---
+TECH: Liferay
+  HEADER: Liferay-Portal = [a-z\s]+([\d.]+)\;version:\1
+  DESC: Open-source company providing documentation and professional services
+  CATS: 1
+---
+TECH: Lift
+  HEADER: X-Lift-Version = (.+)\;version:\1
+  DESC: NONE
+  CATS: 18
+---
+TECH: LiveStreet CMS
+  HEADER: X-Powered-By = LiveStreet CMS
+  DESC: NONE
+  CATS: 1
+---
+TECH: LiteSpeed
+  HEADER: Server = ^LiteSpeed$
+  DESC: High-scalability web server
+  CATS: 22
+---
+TECH: Liquid Web
+  HEADER: x-lw-cache =
+  DESC: US-based premium managed web hosting provider
+  CATS: 62,88
+---
+TECH: Lagoon
+  HEADER: X-LAGOON =
+  HEADER: x-lagoon =
+  DESC: Open Source Application Delivery Platform for Kubernetes
+  CATS: 62
+---
+TECH: Linkedin Ads
+  HEADER: Content-Security-Policy = px\.ads\.linkedin\.com
+  DESC: Paid marketing tool offering sponsored posts and methods
+  CATS: 36
+---
+TECH: Luna
+  HEADER: Content-Security-Policy = bsdk\.api\.ditto.com
+  DESC: Software enabling eyewear companies to sell online with virtual fitting
+  CATS: 105
+---
+TECH: Lua
+  HEADER: X-Powered-By = \bLua(?: ([\d.]+))?\;version:\1
+  DESC: Multi-paradigm programming language for embedded applications
+  CATS: 27
+---
+TECH: LlamaLink Cloud Server
+  HEADER: Server = ^LlamaLink
+  DESC: Custom dynamic web server based on Nginx with load balancing
+  CATS: 22
+---
+TECH: Litespeed Cache
+  HEADER: x-litespeed-cache =
+  HEADER: x-turbo-charged-by = LiteSpeed
+  DESC: All-in-one site acceleration plugin for WordPress
+  CATS: 23,87
+---
+TECH: libwww-perl-daemon
+  HEADER: Server = libwww-perl-daemon(?:/([\d\.]+))?\;version:\1
+  DESC: NONE
+  CATS: 22
+---
+TECH: lighttpd
+  HEADER: Server = (?:L|l)ight(?:y)?(?:tpd)?(?:/([\d\.]+))?\;version:\1
+  DESC: Open-source web server optimized for speed-critical environments
+  CATS: 22
+---
+
+# === M ===
+
+TECH: MATORI.NET
+  HEADER: X-Powered-By = MATORI.NET
+  DESC: MATORI.NET is a fully managed reverse proxy.
+  CATS: 64
+---
+TECH: MODX
+  HEADER: X-Powered-By = ^MODX
+  DESC: MODX (originally MODx) is an open source content management system and web application framework for publishing content on the World Wide Web and intranets.
+  CATS: 1
+---
+TECH: Microsoft ASP.NET
+  HEADER: X-AspNet-Version = (.+)\;version:\1
+  HEADER: X-Powered-By = ^ASP\.NET
+  HEADER: set-cookie = \.AspNetCore
+  DESC: ASP.NET is an open-source, server-side web-application framework designed for web development to produce dynamic web pages.
+  CATS: 18
+---
+TECH: Microsoft HTTPAPI
+  HEADER: Server = Microsoft-HTTPAPI(?:/([\d.]+))?\;version:\1
+  DESC: Microsoft HTTPAPI is a kernel-mode HTTP driver in the Windows operating system responsible for handling HTTP requests and responses.
+  CATS: 22
+---
+TECH: Microsoft SharePoint
+  HEADER: MicrosoftSharePointTeamServices = ^(.+)$\;version:\1
+  HEADER: SPRequestGuid =
+  HEADER: SharePointHealthScore =
+  HEADER: X-SharePointHealthScore =
+  DESC: SharePoint is a cloud-based collaborative platform to manage and share content.
+  CATS: 1
+---
+TECH: MiniServ
+  HEADER: Server = MiniServ/([\d\.]+)\;version:\1
+  DESC: NONE
+  CATS: 22
+---
+TECH: Mobify
+  HEADER: X-Powered-By = Mobify
+  DESC: Mobify is a web storefront platform for headless commerce.
+  CATS: 6,26
+---
+TECH: MochiWeb
+  HEADER: Server = MochiWeb(?:/([\d.]+))?\;version:\1
+  DESC: NONE
+  CATS: 22
+---
+TECH: Mojolicious
+  HEADER: server = ^mojolicious
+  HEADER: x-powered-by = mojolicious
+  DESC: NONE
+  CATS: 18
+---
+TECH: Mongo HTTP Server
+  HEADER: Server = Monkey/?([\d.]+)?\;version:\1
+  DESC: NONE
+  CATS: 22
+---
+TECH: MyCashFlow
+  HEADER: X-MCF-ID =
+  DESC: NONE
+  CATS: 6
+---
+TECH: mod_auth_pam
+  HEADER: Server = mod_auth_pam(?:/([\d\.]+))?\;version:\1
+  DESC: Mod_auth_pam is used to configure ways for authenticating users.
+  CATS: 33
+---
+TECH: mod_dav
+  HEADER: Server = \b(?:mod_)?DAV\b(?:/([\d.]+))?\;version:\1
+  DESC: Mod_dav is an Apache module to provide WebDAV capabilities for your Apache web server.
+  CATS: 33
+---
+TECH: mod_fastcgi
+  HEADER: Server = mod_fastcgi(?:/([\d.]+))?\;version:\1
+  DESC: Mod_fcgid is a high performance alternative to mod_cgi or mod_cgid.
+  CATS: 33
+---
+TECH: mod_jk
+  HEADER: Server = mod_jk(?:/([\d\.]+))?\;version:\1
+  DESC: Mod_jk is an Apache module used to connect the Tomcat servlet container with web servers.
+  CATS: 33
+---
+TECH: mod_perl
+  HEADER: Server = mod_perl(?:/([\d\.]+))?\;version:\1
+  DESC: Mod_perl is an optional module for the Apache HTTP server embedding a Perl interpreter.
+  CATS: 33
+---
+TECH: mod_python
+  HEADER: Server = mod_python(?:/([\d.]+))?\;version:\1
+  DESC: Mod_python is an Apache HTTP Server module integrating the Python programming language with the server.
+  CATS: 33
+---
+TECH: mod_rack
+  HEADER: Server = mod_rack(?:/([\d.]+))?\;version:\1
+  HEADER: X-Powered-By = mod_rack(?:/([\d.]+))?\;version:\1
+  DESC: Mod_rack is a free web server and application server with support for Ruby, Python and Node.js.
+  CATS: 33
+---
+TECH: mod_rails
+  HEADER: Server = mod_rails(?:/([\d.]+))?\;version:\1
+  HEADER: X-Powered-By = mod_rails(?:/([\d.]+))?\;version:\1
+  DESC: Mod_rails is a free web server and application server with support for Ruby, Python and Node.js.
+  CATS: 33
+---
+TECH: mod_ssl
+  HEADER: Server = mod_ssl(?:/([\d.]+))?\;version:\1
+  DESC: mod_ssl is an optional module for the Apache HTTP Server providing strong cryptography via SSL/TLS protocols.
+  CATS: 33
+---
+TECH: mod_wsgi
+  HEADER: Server = mod_wsgi(?:/([\d.]+))?\;version:\1
+  HEADER: X-Powered-By = mod_wsgi(?:/([\d.]+))?\;version:\1
+  DESC: mod_wsgi is an Apache HTTP Server module providing a WSGI compliant interface for hosting Python based web applications.
+  CATS: 33
+---
+TECH: MizbanCloud
+  HEADER: server = ^MizbanCloud$
+  DESC: MizbanCloud is a total cloud infrastructure solutions, CDN service provider and Cloud Computing Services.
+  CATS: 31
+---
+
+# === N ===
+
+TECH: NEO - Omnichannel Commerce Platform
+  HEADER: powered = jet-neo
+  DESC: NEO is an ecommerce software that manages multiple online stores.
+  CATS: 6
+---
+TECH: NTLM
+  HEADER: WWW-Authenticate = ^NTLM
+  DESC: NTLM is an authentication method commonly used by Windows servers
+  CATS: 16
+---
+TECH: Neos CMS
+  HEADER: X-Flow-Powered = Neos/?(.+)?$\;version:\1
+  DESC: NONE
+  CATS: 1
+---
+TECH: Neos Flow
+  HEADER: X-Flow-Powered = Flow/?(.+)?$\;version:\1
+  DESC: NONE
+  CATS: 18
+---
+TECH: Nepso
+  HEADER: X-Powered-CMS = Nepso
+  DESC: NONE
+  CATS: 1
+---
+TECH: Nestify
+  HEADER: x-nestify-cache =
+  DESC: Nestify is a fully managed WordPress hosting platform that runs on AWS graviton processors.
+  CATS: 88
+---
+TECH: Netlify
+  HEADER: Server = ^Netlify
+  HEADER: X-NF-Request-ID =
+  DESC: Netlify providers hosting and server-less backend services for web applications and static websites.
+  CATS: 62,31
+---
+TECH: Nexcess
+  HEADER: x-hostname = nxcli\.net$
+  DESC: Nexcess is a web hosting service.
+  CATS: 62,88
+---
+TECH: NexusPIPE
+  HEADER: Server = ^Nexuspipe.com
+  DESC: NexusPIPE is a ADC and DDoS mitigation Company.
+  CATS: 16
+---
+TECH: Nginx
+  HEADER: Server = nginx(?:/([\d.]+))?\;version:\1
+  HEADER: X-Fastcgi-Cache =
+  DESC: Nginx is a web server that can also be used as a reverse proxy, load balancer, mail proxy and HTTP cache.
+  CATS: 22,64
+---
+TECH: Niagahoster
+  HEADER: x-powered-by = Niagahoster
+  DESC: Niagahoster is a web hosting service for small and medium enterprises.
+  CATS: 88
+---
+TECH: Newspack by Automattic
+  HEADER: host-header = Newspack
+  DESC: Automattic's Newspack service is an all-in-one platform designed for small and medium-sized news organizations.
+  CATS: 88
+---
+TECH: NodeBB
+  HEADER: X-Powered-By = ^NodeBB$
+  DESC: NodeBB forum software is powered by Node.js and built on either a Redis or MongoDB database.
+  CATS: 2
+---
+TECH: Next.js
+  HEADER: x-powered-by = ^Next\.js ?([0-9.]+)?\;version:\1
+  DESC: Next.js is a React framework for developing single page Javascript applications.
+  CATS: 12,18,22,57
+---
+TECH: nghttpx - HTTP/2 proxy
+  HEADER: Server = nghttpx nghttp2/?([\d.]+)?\;version:\1
+  DESC: NONE
+  CATS: 22
+---
+
+# === O ===
+
+TECH: OVHcloud
+  HEADER: NS = \d+\.ovh\.net
+  HEADER: SOA = \d+\.ovh\.net
+  DESC: OVHcloud is a global, cloud provider delivering hosted private cloud, public cloud, and dedicated server solutions.
+  CATS: 62,88
+---
+TECH: OpenBSD httpd
+  HEADER: Server = ^OpenBSD httpd
+  DESC: OpenBSD httpd is a web server for the OpenBSD operating system.
+  CATS: 22
+---
+TECH: OpenCms
+  HEADER: Server = OpenCms
+  DESC: OpenCms is a content management system built with Java.
+  CATS: 1
+---
+TECH: OpenGSE
+  HEADER: Server = GSE
+  DESC: OpenGSE is a test suite used for testing servlet compliance.
+  CATS: 22
+---
+TECH: OpenResty
+  HEADER: Server = openresty(?:/([\d.]+))?\;version:\1
+  DESC: OpenResty is a web platform based on nginx which can run Lua scripts using its LuaJIT engine.
+  CATS: 22
+---
+TECH: OpenSSL
+  HEADER: Server = OpenSSL(?:/([\d.]+[a-z]?))?\;version:\1
+  DESC: OpenSSL is a software library for applications that secure communications over computer networks.
+  CATS: 33
+---
+TECH: OpenSwoole
+  HEADER: Server = OpenSwoole(?:/([\d.]+))?\;version:\1
+  DESC: OpenSwoole is a high-performance, asynchronous, event-driven, coroutine-based PHP framework.
+  CATS: 18
+---
+TECH: Oracle Application Server
+  HEADER: Server = Oracle[- ]Application[- ]Server(?: Containers for J2EE)?(?:[- ](\d[\da-z./]+))?\;version:\1
+  DESC: Oracle Application Server is a Java-based application server.
+  CATS: 22
+---
+TECH: Oracle Commerce
+  HEADER: X-ATG-Version = (?:ATGPlatform/([\d.]+))?\;version:\1
+  DESC: Oracle Commerce is a unified B2B and B2C ecommerce platform.
+  CATS: 6
+---
+TECH: Oracle Commerce Cloud
+  HEADER: OracleCommerceCloud-Version = ^(.+)$\;version:\1
+  DESC: Oracle Commerce Cloud is a cloud-native, fully featured SaaS ecommerce solution.
+  CATS: 6
+---
+TECH: Oracle Dynamic Monitoring Service
+  HEADER: x-oracle-dms-ecid =
+  DESC: Oracle Dynamic Monitoring Service provides real-time monitoring for Java applications.
+  CATS: 19
+---
+TECH: Oracle HTTP Server
+  HEADER: Server = Oracle-HTTP-Server(?:/([\d.]+))?\;version:\1
+  DESC: Oracle HTTP Server is a web server from Oracle.
+  CATS: 22
+---
+TECH: Oracle Web Cache
+  HEADER: Server = Oracle(?:AS)?[- ]Web[- ]Cache(?:[- /]([\da-z./]+))?\;version:\1
+  DESC: Oracle Web Cache improves the performance of web sites.
+  CATS: 23
+---
+TECH: Optimizely Content Management
+  HEADER: content-security-policy = \.episerver\.net
+  DESC: Optimizely Content Management is a digital content and marketing management solution.
+  CATS: 1
+---
+TECH: Onfido
+  HEADER: content-security-policy = (?:api|sync)\.onfido\.com
+  DESC: Onfido helps businesses verify identities using photo-based identity documents.
+  CATS: 16,69
+---
+TECH: Ookla Speedtest Custom
+  HEADER: content-security-policy = \.speedtestcustom\.com
+  DESC: Speedtest Custom is an HTML5-based testing solution built by Ookla.
+  CATS: 5
+---
+TECH: Ordergroove
+  HEADER: content-security-policy = \.ordergroove\.com
+  DESC: Ordergroove provides a SaaS-based subscription and membership commerce platform.
+  CATS: 41
+---
+TECH: Orchard Core
+  HEADER: x-generator = ^Orchard$
+  HEADER: x-powered-by = OrchardCore
+  DESC: Orchard Core is an open-source modular CMS built with ASP.NET Core.
+  CATS: 1
+---
+TECH: Orckestra
+  HEADER: x-orckestra-commerce = .NET Client
+  HEADER: x-powered-by = Orckestra
+  DESC: Orckestra provides cloud-based omnichannel commerce solutions.
+  CATS: 6
+---
+TECH: Outlook Web App
+  HEADER: X-OWA-Version = ([\d\.]+)?\;version:\1
+  DESC: Outlook on the web is a web-based email, calendar, contact, and task manager.
+  CATS: 30
+---
+
+# === P ===
+
+TECH: PHP
+  HEADER: Server = php/?([\d.]+)?\;version:\1
+  HEADER: X-Powered-By = ^php/?([\d.]+)?\;version:\1
+  DESC: General-purpose scripting language used for web development
+  CATS: 27
+---
+TECH: PHPFusion
+  HEADER: X-PHPFusion = (.+)$\;version:\1
+  HEADER: X-Powered-By = PHPFusion (.+)$\;version:\1
+  DESC: NONE
+  CATS: 1
+---
+TECH: PRONOTE
+  HEADER: Server = ^PRONOTE\s[\d]{4}\s-\s([\d\.]+)\;version:\1
+  DESC: Information system for schools enabling communication among personnel
+  CATS: 21
+---
+TECH: Pagely
+  HEADER: Server = ^Pagely
+  DESC: NONE
+  CATS: 62,88
+---
+TECH: Pagevamp
+  HEADER: X-ServedBy = pagevamp
+  DESC: NONE
+  CATS: 1
+---
+TECH: Pagefai CMS
+  HEADER: x-powered-by = PAGEFAI CMS
+  DESC: Cloud platform offering ecommerce functionality
+  CATS: 1
+---
+TECH: Pantheon
+  HEADER: Server = ^Pantheon
+  HEADER: x-pantheon-styx-hostname =
+  HEADER: x-styx-req-id =
+  DESC: WebOps and Management Platform for WordPress and Drupal
+  CATS: 62
+---
+TECH: Pars Elecom Portal
+  HEADER: X-Powered-By = Pars Elecom Portal
+  DESC: NONE
+  CATS: 1
+---
+TECH: Parmin Cloud
+  HEADER: x-powered-by = ^ParminCloud$
+  DESC: Cloud services provider
+  CATS: 63
+---
+TECH: Perl
+  HEADER: Server = \bPerl\b(?: ?/?v?([\d.]+))?\;version:\1
+  DESC: High-level, general-purpose interpreted programming language family
+  CATS: 27
+---
+TECH: Phusion Passenger
+  HEADER: Server = Phusion Passenger ([\d.]+)\;version:\1
+  HEADER: X-Powered-By = Phusion Passenger(?:\(R\))? ?([\d.]+)?\;version:\1
+  DESC: Free web and application server supporting Ruby, Python, Node.js
+  CATS: 22
+---
+TECH: Pimcore
+  HEADER: X-Powered-By = ^pimcore$
+  DESC: Open-source digital platform aggregating and managing enterprise data
+  CATS: 1,6
+---
+TECH: Platform.sh
+  HEADER: x-platform-cluster =
+  HEADER: x-platform-processor =
+  HEADER: x-platform-router =
+  HEADER: x-platform-server =
+  DESC: NONE
+  CATS: 62
+---
+TECH: PlatformOS
+  HEADER: x-powered-by = ^platformOS$
+  DESC: NONE
+  CATS: 1,62
+---
+TECH: Plesk
+  HEADER: X-Powered-By = ^Plesk(?:L|W)in
+  HEADER: X-Powered-By-Plesk = ^Plesk
+  DESC: Web hosting and server automation software with control panel
+  CATS: 9
+---
+TECH: Polylang
+  HEADER: x-redirected-by = Polylang(?: (Pro))?\;version:\1
+  DESC: WordPress plugin for creating multilingual sites
+  CATS: 87,89
+---
+TECH: PowerSchool
+  HEADER: content-security-policy = \.powerschool\.com
+  DESC: Student information system for K-12 schools managing data
+  CATS: 21
+---
+TECH: Pressable
+  HEADER: host-header = ^Pressable
+  DESC: Managed hosting platform for WordPress
+  CATS: 62
+---
+TECH: PrestaShop
+  HEADER: Powered-By = ^Prestashop$
+  DESC: Freemium, open-source ecommerce solution in PHP
+  CATS: 6
+---
+TECH: Progress MOVEit
+  HEADER: X-Moveitisapi-Version = ^(.+)$\;version:\1
+  DESC: Managed file transfer solution for secure file transfers
+  CATS: 19
+---
+TECH: ProcessWire
+  HEADER: X-Powered-By = ProcessWire CMS
+  DESC: Open-source content management system and framework
+  CATS: 1
+---
+TECH: Public CMS
+  HEADER: X-Powered-PublicCMS = ^(.+)$\;version:\1
+  DESC: NONE
+  CATS: 1
+---
+TECH: PyroCMS
+  HEADER: X-Streams-Distribution = PyroCMS
+  DESC: NONE
+  CATS: 1
+---
+TECH: PythonAnywhere
+  HEADER: Server = ^PythonAnywhere$
+  DESC: Online IDE and web hosting service based on Python
+  CATS: 62,88
+---
+
+# === Q ===
+
+TECH: Quintype
+  HEADER: link = fea\.assettype\.com/quintype-ace
+  DESC: Quintype is a digital publishing platform that provides content management, audience engagement, and monetisation solutions for digital media organisations.
+  CATS: 1
+---
+
+# === R ===
+
+TECH: RX Web Server
+  HEADER: X-Powered-By = RX-WEB
+  DESC: NONE
+  CATS: 22
+---
+TECH: RackCache
+  HEADER: X-Rack-Cache =
+  DESC: RackCache is a quick drop-in component to enable HTTP caching for Rack-based applications.
+  CATS: 23
+---
+TECH: RapidSec
+  HEADER: Content-Security-Policy = \.rapidsec\.net
+  HEADER: Content-Security-Policy-Report-Only = \.rapidsec\.net
+  HEADER: report-to = \.rapidsec\.net
+  DESC: RapidSec offers automated client-side security and monitoring.
+  CATS: 16
+---
+TECH: Raspbian
+  HEADER: Server = Raspbian
+  HEADER: X-Powered-By = Raspbian
+  DESC: Raspbian is a free operating system for the Raspberry Pi hardware.
+  CATS: 28
+---
+TECH: RebelMouse
+  HEADER: x-rebelmouse-cache-control =
+  HEADER: x-rebelmouse-surrogate-control =
+  DESC: NONE
+  CATS: 1
+---
+TECH: Red Hat
+  HEADER: Server = Red Hat
+  HEADER: X-Powered-By = Red Hat
+  DESC: Red Hat is an open-source Linux operating system.
+  CATS: 28
+---
+TECH: Replicache
+  HEADER: x-replicache-requestid =
+  DESC: Replicache is a JavaScript framework for building high-performance, offline-capable, collaborative web apps.
+  CATS: 12,23
+---
+TECH: Replit
+  HEADER: expect-ct = \.repl\.it/
+  HEADER: replit-cluster =
+  DESC: Replit is a platform for creating and sharing software.
+  CATS: 47
+---
+TECH: Render
+  HEADER: x-render-origin-server = Render
+  DESC: Render is a cloud computing platform providing web hosting, cloud computing, and application development services.
+  CATS: 62
+---
+TECH: Resin
+  HEADER: Server = ^Resin(?:/(\S*))?\;version:\1
+  DESC: NONE
+  CATS: 22
+---
+TECH: Ripple
+  HEADER: x-sdp-app-type = ripple
+  DESC: Ripple is the frontend framework for Single Digital Presence, delivered using Nuxt and Vue.js.
+  CATS: 12
+---
+TECH: Riskified
+  HEADER: server = Riskified Server
+  DESC: Riskified provides SaaS fraud and chargeback prevention technology.
+  CATS: 10,16
+---
+TECH: RoadRunner
+  HEADER: Server = RoadRunner
+  DESC: RoadRunner is a high-performance PHP application server written in Golang.
+  CATS: 22
+---
+TECH: Roadiz CMS
+  HEADER: X-Powered-By = Roadiz CMS
+  DESC: Roadiz CMS is a PHP CMS powered by the Zend Framework.
+  CATS: 1,11
+---
+TECH: Rokt
+  HEADER: Content-Security-Policy = \.rokt\.com
+  DESC: Rokt is an ecommerce marketing technology providing personalised shopping experiences.
+  CATS: 76
+---
+TECH: Rosti
+  HEADER: X-Rosti =
+  DESC: Rosti is a hosting service for development and production deployment.
+  CATS: 88
+---
+
+# === S ===
+
+TECH: SAP
+  HEADER: Server = SAP NetWeaver Application Server
+  DESC: NONE
+  CATS: 53
+---
+TECH: SPNEGO
+  HEADER: WWW-Authenticate = ^Negotiate
+  DESC: SPNEGO is an authentication method commonly used in Windows servers to allow NTLM or Kerberos authentication.
+  CATS: 16
+---
+TECH: SPDY
+  HEADER: X-Firefox-Spdy = \d\.\d
+  DESC: NONE
+  CATS: 19
+---
+TECH: SPIP
+  HEADER: Composed-By = SPIP ([\d.]+) @\;version:\1
+  HEADER: X-Spip-Cache =
+  DESC: SPIP is a content management system written in PHP that uses one or more databases like SQL, SQLite or PostgreSQL.
+  CATS: 1
+---
+TECH: SUSE
+  HEADER: Server = SUSE(?:/?\s?-?([\d.]+))?\;version:\1
+  HEADER: X-Powered-By = SUSE(?:/?\s?-?([\d.]+))?\;version:\1
+  DESC: SUSE is a Linux-based server operating system.
+  CATS: 28
+---
+TECH: Salla
+  HEADER: x-powered-by = ^Salla$
+  HEADER: X-Frame-Options = \.salla\.sa
+  DESC: Salla is an ecommerce platform specifically tailored to serve businesses and customers in Saudi Arabia.
+  CATS: 6
+---
+TECH: Sanity
+  HEADER: content-security-policy = cdn\.sanity\.io
+  HEADER: x-sanity-shard =
+  DESC: Sanity is a platform for structured content with open-source headless CMS, real-time data store and asset delivery.
+  CATS: 1
+---
+TECH: Salesforce Commerce Cloud
+  HEADER: Server = Demandware eCommerce Server
+  DESC: Salesforce Commerce Cloud is a cloud-based software-as-a-service (SaaS) ecommerce solution.
+  CATS: 6
+---
+TECH: Salesforce Marketing Cloud Account Engagement
+  HEADER: X-Pardot-LB =
+  HEADER: X-Pardot-Route =
+  HEADER: X-Pardot-Rsp =
+  DESC: Salesforce Marketing Cloud Account Engagement (formerly known as Pardot) is an application designed for B2B marketing automation.
+  CATS: 32
+---
+TECH: Salesforce Marketing Cloud Email Studio
+  HEADER: content-security-policy = \.exacttarget\.com/
+  DESC: Salesforce Marketing Cloud Email Studio is a powerful tool for building and sending personalised emails.
+  CATS: 75
+---
+TECH: Scientific Linux
+  HEADER: Server = Scientific Linux
+  HEADER: X-Powered-By = Scientific Linux
+  DESC: Scientific Linux (SL) is a free open-source operating system based on Red Hat Enterprise Linux.
+  CATS: 28
+---
+TECH: Shelf
+  HEADER: Server = dart:io with Shelf
+  HEADER: x-powered-by = Dart with package:shelf
+  DESC: Shelf is a server framework for Dart.
+  CATS: 33
+---
+TECH: Shopery
+  HEADER: X-Shopery =
+  DESC: Shopery is built on PHP, Symfony, and Elcodi for ecommerce functionality.
+  CATS: 6
+---
+TECH: Shopfa
+  HEADER: X-Powered-By = ^ShopFA ([\d.]+)$\;version:\1
+  DESC: Shopfa provides ecommerce solutions with integrated features.
+  CATS: 6
+---
+TECH: Shopify
+  HEADER: x-shopid = \;confidence:50
+  HEADER: x-shopify-stage =
+  DESC: Shopify is a subscription-based software enabling online store setup and product sales with POS capabilities.
+  CATS: 6
+---
+TECH: Shopware
+  HEADER: sw-context-token = ^[\w]{32}$\;version:6
+  HEADER: sw-invalidation-states = \;version:6
+  HEADER: sw-language-id = ^[a-fA-F0-9]{32}$\;version:6
+  HEADER: sw-version-id = \;version:6
+  DESC: Shopware is an enterprise-level ecommerce platform.
+  CATS: 6
+---
+TECH: ShopBase
+  HEADER: content-security-policy = (?:accounts|templates)\.shopbase\.com
+  DESC: ShopBase is a cross-border ecommerce platform for dropshipping and print-on-demand merchants.
+  CATS: 6,106
+---
+TECH: Sirclo
+  HEADER: X-Powered-By = Sirclo
+  DESC: Sirclo offers online business solutions for merchants.
+  CATS: 6
+---
+TECH: Section.io
+  HEADER: section-io-id =
+  HEADER: section-io-origin-status =
+  HEADER: section-io-origin-time-seconds =
+  DESC: Section.io is a Content Delivery Network (CDN).
+  CATS: 31
+---
+TECH: Seravo
+  HEADER: x-powered-by = ^Seravo
+  DESC: Seravo provides WordPress hosting and related services.
+  CATS: 62,88
+---
+TECH: SiteGround
+  HEADER: host-header = 192fc2e7e50945beb8231a492d6a8024|b7440e60b07ee7b8044761568fab26e8|624d5be7be38418a3e2a818cc8b7029b|6b7412fb82ca5edfd0917e3957f05d89
+  DESC: SiteGround is a web hosting service provider.
+  CATS: 62,88
+---
+TECH: Simplebo
+  HEADER: X-ServedBy = simplebo
+  DESC: Simplebo is a website builder offering services to small businesses.
+  CATS: 1
+---
+
+# === T ===
+
+TECH: Tangled Network
+  HEADER: X-Hosting-Provider = Tangled Network
+  DESC: Managed services in website development, web and database hosting
+  CATS: 88
+---
+TECH: Tebex
+  HEADER: tb-cache-country = ^\w+$\;confidence:50
+  HEADER: tb-cache-group = ^webstore$\;confidence:50
+  DESC: Provides ecommerce solutions for online games
+  CATS: 6
+---
+TECH: Tencent Cloud
+  HEADER: copyright = ^.+Tencent\sCloud\.$
+  DESC: China's leading public cloud service provider
+  CATS: 31,62
+---
+TECH: Tengine
+  HEADER: Server = Tengine
+  DESC: Web server based on the Nginx HTTP server
+  CATS: 22
+---
+TECH: The Hotels Network
+  HEADER: content-security-policy = \.thehotelsnetwork\.com
+  HEADER: content-security-policy-report-only = \.thehotelsnetwork\.com
+  DESC: SaaS software enhancing hotelier websites
+  CATS: 10,76
+---
+TECH: ThinkPHP
+  HEADER: X-Powered-By = ThinkPHP
+  DESC: Open-source PHP framework with MVC structure
+  CATS: 18
+---
+TECH: TotalCode
+  HEADER: X-Powered-By = ^TotalCode$
+  DESC: NONE
+  CATS: 6
+---
+TECH: TornadoServer
+  HEADER: Server = TornadoServer(?:/([\d.]+))?\;version:\1
+  DESC: NONE
+  CATS: 22
+---
+TECH: TwicPics
+  HEADER: server = ^TwicPics/\d+\.\d+\.\d+$
+  DESC: On-demand responsive image generation
+  CATS: 31,59
+---
+TECH: Twilight CMS
+  HEADER: X-Powered-CMS = Twilight CMS
+  DESC: NONE
+  CATS: 1
+---
+TECH: TwistedWeb
+  HEADER: Server = TwistedWeb(?:/([\d.]+))?\;version:\1
+  DESC: NONE
+  CATS: 22
+---
+TECH: TwistPHP
+  HEADER: X-Powered-By = TwistPHP
+  DESC: NONE
+  CATS: 18
+---
+TECH: total.js
+  HEADER: X-Powered-By = ^total\.js
+  DESC: NONE
+  CATS: 18
+---
+TECH: Trove Recommerce
+  HEADER: x-trove-app-name =
+  HEADER: x-trove-country-code =
+  HEADER: x-trove-order-uuid =
+  HEADER: x-yerdle-app-name =
+  DESC: White-label technology for ecommerce platforms
+  CATS: 6
+---
+TECH: TownNews
+  HEADER: x-tncms =
+  DESC: CMS platform built for local media organizations
+  CATS: 1
+---
+
+# === U ===
+
+TECH: UNIX
+  HEADER: Server = Unix
+  DESC: Unix is a family of multitasking, multiuser computer operating systems.
+  CATS: 28
+---
+TECH: Ubuntu
+  HEADER: Server = Ubuntu
+  HEADER: X-Powered-By = Ubuntu
+  DESC: Ubuntu is a free and open-source operating system on Linux for the enterprise server, desktop, cloud, and IoT.
+  CATS: 28
+---
+TECH: Umbraco
+  HEADER: X-Umbraco-Version = ^(.+)$\;version:\1
+  DESC: Umbraco is an open-source Microsoft ASP.NET based content management system.
+  CATS: 1
+---
+TECH: Unbounce
+  HEADER: X-Unbounce-PageId =
+  DESC: Unbounce is a tool to build landing pages.
+  CATS: 20,51
+---
+TECH: UptimeRobot
+  HEADER: content-security-policy = \.uptimerobot\.com
+  DESC: UptimeRobot is a web-based software that is designed to monitor the sites frequently to check whether any site is down owing to server problem or any bug in coding.
+  CATS: 13
+---
+TECH: Uvicorn
+  HEADER: Server = uvicorn
+  DESC: NONE
+  CATS: 22
+---
+TECH: uKnowva
+  HEADER: X-Content-Encoded-By = uKnowva ([\d.]+)\;version:\1
+  DESC: NONE
+  CATS: 1,2,50
+---
+
+# === V ===
+
+TECH: VTEX
+  HEADER: Server = ^VTEX IO$
+  HEADER: powered = vtex
+  DESC: VTEX is an ecommerce software that manages multiple online stores.
+  CATS: 6
+---
+TECH: Varnish
+  HEADER: Via = varnish(?: \(Varnish/([\d.]+)\))?\;version:\1
+  HEADER: X-Varnish =
+  HEADER: X-Varnish-Action =
+  HEADER: X-Varnish-Age =
+  HEADER: X-Varnish-Cache =
+  HEADER: X-Varnish-Hostname =
+  DESC: Varnish is a reverse caching proxy.
+  CATS: 23
+---
+TECH: Vanilla
+  HEADER: X-Powered-By = Vanilla
+  DESC: Vanilla is a both a cloud-based (SaaS) open-source community forum software.
+  CATS: 2
+---
+TECH: Vercel
+  HEADER: server = ^now|Vercel$
+  HEADER: x-now-trace =
+  HEADER: x-vercel-cache =
+  HEADER: x-vercel-id =
+  DESC: Vercel is a cloud platform for static frontends and serverless functions.
+  CATS: 62
+---
+TECH: Very Good Security
+  HEADER: Content-Security-Policy = \.verygoodvault\.com
+  DESC: Very Good Security (VGS) is a data security and compliance platform encrypting and tokenising sensitive data.
+  CATS: 16
+---
+TECH: Virgool
+  HEADER: X-Powered-By = ^Virgool$
+  DESC: NONE
+  CATS: 11
+---
+TECH: Virtuoso
+  HEADER: Server = Virtuoso/?([\d.]+)?\;version:\1
+  DESC: NONE
+  CATS: 34
+---
+
+# === W ===
+
+TECH: W3 Total Cache
+  HEADER: X-Powered-By = W3 Total Cache(?:/([\d.]+))?\;version:\1
+  DESC: Improves SEO and website performance through CDN integration and caching
+  CATS: 23,87
+---
+TECH: WEBDEV
+  HEADER: WebDevSrc =
+  DESC: Tool for developing internet and intranet sites and applications
+  CATS: 20
+---
+TECH: WEBrick
+  HEADER: Server = ^WEBrick/([\d\.]+)\;version:\1
+  DESC: Lightweight HTTP server library in Ruby for development and testing
+  CATS: 22
+---
+TECH: WP Engine
+  HEADER: X-Pass-Why =
+  HEADER: X-Powered-By = WP Engine
+  HEADER: X-WPE-Loopback-Upstream-Addr =
+  HEADER: wpe-backend =
+  DESC: Website hosting provider
+  CATS: 62,88
+---
+TECH: WP Rocket
+  HEADER: X-Powered-By = WP Rocket(?:/([\d.]+))?\;version:\1
+  HEADER: X-Rocket-Nginx-Bypass =
+  DESC: Caching and performance optimization plugin for WordPress
+  CATS: 23,87
+---
+TECH: WPCacheOn
+  HEADER: x-powered-by = ^Optimized by WPCacheOn
+  DESC: Caching and performance optimization plugin for WordPress
+  CATS: 23,87
+---
+TECH: Warp
+  HEADER: Server = ^Warp/(\d+(?:\.\d+)+)?$\;version:\1
+  DESC: NONE
+  CATS: 22
+---
+TECH: Web2py
+  HEADER: X-Powered-By = web2py
+  DESC: Python web framework with integrated development environment
+  CATS: 18
+---
+TECH: WebAssembly
+  HEADER: Content-Type = application/wasm
+  DESC: Binary instruction format for stack-based virtual machine
+  CATS: 27
+---
+TECH: Weglot
+  HEADER: Weglot-Translated =
+  DESC: NONE
+  CATS: 89
+---
+TECH: Weblogic Server
+  HEADER: Server = ^WebLogic\sServer\s([\d\.]+)?\;version:\1
+  DESC: Application server running between databases and browser clients
+  CATS: 22
+---
+TECH: Wix
+  HEADER: X-Wix-Renderer-Server =
+  HEADER: X-Wix-Request-Id =
+  HEADER: X-Wix-Server-Artifact-Id =
+  DESC: Cloud-based web development services for HTML5 websites
+  CATS: 1,11
+---
+TECH: WordPress
+  HEADER: X-Pingback = /xmlrpc\.php$
+  HEADER: link = rel="https://api\.w\.org/"
+  DESC: Free open-source CMS written in PHP with MySQL database
+  CATS: 1,11
+---
+TECH: WordPress Super Cache
+  HEADER: WP-Super-Cache =
+  DESC: Static caching plugin for WordPress
+  CATS: 23,87
+---
+TECH: WordPress VIP
+  HEADER: x-powered-by = ^WordPress VIP|wpvip\.com
+  DESC: Managed hosting platform for WordPress
+  CATS: 62
+---
+TECH: WiziShop
+  HEADER: Server = ^WiziServer$
+  DESC: Ecommerce solution provider
+  CATS: 6
+---
+TECH: Wunderkind
+  HEADER: Content-Security-Policy = \.smarterhq\.io
+  DESC: Behavioral marketing technology for de-anonymizing visitors
+  CATS: 32
+---
+TECH: wpCache
+  HEADER: X-Powered-By = wpCache(?:/([\d.]+))?\;version:\1
+  DESC: Static caching plugin for WordPress
+  CATS: 23,87
+---
+
+# === X ===
+
+TECH: Xeora
+  HEADER: Server = XeoraEngine
+  HEADER: X-Powered-By = XeoraCube
+  DESC: Xeora is a web framework built on Microsoft ASP.NET
+  CATS: 18
+---
+TECH: Xitami
+  HEADER: Server = Xitami(?:/([\d.]+))?\;version:\1
+  DESC: NONE
+  CATS: 22
+---
+
+# === Y ===
+
+TECH: Yahoo! Ecommerce
+  HEADER: X-XRDS-Location = /ystore/
+  DESC: Yahoo! Ecommerce is an ecommerce platform by Yahoo.
+  CATS: 6
+---
+TECH: Yandex SmartCaptcha
+  HEADER: x-yandex-captcha =
+  DESC: Service for verifying queries to identify user requests and block bots.
+  CATS: 16
+---
+TECH: YooMoney
+  HEADER: Content-Security-Policy = \.yoomoney\.ru
+  DESC: IT company providing electronic payment services for individuals and businesses.
+  CATS: 41
+---
+TECH: Yottaa
+  HEADER: X-Yottaa-Metrics =
+  HEADER: X-Yottaa-Optimizations =
+  DESC: Ecommerce optimisation platform for conversions, performance and security.
+  CATS: 42,74,92
+---
+TECH: YouCan
+  HEADER: x-powered-by = Youcan\.Private\.DC/
+  DESC: Integrated platform specialising in ecommerce services for merchants and entrepreneurs.
+  CATS: 6
+---
+
+# === Z ===
+
+TECH: Zeabur
+  HEADER: X-Zeabur-Request-Id =
+  DESC: Zeabur is a platform for running full stack apps and databases.
+  CATS: 62
+---
+TECH: Zend
+  HEADER: X-Powered-By = Zend(?:Server)?(?:[\s/]?([0-9.]+))?\;version:\1
+  DESC: NONE
+  CATS: 22
+---
+TECH: Zendesk
+  HEADER: x-zendesk-user-id =
+  DESC: Zendesk is a cloud-based help desk management solution offering customizable tools to build customer service portal, knowledge base and online communities.
+  CATS: 4,13,52
+---
+TECH: Zipkin
+  HEADER: X-B3-Flags =
+  HEADER: X-B3-ParentSpanId =
+  HEADER: X-B3-Sampled =
+  HEADER: X-B3-SpanId =
+  HEADER: X-B3-TraceId =
+  DESC: NONE
+  CATS: 10
+---
+TECH: Zope
+  HEADER: Server = ^Zope/
+  DESC: NONE
+  CATS: 22
+---
