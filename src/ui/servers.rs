@@ -69,6 +69,7 @@ enum DisplayRow<'a> {
     CategoryHeader {
         category: ServerCategory,
         count: usize,
+        collapsed: bool,
     },
     /// Line 1 of a server card: icon + name + version badge + port + proto + status
     ServerLine1 {
@@ -148,22 +149,26 @@ pub fn draw_servers(f: &mut Frame, area: Rect, app: &App) {
 
     for cat in &categories {
         if let Some(servers) = by_category.get(cat) {
+            let is_collapsed = scanner.collapsed_categories.contains(cat);
             display_rows.push(DisplayRow::CategoryHeader {
                 category: cat.clone(),
                 count: servers.len(),
+                collapsed: is_collapsed,
             });
-            for s in servers {
-                let active = conn_counts.get(&s.port).copied().unwrap_or(0);
-                display_rows.push(DisplayRow::ServerLine1 {
-                    server: s,
-                    server_index: server_count,
-                    active_conns: active,
-                });
-                display_rows.push(DisplayRow::ServerLine2 {
-                    server: s,
-                    server_index: server_count,
-                });
-                server_count += 1;
+            if !is_collapsed {
+                for s in servers {
+                    let active = conn_counts.get(&s.port).copied().unwrap_or(0);
+                    display_rows.push(DisplayRow::ServerLine1 {
+                        server: s,
+                        server_index: server_count,
+                        active_conns: active,
+                    });
+                    display_rows.push(DisplayRow::ServerLine2 {
+                        server: s,
+                        server_index: server_count,
+                    });
+                    server_count += 1;
+                }
             }
         }
     }
@@ -283,7 +288,7 @@ fn draw_summary_strip(
     // Line 3: Top detected technologies with emoji icons
     let mut kind_counts: HashMap<(String, String), usize> = HashMap::new();
     for s in all_servers {
-        let key = (s.server_kind.unicode_icon().to_string(), s.display_name());
+        let key = (s.display_icon().to_string(), s.display_name());
         *kind_counts.entry(key).or_insert(0) += 1;
     }
     let mut kind_entries: Vec<_> = kind_counts.iter().collect();
@@ -423,8 +428,8 @@ fn draw_category_cards(
         let row_area = Rect::new(inner.x, inner.y + i as u16, inner.width, 1);
 
         match row {
-            DisplayRow::CategoryHeader { category, count } => {
-                render_category_header(f, row_area, category, *count, width);
+            DisplayRow::CategoryHeader { category, count, collapsed } => {
+                render_category_header(f, row_area, category, *count, *collapsed, width);
             }
             DisplayRow::ServerLine1 {
                 server,
@@ -468,12 +473,14 @@ fn render_category_header(
     area: Rect,
     category: &ServerCategory,
     count: usize,
+    collapsed: bool,
     width: usize,
 ) {
     let cc = cat_color(category);
     let label = category.label().to_uppercase();
+    let collapse_icon = if collapsed { "\u{25B6}" } else { "\u{25BC}" }; // ▶ / ▼
     let suffix = format!(" {} services ", count);
-    let prefix = format!(" \u{25A0} {} ", label);
+    let prefix = format!(" {} {} ", collapse_icon, label);
     let used = prefix.len() + suffix.len();
     let dash_count = if width > used { width - used } else { 0 };
     let dashes: String = "\u{2500}".repeat(dash_count);
@@ -518,9 +525,9 @@ fn render_server_line1(
         spans.push(Span::styled("   ", Style::default()));
     }
 
-    // Emoji icon
+    // Emoji icon — uses display_icon() to show 📦 for identified programs instead of ❓
     spans.push(Span::styled(
-        format!("{} ", server.server_kind.unicode_icon()),
+        format!("{} ", server.display_icon()),
         Style::default().fg(kind_color),
     ));
 
@@ -724,7 +731,7 @@ fn draw_detail_bar(
     let ver = server.version.as_deref().unwrap_or("\u{2014}");
     let line1 = Line::from(vec![
         Span::styled(
-            format!(" {} ", server.server_kind.unicode_icon()),
+            format!(" {} ", server.display_icon()),
             Style::default().fg(kind_color),
         ),
         Span::styled(

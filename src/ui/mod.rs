@@ -14,7 +14,10 @@ pub mod firewall;
 pub mod networks;
 pub mod widgets;
 
-use ratatui::layout::{Constraint, Direction, Layout};
+use ratatui::layout::{Constraint, Direction, Layout, Rect};
+use ratatui::style::{Color, Modifier, Style};
+use ratatui::text::{Line, Span};
+use ratatui::widgets::{Block, Borders, Clear, Paragraph};
 use ratatui::Frame;
 
 use crate::app::App;
@@ -52,6 +55,34 @@ pub fn draw(f: &mut Frame, app: &mut App) {
 
     packets::draw_packet_preview(f, main_layout[4], &app.sniffer);
     status::draw_key_hints(f, main_layout[5], app);
+
+    // Status message toast — shown briefly after actions like copy/open
+    if let Some((ref msg, _)) = app.status_message {
+        let msg_width = (msg.len() as u16 + 4).min(f.area().width.saturating_sub(4));
+        let area = f.area();
+        let toast_area = Rect::new(
+            area.x + (area.width.saturating_sub(msg_width)) / 2,
+            area.y + area.height.saturating_sub(4),
+            msg_width,
+            3,
+        );
+        f.render_widget(Clear, toast_area);
+        let toast = Paragraph::new(Line::from(vec![
+            Span::styled(
+                format!(" {} ", msg),
+                Style::default()
+                    .fg(Color::Rgb(200, 255, 200))
+                    .add_modifier(Modifier::BOLD),
+            ),
+        ]))
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(Color::Rgb(80, 200, 120)))
+                .style(Style::default().bg(Color::Rgb(15, 30, 20))),
+        );
+        f.render_widget(toast, toast_area);
+    }
 
     // Detail popup overlay — drawn last so it appears on top of everything
     detail_popup::draw_detail_popup(f, app);

@@ -265,8 +265,19 @@ fn extract_version_for_match(
         }
 
         // Generic version extraction from banner.
-        if let Some(v) = extract_first_version(b) {
-            return Some(v);
+        // Skip HTTP status lines — "1.1" from "HTTP/1.1" is not a real version.
+        let version_source = if b.starts_with("HTTP/") {
+            // Look for version info after the status line
+            b.lines().nth(0)
+                .and_then(|_| b.find('\n').map(|i| &b[i+1..]))
+                .unwrap_or("")
+        } else {
+            b
+        };
+        if !version_source.is_empty() {
+            if let Some(v) = extract_first_version(version_source) {
+                return Some(v);
+            }
         }
     }
 

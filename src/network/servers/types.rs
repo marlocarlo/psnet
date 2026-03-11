@@ -2051,6 +2051,25 @@ impl ListeningPort {
             _ => self.server_kind.description().to_string(),
         }
     }
+
+    /// Returns a display-friendly icon for this listener.
+    /// For Unknown/Generic entries with product_name or file_description from PE VersionInfo,
+    /// returns a package icon instead of the generic ❓ / 🔌 / 📡.
+    pub fn display_icon(&self) -> &str {
+        match self.server_kind {
+            ServerKind::Unknown | ServerKind::GenericTcp | ServerKind::GenericUdp | ServerKind::CustomHttp => {
+                if !self.product_name.is_empty() || !self.file_description.is_empty() {
+                    // We identified the program via VersionInfo — show an app icon
+                    "\u{1F4E6}" // 📦 package — identified program
+                } else if !self.process_name.is_empty() && self.process_name != "System" {
+                    "\u{2699}" // ⚙ gear — known process but no metadata
+                } else {
+                    self.server_kind.unicode_icon()
+                }
+            }
+            _ => self.server_kind.unicode_icon(),
+        }
+    }
 }
 
 /// A technology detected via HTTP header fingerprinting (Wappalyzer-style).

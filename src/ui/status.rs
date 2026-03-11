@@ -85,10 +85,13 @@ pub fn draw_key_hints(f: &mut Frame, area: Rect, app: &App) {
             key_span("Esc", "Clear"),
         ],
         BottomTab::Servers => vec![
-            key_span("s", "Scan Now"),
+            key_span("s", "Scan"),
+            key_span("o", "Open"),
+            key_span("y", "Copy"),
+            key_span("p", "Folder"),
+            key_span("\u{2190}", "Collapse"),
+            key_span("\u{2192}", "Expand"),
             key_span("1-3", "Sort"),
-            key_span("f", "Filter"),
-            key_span("Esc", "Clear"),
         ],
         BottomTab::Alerts => vec![
             key_span("\u{2190}\u{2192}", "Pane"),

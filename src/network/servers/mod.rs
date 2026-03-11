@@ -48,6 +48,8 @@ pub struct ServersScanner {
     pub sort_column: usize,
     /// Sort ascending.
     pub sort_ascending: bool,
+    /// Collapsed categories in the UI.
+    pub collapsed_categories: std::collections::HashSet<types::ServerCategory>,
 }
 
 impl ServersScanner {
@@ -66,6 +68,7 @@ impl ServersScanner {
             scroll_offset: 0,
             sort_column: 0,
             sort_ascending: true,
+            collapsed_categories: std::collections::HashSet::new(),
         }
     }
 
@@ -218,7 +221,7 @@ impl ServersScanner {
         self.scanning.load(Ordering::Relaxed)
     }
 
-    /// Get servers filtered by current filter text.
+    /// Get servers filtered by current filter text (includes collapsed categories).
     pub fn filtered_servers(&self) -> Vec<&ListeningPort> {
         if self.filter_text.is_empty() {
             self.servers.iter().collect()
@@ -236,6 +239,14 @@ impl ServersScanner {
                 })
                 .collect()
         }
+    }
+
+    /// Get servers filtered by text AND excluding collapsed categories (for selection).
+    pub fn visible_servers(&self) -> Vec<&ListeningPort> {
+        self.filtered_servers()
+            .into_iter()
+            .filter(|s| !self.collapsed_categories.contains(&s.server_kind.category()))
+            .collect()
     }
 
     /// Summary stats for header display.

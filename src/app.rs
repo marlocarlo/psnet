@@ -2,6 +2,7 @@ use std::collections::{HashMap, HashSet};
 use std::net::IpAddr;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
+use std::process::Command;
 
 use crossterm::event::{KeyCode, MouseEventKind};
 use ratatui::layout::Rect;
@@ -150,6 +151,9 @@ pub struct App {
     /// Last rendered frame size, used for mouse click coordinate mapping.
     pub last_frame_size: Rect,
 
+    /// Transient status message shown briefly (text, when).
+    pub status_message: Option<(String, Instant)>,
+
     // Internal
     pid_cache: PidCache,
     pub dns_cache: DnsCache,
@@ -254,6 +258,7 @@ impl App {
 
             bg_dns_servers: Arc::new(Mutex::new(None)),
             bg_dns_ipconfig: Arc::new(Mutex::new(None)),
+            status_message: None,
         }
     }
 
@@ -290,6 +295,13 @@ impl App {
 
     /// Refresh network speed and connections. Called each tick.
     pub fn update(&mut self, networks: &mut Networks) {
+        // Auto-clear status message after 3 seconds
+        if let Some((_, when)) = &self.status_message {
+            if when.elapsed().as_secs() >= 3 {
+                self.status_message = None;
+            }
+        }
+
         networks.refresh();
         let (recv, sent, iface) = get_network_bytes(networks);
         let now = Instant::now();
@@ -847,9 +859,39 @@ impl App {
                     _ => {}
                 }
             } else {
+                // Server detail popup: o/y/p shortcuts for exe path
+                let server_exe_path = if let Some(DetailKind::Server { ref exe_path, .. }) = self.detail_popup {
+                    if !exe_path.is_empty() { Some(exe_path.clone()) } else { None }
+                } else {
+                    None
+                };
+
                 match code {
                     KeyCode::Esc | KeyCode::Enter | KeyCode::Char('q') => {
                         self.detail_popup = None;
+                    }
+                    KeyCode::Char('o') | KeyCode::Char('O') if server_exe_path.is_some() => {
+                        let path = server_exe_path.unwrap();
+                        let _ = Command::new("explorer.exe")
+                            .arg(format!("/select,{}", path))
+                            .spawn();
+                        self.status_message = Some((format!("Opened folder: {}", path), Instant::now()));
+                    }
+                    KeyCode::Char('y') | KeyCode::Char('Y') if server_exe_path.is_some() => {
+                        let path = server_exe_path.unwrap();
+                        if copy_to_clipboard(&path) {
+                            self.status_message = Some((format!("Copied: {}", path), Instant::now()));
+                        }
+                    }
+                    KeyCode::Char('p') | KeyCode::Char('P') if server_exe_path.is_some() => {
+                        let path = server_exe_path.unwrap();
+                        let folder = std::path::Path::new(&path)
+                            .parent()
+                            .map(|p| p.to_string_lossy().to_string())
+                            .unwrap_or(path.clone());
+                        if copy_to_clipboard(&folder) {
+                            self.status_message = Some((format!("Copied folder: {}", folder), Instant::now()));
+                        }
                     }
                     _ => {}
                 }
@@ -917,10 +959,10 @@ impl App {
                 filtered.get(selected).map(|c| DetailKind::Connection((*c).clone()))
             }
             BottomTab::Servers => {
-                let filtered = self.servers_scanner.filtered_servers();
-                if filtered.is_empty() { return; }
-                let selected = self.servers_scanner.scroll_offset.min(filtered.len() - 1);
-                if let Some(s) = filtered.get(selected) {
+                let visible = self.servers_scanner.visible_servers();
+                if visible.is_empty() { return; }
+                let selected = self.servers_scanner.scroll_offset.min(visible.len() - 1);
+                if let Some(s) = visible.get(selected) {
                     let active = self.connections.iter()
                         .filter(|c| c.local_port == s.port && !matches!(c.state.as_ref(), Some(TcpState::Listen)))
                         .count() as u32;
@@ -1099,10 +1141,78 @@ impl App {
         }
     }
 
+    /// Get the category of the currently selected server.
+    fn selected_server_category(&self) -> Option<crate::network::servers::types::ServerCategory> {
+        let visible = self.servers_scanner.visible_servers();
+        if visible.is_empty() { return None; }
+        let idx = self.servers_scanner.scroll_offset.min(visible.len() - 1);
+        Some(visible[idx].server_kind.category())
+    }
+
+    /// Get the exe_path of the currently selected server (if any).
+    fn selected_server_exe_path(&self) -> Option<String> {
+        let visible = self.servers_scanner.visible_servers();
+        if visible.is_empty() { return None; }
+        let idx = self.servers_scanner.scroll_offset.min(visible.len() - 1);
+        let path = &visible[idx].exe_path;
+        if path.is_empty() { None } else { Some(path.clone()) }
+    }
+
     fn handle_servers_key(&mut self, code: KeyCode) {
         match code {
             KeyCode::Char('s') | KeyCode::Char('S') => {
                 self.servers_scanner.start_scan();
+            }
+            // Open containing folder in Explorer
+            KeyCode::Char('o') | KeyCode::Char('O') => {
+                if let Some(path) = self.selected_server_exe_path() {
+                    let _ = Command::new("explorer.exe")
+                        .arg(format!("/select,{}", path))
+                        .spawn();
+                    self.status_message = Some((format!("Opened folder: {}", path), Instant::now()));
+                } else {
+                    self.status_message = Some(("No executable path available".into(), Instant::now()));
+                }
+            }
+            // Copy full executable path to clipboard
+            KeyCode::Char('y') | KeyCode::Char('Y') => {
+                if let Some(path) = self.selected_server_exe_path() {
+                    let copied = copy_to_clipboard(&path);
+                    if copied {
+                        self.status_message = Some((format!("Copied: {}", path), Instant::now()));
+                    } else {
+                        self.status_message = Some(("Failed to copy to clipboard".into(), Instant::now()));
+                    }
+                } else {
+                    self.status_message = Some(("No executable path available".into(), Instant::now()));
+                }
+            }
+            // Copy containing folder path to clipboard
+            KeyCode::Char('p') | KeyCode::Char('P') => {
+                if let Some(path) = self.selected_server_exe_path() {
+                    let folder = std::path::Path::new(&path)
+                        .parent()
+                        .map(|p| p.to_string_lossy().to_string())
+                        .unwrap_or(path.clone());
+                    let copied = copy_to_clipboard(&folder);
+                    if copied {
+                        self.status_message = Some((format!("Copied folder: {}", folder), Instant::now()));
+                    } else {
+                        self.status_message = Some(("Failed to copy to clipboard".into(), Instant::now()));
+                    }
+                } else {
+                    self.status_message = Some(("No executable path available".into(), Instant::now()));
+                }
+            }
+            // Collapse selected server's category
+            KeyCode::Left => {
+                if let Some(cat) = self.selected_server_category() {
+                    self.servers_scanner.collapsed_categories.insert(cat);
+                }
+            }
+            // Expand all collapsed categories
+            KeyCode::Right => {
+                self.servers_scanner.collapsed_categories.clear();
             }
             KeyCode::Char('1') => {
                 self.servers_scanner.sort_column = 0;
@@ -1498,7 +1608,7 @@ impl App {
         match self.bottom_tab {
             BottomTab::Connections => self.conn_scroll = self.connections.len(),
             BottomTab::Servers => {
-                self.servers_scanner.scroll_offset = self.servers_scanner.servers.len().saturating_sub(1);
+                self.servers_scanner.scroll_offset = self.servers_scanner.visible_servers().len().saturating_sub(1);
             }
             BottomTab::Alerts => {
                 if let Some((cat, count)) = self.focused_alert_cat() {
@@ -1779,6 +1889,23 @@ impl App {
             }
             _ => {}
         }
+    }
+}
+
+/// Copy text to Windows clipboard via clip.exe.
+fn copy_to_clipboard(text: &str) -> bool {
+    use std::io::Write;
+    match Command::new("clip.exe")
+        .stdin(std::process::Stdio::piped())
+        .spawn()
+    {
+        Ok(mut child) => {
+            if let Some(ref mut stdin) = child.stdin {
+                let _ = stdin.write_all(text.as_bytes());
+            }
+            child.wait().is_ok()
+        }
+        Err(_) => false,
     }
 }
 

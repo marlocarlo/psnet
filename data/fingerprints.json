@@ -11242,5 +11242,59 @@
     "process_names": [
       "openvpn"
     ]
+  },
+  {
+    "kind": "WinRM",
+    "priority": 3,
+    "process_names": [
+      "system"
+    ],
+    "banner_starts_with": [
+      "HTTP/"
+    ],
+    "default_ports": [
+      5985,
+      5986,
+      47001
+    ]
+  },
+  {
+    "kind": "HttpSys",
+    "priority": 8,
+    "process_names": [
+      "system"
+    ],
+    "banner_starts_with": [
+      "HTTP/"
+    ],
+    "default_ports": [
+      80,
+      443,
+      5357,
+      8443
+    ]
+  },
+  {
+    "kind": "HttpSys",
+    "priority": 4,
+    "process_names": [
+      "system"
+    ],
+    "banner_starts_with": [
+      "HTTP/"
+    ],
+    "default_ports": [
+      5357
+    ]
+  },
+  {
+    "kind": "HttpSys",
+    "priority": 12,
+    "process_names": [
+      "system"
+    ],
+    "banner_starts_with": [
+      "HTTP/"
+    ]
   }
 ]
