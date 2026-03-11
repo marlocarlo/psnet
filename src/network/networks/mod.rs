@@ -183,21 +183,6 @@ impl NetworksScanner {
         self.active_count.load(Ordering::SeqCst) > 0
     }
 
-    /// Total device count across all networks.
-    pub fn total_devices(&self) -> usize {
-        self.networks.iter().map(|n| n.devices.len()).sum()
-    }
-
-    /// Flat list of (network_index, device_index) for UI iteration.
-    pub fn flat_device_list(&self) -> Vec<(usize, usize)> {
-        let mut list = Vec::new();
-        for (ni, net) in self.networks.iter().enumerate() {
-            for di in 0..net.devices.len() {
-                list.push((ni, di));
-            }
-        }
-        list
-    }
 }
 
 // ─── Spawn helpers ──────────────────────────────────────────────────────────
@@ -277,7 +262,6 @@ fn spawn_adapter_probes(
                             subnet_mask: net.subnet_mask,
                             subnet_cidr: net.subnet_cidr,
                             gateway: net.gateway,
-                            is_active: true,
                             devices,
                         });
                     }
@@ -415,7 +399,6 @@ fn spawn_instant_sources(
                 subnet_mask,
                 subnet_cidr,
                 gateway: adapter.and_then(|a| a.gateway),
-                is_active: true,
                 devices,
             });
         }
@@ -640,7 +623,6 @@ fn discover_adapter_networks(primary_ip: Option<Ipv4Addr>) -> Vec<RemoteNetwork>
             subnet_mask: adapter.mask,
             subnet_cidr,
             gateway: adapter.gateway,
-            is_active: true,
             devices: Vec::new(),
         });
     }
@@ -734,7 +716,6 @@ fn discover_docker_networks() -> Vec<RemoteNetwork> {
             subnet_mask,
             subnet_cidr,
             gateway,
-            is_active: true,
             devices,
         });
     }
@@ -788,7 +769,6 @@ fn discover_wsl_networks() -> Vec<RemoteNetwork> {
         subnet_mask: Ipv4Addr::new(255, 240, 0, 0),
         subnet_cidr: "172.16.0.0/12".to_string(),
         gateway: None,
-        is_active: true,
         devices,
     }]
 }

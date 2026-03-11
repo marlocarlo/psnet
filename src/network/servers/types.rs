@@ -6,6 +6,7 @@ use chrono::NaiveTime;
 
 /// What kind of server technology is running.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[allow(dead_code)]
 pub enum ServerKind {
     // -- Web servers --
     Nginx,
@@ -1971,8 +1972,6 @@ pub struct ListeningPort {
     pub banner: Option<String>,
     /// HTTP response headers of interest.
     pub response_headers: Vec<(String, String)>,
-    /// Number of active connections to this port.
-    pub active_connections: u32,
     /// When this listener was first detected.
     pub first_seen: NaiveTime,
     /// Whether this listener is confirmed responding.

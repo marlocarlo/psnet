@@ -12,7 +12,6 @@ use ratatui::widgets::{
 use ratatui::Frame;
 
 use crate::app::App;
-use crate::types::FirewallAppAction;
 use crate::utils::{format_bytes, format_speed};
 
 pub fn draw_firewall(f: &mut Frame, area: Rect, app: &App) {

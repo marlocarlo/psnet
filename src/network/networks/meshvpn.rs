@@ -167,7 +167,6 @@ fn discover_tailscale() -> Vec<RemoteNetwork> {
         subnet_mask: Ipv4Addr::new(255, 192, 0, 0),
         subnet_cidr: "100.64.0.0/10".to_string(),
         gateway: None,
-        is_active: true,
         devices,
     }]
 }
@@ -200,7 +199,7 @@ fn discover_zerotier() -> Vec<RemoteNetwork> {
         let nwid = parts[2];
         let net_name = parts[3];
         let _mac = parts[4];
-        let status = parts[5];
+        let _status = parts[5];
         let assigned_ips = parts[8..].join(" ");
 
         // Parse assigned IP
@@ -223,7 +222,6 @@ fn discover_zerotier() -> Vec<RemoteNetwork> {
             subnet_mask: Ipv4Addr::new(255, 255, 0, 0),
             subnet_cidr: format!("{}/16", local_ip),
             gateway: None,
-            is_active: status == "OK",
             devices: peers,
         });
     }
@@ -337,7 +335,6 @@ fn discover_nebula() -> Vec<RemoteNetwork> {
         subnet_mask: Ipv4Addr::new(255, 0, 0, 0),
         subnet_cidr: "10.0.0.0/8".to_string(),
         gateway: None,
-        is_active: true,
         devices: vec![LanDevice {
             ip: IpAddr::V4(Ipv4Addr::new(10, 0, 0, 1)),
             mac: String::new(),

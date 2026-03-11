@@ -163,19 +163,6 @@ impl UsageTracker {
         &self.store.data_plan
     }
 
-    /// Update data plan settings.
-    pub fn set_data_plan(&mut self, plan: DataPlan) {
-        self.store.data_plan = plan;
-        self.dirty = true;
-    }
-
-    /// Get daily records for the last N days.
-    pub fn recent_days(&self, n: usize) -> Vec<&UsageRecord> {
-        let len = self.store.daily_records.len();
-        let start = len.saturating_sub(n);
-        self.store.daily_records[start..].iter().collect()
-    }
-
     /// Export usage data to a CSV file.
     ///
     /// Writes daily records as `date,download_bytes,upload_bytes` followed by
@@ -195,7 +182,7 @@ impl UsageTracker {
         writeln!(file, "date,app,download_bytes,upload_bytes")?;
         for record in &self.store.daily_records {
             let mut apps: Vec<_> = record.per_app.iter().collect();
-            apps.sort_by_key(|(name, _)| name.clone());
+            apps.sort_by_key(|&(name, _)| name);
             for (name, (down, up)) in apps {
                 writeln!(file, "{},{},{},{}", record.date, name, down, up)?;
             }

@@ -988,7 +988,6 @@ impl App {
                         first_seen: s.first_seen.format("%H:%M:%S").to_string(),
                         is_responsive: s.is_responsive,
                         tls_detected: has_tls,
-                        details: s.details.clone(),
                         category_color: s.server_kind.category().color(),
                         detected_techs: s.detected_techs.iter().map(|t| (t.name.clone(), t.category.clone(), t.version.clone())).collect(),
                     })

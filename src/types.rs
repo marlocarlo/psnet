@@ -181,49 +181,13 @@ impl SpeedHistory {
 pub enum TrafficEventKind {
     NewConnection,
     ConnectionClosed,
-    StateChange { from: TcpState, to: TcpState },
-    DataActivity { bytes: usize, inbound: bool },
-}
-
-impl TrafficEventKind {
-    pub fn label(&self) -> &str {
-        match self {
-            Self::NewConnection => "CONNECT",
-            Self::ConnectionClosed => "CLOSE",
-            Self::StateChange { .. } => "STATE",
-            Self::DataActivity { .. } => "DATA",
-        }
-    }
-
-    pub fn color(&self) -> ratatui::style::Color {
-        use ratatui::style::Color;
-        match self {
-            Self::NewConnection => Color::Green,
-            Self::ConnectionClosed => Color::Red,
-            Self::StateChange { .. } => Color::Yellow,
-            Self::DataActivity { inbound: true, .. } => Color::Cyan,
-            Self::DataActivity { inbound: false, .. } => Color::Magenta,
-        }
-    }
+    StateChange,
+    DataActivity,
 }
 
 #[derive(Clone, Debug)]
 pub struct TrafficEntry {
-    pub timestamp: NaiveTime,
     pub event: TrafficEventKind,
-    pub proto: ConnProto,
-    pub local_addr: IpAddr,
-    pub local_port: u16,
-    pub remote_addr: Option<IpAddr>,
-    pub remote_port: Option<u16>,
-    pub process_name: String,
-    pub outbound: bool,
-    pub state_label: String,
-    /// DNS-resolved hostname for remote address (if available).
-    pub dns_name: Option<String>,
-    /// Estimated data transferred (bytes) for this connection at event time.
-    #[allow(dead_code)]
-    pub data_size: Option<u64>,
 }
 
 // ─── Bottom pane tab ─────────────────────────────────────────────────────────
@@ -284,34 +248,6 @@ impl BottomTab {
         }
     }
 
-    pub fn index(&self) -> usize {
-        match self {
-            Self::Dashboard => 0,
-            Self::Connections => 1,
-            Self::Servers => 2,
-            Self::Packets => 3,
-            Self::Topology => 4,
-            Self::Alerts => 5,
-            Self::Firewall => 6,
-            Self::Devices => 7,
-            Self::Networks => 8,
-        }
-    }
-
-    pub fn from_index(i: usize) -> Option<Self> {
-        match i {
-            0 => Some(Self::Dashboard),
-            1 => Some(Self::Connections),
-            2 => Some(Self::Servers),
-            3 => Some(Self::Packets),
-            4 => Some(Self::Topology),
-            5 => Some(Self::Alerts),
-            6 => Some(Self::Firewall),
-            7 => Some(Self::Devices),
-            8 => Some(Self::Networks),
-            _ => None,
-        }
-    }
 }
 
 /// Time range for the dashboard traffic graph.
@@ -359,23 +295,6 @@ impl TrafficHistory {
         self.samples.push_back((down_bps, up_bps));
         while self.samples.len() > self.max_samples {
             self.samples.pop_front();
-        }
-    }
-    pub fn recent(&self, n: usize) -> &[(f64, f64)] {
-        let len = self.samples.len();
-        let (a, b) = self.samples.as_slices();
-        if n >= len {
-            // Return all - but as_slices returns two slices, caller needs contiguous
-            // Just return the back slice if it has enough, else all
-            if b.len() >= n.min(len) { b } else if a.is_empty() { b } else { b }
-        } else {
-            let skip = len - n;
-            if skip >= a.len() {
-                &b[skip - a.len()..]
-            } else {
-                // spans both slices, return just the back portion
-                b
-            }
         }
     }
 }
@@ -489,8 +408,6 @@ pub enum AlertKind {
     BandwidthOverage { used_bytes: u64, limit_bytes: u64 },
     /// Application info changed (binary modified)
     AppChanged { process_name: String, detail: String },
-    /// Connection blocked by firewall
-    ConnectionBlocked { process_name: String, remote: String },
     /// Traffic anomaly: app traffic significantly above baseline
     TrafficAnomaly { process_name: String, current_bytes: u64, baseline_bytes: u64 },
     /// Hosts file was modified
@@ -518,7 +435,6 @@ impl AlertKind {
             Self::ArpAnomaly { .. } => "ARP Anomaly",
             Self::BandwidthOverage { .. } => "Data Overage",
             Self::AppChanged { .. } => "App Changed",
-            Self::ConnectionBlocked { .. } => "Blocked",
             Self::TrafficAnomaly { .. } => "Anomaly",
             Self::HostsFileChanged { .. } => "Hosts Changed",
             Self::ProxyChanged { .. } => "Proxy Changed",
@@ -540,7 +456,6 @@ impl AlertKind {
             Self::ArpAnomaly { .. } => AlertSeverity::Critical,
             Self::BandwidthOverage { .. } => AlertSeverity::Warning,
             Self::AppChanged { .. } => AlertSeverity::Warning,
-            Self::ConnectionBlocked { .. } => AlertSeverity::Warning,
             Self::TrafficAnomaly { .. } => AlertSeverity::Warning,
             Self::HostsFileChanged { .. } => AlertSeverity::Critical,
             Self::ProxyChanged { .. } => AlertSeverity::Warning,
@@ -586,9 +501,6 @@ impl AlertKind {
             Self::AppChanged { process_name, detail } => {
                 format!("{}: {}", process_name, detail)
             }
-            Self::ConnectionBlocked { process_name, remote } => {
-                format!("Blocked {} → {}", process_name, remote)
-            }
             Self::TrafficAnomaly { process_name, current_bytes, baseline_bytes } => {
                 format!("{}: traffic {}x above baseline ({} vs {})",
                     process_name,
@@ -626,7 +538,7 @@ impl AlertKind {
             // Network Access (apps connecting)
             Self::NewAppFirstConnection { .. }
             | Self::AppChanged { .. }
-            | Self::ConnectionBlocked { .. } => AlertCategory::NetworkAccess,
+            => AlertCategory::NetworkAccess,
 
             // System Changes
             Self::DnsServerChanged { .. }
@@ -790,8 +702,6 @@ pub struct RemoteNetwork {
     pub subnet_cidr: String,
     /// Gateway address (if configured).
     pub gateway: Option<std::net::Ipv4Addr>,
-    /// Whether the adapter is active.
-    pub is_active: bool,
     /// Devices discovered on this network.
     pub devices: Vec<LanDevice>,
 }
@@ -827,46 +737,10 @@ pub struct LanDevice {
 
 // ─── Firewall rule ──────────────────────────────────────────────────────────
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum FirewallAction {
-    Allow,
-    Block,
-}
-
-impl FirewallAction {
-    pub fn label(&self) -> &str {
-        match self {
-            Self::Allow => "ALLOW",
-            Self::Block => "BLOCK",
-        }
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum FirewallDirection {
-    Inbound,
-    Outbound,
-    Both,
-}
-
-impl FirewallDirection {
-    pub fn label(&self) -> &str {
-        match self {
-            Self::Inbound => "IN",
-            Self::Outbound => "OUT",
-            Self::Both => "BOTH",
-        }
-    }
-}
-
 #[derive(Clone, Debug)]
 pub struct FirewallRule {
     pub name: String,
-    pub process_name: Option<String>,
-    pub action: FirewallAction,
-    pub direction: FirewallDirection,
     pub enabled: bool,
-    pub profile: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -876,13 +750,6 @@ pub enum FirewallMode {
     Lockdown,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct FirewallProfile {
-    pub name: String,
-    pub blocked_apps: Vec<String>,
-    pub allowed_apps: Vec<String>,
-    pub mode: FirewallMode,
-}
 
 impl FirewallMode {
     pub fn label(&self) -> &str {
@@ -903,16 +770,6 @@ pub enum FirewallAppAction {
     Deny,
     /// Silent drop (identical to Deny on Windows Firewall, tracked separately).
     Drop,
-}
-
-impl FirewallAppAction {
-    pub fn label(&self) -> &str {
-        match self {
-            Self::Allow => "ALLOW",
-            Self::Deny  => "DENY",
-            Self::Drop  => "DROP",
-        }
-    }
 }
 
 /// Combined firewall + bandwidth detail for the popup overlay.
@@ -983,28 +840,6 @@ impl Default for UsageStore {
 pub struct ThreatInfo {
     pub ip: IpAddr,
     pub reason: String,
-    pub category: ThreatCategory,
-}
-
-#[derive(Clone, Debug)]
-pub enum ThreatCategory {
-    Bogon,         // Private/reserved IP in unexpected context
-    KnownMalware,  // Known malware C2 range
-    TorExit,       // Tor exit node
-    Scanner,       // Known scanner/attacker
-    Proxy,         // Known open proxy
-}
-
-impl ThreatCategory {
-    pub fn label(&self) -> &str {
-        match self {
-            Self::Bogon => "Bogon",
-            Self::KnownMalware => "Malware",
-            Self::TorExit => "Tor Exit",
-            Self::Scanner => "Scanner",
-            Self::Proxy => "Proxy",
-        }
-    }
 }
 
 // ─── Detail popup ─────────────────────────────────────────────────────────────
@@ -1013,7 +848,6 @@ impl ThreatCategory {
 #[derive(Clone, Debug)]
 pub enum DetailKind {
     Connection(Connection),
-    TrafficEvent(TrafficEntry),
     Alert(Alert),
     Device(LanDevice),
     FirewallApp(FirewallAppDetail),
@@ -1038,7 +872,6 @@ pub enum DetailKind {
         first_seen: String,
         is_responsive: bool,
         tls_detected: bool,
-        details: String,
         category_color: (u8, u8, u8),
         detected_techs: Vec<(String, String, String)>, // (name, category, version)
     },

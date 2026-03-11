@@ -49,11 +49,9 @@ const ERROR_BUFFER_OVERFLOW: u32 = 111;
 
 // ─── Adapter type constants ──────────────────────────────────────────────────
 
-pub const IF_TYPE_ETHERNET: u32 = 6;
 pub const IF_TYPE_PPP: u32 = 23;
 pub const IF_TYPE_LOOPBACK: u32 = 24;
 pub const IF_TYPE_SLIP: u32 = 28;
-pub const IF_TYPE_WIFI: u32 = 71;
 pub const IF_TYPE_TUNNEL: u32 = 131;
 
 // ─── Public types ────────────────────────────────────────────────────────────
@@ -71,8 +69,6 @@ pub struct AdapterInfo {
     pub mask: Ipv4Addr,
     /// Default gateway (if configured).
     pub gateway: Option<Ipv4Addr>,
-    /// MAC address string (XX:XX:XX:XX:XX:XX).
-    pub mac: String,
     /// MIB interface type (IF_TYPE_*).
     pub if_type: u32,
 }
@@ -110,22 +106,12 @@ pub fn enumerate_all() -> Vec<AdapterInfo> {
                     let gw = gw_str.parse::<Ipv4Addr>().ok()
                         .filter(|g| !g.is_unspecified());
 
-                    let addr_len = (*adapter).AddressLength as usize;
-                    let mac = if addr_len >= 6 {
-                        format!("{:02X}:{:02X}:{:02X}:{:02X}:{:02X}:{:02X}",
-                            (*adapter).Address[0], (*adapter).Address[1], (*adapter).Address[2],
-                            (*adapter).Address[3], (*adapter).Address[4], (*adapter).Address[5])
-                    } else {
-                        String::new()
-                    };
-
                     result.push(AdapterInfo {
                         name,
                         description: desc,
                         ip,
                         mask,
                         gateway: gw,
-                        mac,
                         if_type: (*adapter).Type,
                     });
                 }

@@ -13,18 +13,7 @@ use std::time::Instant;
 use chrono::Local;
 
 use types::{ListeningPort, ServerKind, ListenProto};
-use listeners::{RawListener, ProcessInfo};
 use fingerprint::ProbeResult;
-
-// ─── Summary ────────────────────────────────────────────────────────────────
-
-pub struct ServersSummary {
-    pub total: usize,
-    pub tcp: usize,
-    pub udp: usize,
-    pub responsive: usize,
-    pub categories: usize,
-}
 
 // ─── ServersScanner ─────────────────────────────────────────────────────────
 
@@ -174,8 +163,7 @@ impl ServersScanner {
                     http_title: None,
                     banner: None,
                     response_headers: Vec::new(),
-                    active_connections: 0,
-                    first_seen: now,
+                        first_seen: now,
                     is_responsive: false,
                     details: build_details(name, exe, cmd, None),
                     detected_techs: Vec::new(),
@@ -249,29 +237,6 @@ impl ServersScanner {
             .collect()
     }
 
-    /// Summary stats for header display.
-    pub fn summary(&self) -> ServersSummary {
-        let total = self.servers.len();
-        let tcp = self
-            .servers
-            .iter()
-            .filter(|s| s.proto == ListenProto::Tcp)
-            .count();
-        let udp = total - tcp;
-        let responsive = self.servers.iter().filter(|s| s.is_responsive).count();
-        let categories: HashSet<_> = self
-            .servers
-            .iter()
-            .map(|s| s.server_kind.category())
-            .collect();
-        ServersSummary {
-            total,
-            tcp,
-            udp,
-            responsive,
-            categories: categories.len(),
-        }
-    }
 }
 
 // ─── Quick scan (synchronous, no probing) ───────────────────────────────────
@@ -327,7 +292,6 @@ fn quick_scan() -> Vec<ListeningPort> {
                 http_title: None,
                 banner: None,
                 response_headers: Vec::new(),
-                active_connections: 0,
                 first_seen: now,
                 is_responsive: false,
                 details: build_details(name, exe, cmd, None),
@@ -429,7 +393,6 @@ fn full_scan() -> Vec<ListeningPort> {
                 response_headers: probe
                     .map(|p| p.http_headers.clone())
                     .unwrap_or_default(),
-                active_connections: 0,
                 first_seen: now,
                 is_responsive: probe.map(|p| p.is_responsive).unwrap_or(false),
                 details: build_details(name, exe, cmd, probe),

@@ -84,16 +84,6 @@ enum DisplayRow<'a> {
     },
 }
 
-impl<'a> DisplayRow<'a> {
-    fn server_index(&self) -> Option<usize> {
-        match self {
-            Self::ServerLine1 { server_index, .. } | Self::ServerLine2 { server_index, .. } => {
-                Some(*server_index)
-            }
-            Self::CategoryHeader { .. } => None,
-        }
-    }
-}
 
 // ─── Main draw function ──────────────────────────────────────────────────────
 

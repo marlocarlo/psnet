@@ -4,7 +4,6 @@ use ratatui::style::Color;
 /// Known network protocols detected via port heuristics.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Protocol {
-    Arp,
     Dhcp,
     Dns,
     Http,
@@ -21,7 +20,6 @@ pub enum Protocol {
     Mdns,
     Llmnr,
     Ssdp,
-    Icmp,
     Quic,
     Other,
 }
@@ -30,7 +28,6 @@ impl Protocol {
     /// Short display label for the tag cloud.
     pub fn label(&self) -> &'static str {
         match self {
-            Self::Arp => "ARP",
             Self::Dhcp => "DHCP",
             Self::Dns => "DNS",
             Self::Http => "HTTP",
@@ -47,7 +44,6 @@ impl Protocol {
             Self::Mdns => "mDNS",
             Self::Llmnr => "LLMNR",
             Self::Ssdp => "SSDP",
-            Self::Icmp => "ICMP",
             Self::Quic => "QUIC",
             Self::Other => "OTHER",
         }
@@ -56,7 +52,6 @@ impl Protocol {
     /// Distinct color per protocol for the tag cloud.
     pub fn color(&self) -> Color {
         match self {
-            Self::Arp => Color::Rgb(255, 200, 60),
             Self::Dhcp => Color::Rgb(180, 140, 255),
             Self::Dns => Color::Rgb(80, 200, 255),
             Self::Http => Color::Rgb(100, 220, 100),
@@ -73,7 +68,6 @@ impl Protocol {
             Self::Mdns => Color::Rgb(120, 180, 255),
             Self::Llmnr => Color::Rgb(140, 160, 255),
             Self::Ssdp => Color::Rgb(200, 160, 200),
-            Self::Icmp => Color::Rgb(255, 220, 100),
             Self::Quic => Color::Rgb(0, 220, 180),
             Self::Other => Color::Rgb(140, 140, 140),
         }

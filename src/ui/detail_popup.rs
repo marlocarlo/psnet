@@ -21,11 +21,6 @@ pub fn draw_detail_popup(f: &mut Frame, app: &App) {
             f.render_widget(Clear, area);
             draw_connection_detail(f, area, conn, app);
         }
-        DetailKind::TrafficEvent(entry) => {
-            let area = centered_rect(70, 60, f.area());
-            f.render_widget(Clear, area);
-            draw_traffic_detail(f, area, entry, app);
-        }
         DetailKind::Alert(alert) => {
             let area = centered_rect(70, 60, f.area());
             f.render_widget(Clear, area);
@@ -83,55 +78,6 @@ fn draw_connection_detail(f: &mut Frame, area: Rect, conn: &crate::types::Connec
     lines.push(row("Service",     service,                                          Color::Rgb(200, 180, 80)));
     lines.push(row("State",       state_str,                                        state_color));
     lines.push(row("Country",     country_str,                                      Color::Rgb(170, 200, 230)));
-    lines.push(Line::from(""));
-    lines.push(dismiss_line());
-
-    render_popup(f, area, lines);
-}
-
-// ─── Traffic event detail ────────────────────────────────────────────────────
-
-fn draw_traffic_detail(f: &mut Frame, area: Rect, entry: &crate::types::TrafficEntry, app: &App) {
-    let geo = entry.remote_addr
-        .filter(|ip| !ip.is_loopback() && !ip.is_unspecified())
-        .and_then(|ip| app.geoip.lookup(ip));
-
-    let country_str = geo.map(|g| format!("{} {} ({})", g.flag, g.name, g.code)).unwrap_or_else(|| "Local / Private".to_string());
-
-    let event_str = match &entry.event {
-        crate::types::TrafficEventKind::NewConnection => "\u{25cf} New Connection".to_string(),
-        crate::types::TrafficEventKind::ConnectionClosed => "\u{2715} Connection Closed".to_string(),
-        crate::types::TrafficEventKind::StateChange { from, to } => format!("\u{2194} {} \u{2192} {}", from.label(), to.label()),
-        crate::types::TrafficEventKind::DataActivity { bytes, inbound } => {
-            format!("{} Data: {}", if *inbound { "\u{25c0} Inbound" } else { "\u{25b6} Outbound" }, format_bytes(*bytes as u64))
-        }
-    };
-    let event_color = entry.event.color();
-
-    let remote_str = match (entry.remote_addr, entry.remote_port) {
-        (Some(a), Some(p)) => format!("{}:{}", a, p),
-        (Some(a), None) => a.to_string(),
-        _ => "\u{2014}".to_string(),
-    };
-    let port = entry.remote_port.unwrap_or(entry.local_port);
-    let service = port_service_name(port)
-        .map(|s| format!("{}/{}", s, entry.proto.label()))
-        .unwrap_or_else(|| format!("{}/{}", port, entry.proto.label()));
-    let data_str = entry.data_size.map(|b| format_bytes(b)).unwrap_or_else(|| "\u{2014}".to_string());
-
-    let mut lines = header_lines(" Traffic Event Detail ");
-    lines.push(row("Time",       entry.timestamp.format("%H:%M:%S").to_string(), Color::Rgb(120, 130, 160)));
-    lines.push(row("Event",      event_str,                                      event_color));
-    lines.push(row("Process",    entry.process_name.clone(),                     Color::Rgb(130, 200, 140)));
-    lines.push(row("Protocol",   entry.proto.label().to_string(),                Color::Rgb(100, 220, 255)));
-    lines.push(row("Direction",  if entry.outbound { "Outbound \u{2192}" } else { "Inbound \u{2190}" }.to_string(), Color::Rgb(200, 180, 100)));
-    lines.push(row("Local",      format!("{}:{}", entry.local_addr, entry.local_port), Color::Rgb(150, 160, 190)));
-    lines.push(row("Remote",     remote_str,                                     Color::Rgb(170, 185, 210)));
-    lines.push(row("DNS Name",   entry.dns_name.clone().unwrap_or_else(|| "\u{2014}".to_string()), Color::Rgb(100, 220, 255)));
-    lines.push(row("Service",    service,                                        Color::Rgb(200, 180, 80)));
-    lines.push(row("State",      entry.state_label.clone(),                      Color::Rgb(160, 180, 140)));
-    lines.push(row("Country",    country_str,                                    Color::Rgb(170, 200, 230)));
-    lines.push(row("Data",       data_str,                                       Color::Rgb(130, 160, 200)));
     lines.push(Line::from(""));
     lines.push(dismiss_line());
 
@@ -480,7 +426,7 @@ fn draw_server_detail(f: &mut Frame, area: Rect, detail: &DetailKind) {
         pid, process_name, exe_path, cmdline, product_name, company_name,
         version, http_title,
         banner, response_headers, active_connections, first_seen,
-        is_responsive, tls_detected, details: _, category_color,
+        is_responsive, tls_detected, category_color,
         detected_techs,
     } = detail else { return };
 

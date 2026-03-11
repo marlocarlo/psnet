@@ -153,7 +153,6 @@ fn discover_ssh_tunnels() -> Vec<RemoteNetwork> {
         subnet_mask: Ipv4Addr::new(255, 255, 255, 255),
         subnet_cidr: "127.0.0.1/32".to_string(),
         gateway: None,
-        is_active: true,
         devices: tunnel_devices,
     }]
 }
@@ -293,7 +292,6 @@ fn discover_proxy_ports() -> Vec<RemoteNetwork> {
         subnet_mask: Ipv4Addr::new(255, 255, 255, 255),
         subnet_cidr: "127.0.0.1/32".to_string(),
         gateway: None,
-        is_active: true,
         devices,
     }]
 }
@@ -364,7 +362,6 @@ fn discover_tunnel_processes() -> Vec<RemoteNetwork> {
         subnet_mask: Ipv4Addr::new(255, 255, 255, 255),
         subnet_cidr: "127.0.0.1/32".to_string(),
         gateway: None,
-        is_active: true,
         devices,
     }]
 }

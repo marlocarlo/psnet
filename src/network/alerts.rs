@@ -171,10 +171,6 @@ impl IdleTracker {
         }
     }
 
-    /// Take the pending summary (clears it).
-    pub fn take_summary(&mut self) -> Option<IdleSummary> {
-        self.pending_summary.take()
-    }
 }
 
 /// The alert engine — tracks state and generates alerts.

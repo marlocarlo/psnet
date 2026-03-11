@@ -16,7 +16,6 @@ const EPHEMERAL_PORT_MIN: u16 = 49153;
 /// Result of probing a single listening port.
 #[derive(Debug, Clone)]
 pub struct ProbeResult {
-    pub port: u16,
     pub banner: Option<String>,
     pub http_server: Option<String>,
     pub http_powered_by: Option<String>,
@@ -77,7 +76,6 @@ fn probe_single(addr: IpAddr, port: u16) -> Option<ProbeResult> {
     stream.set_nodelay(true).ok();
 
     let mut result = ProbeResult {
-        port,
         banner: None,
         http_server: None,
         http_powered_by: None,
@@ -495,7 +493,6 @@ fn try_redis_ping(addr: IpAddr, port: u16) -> Option<ProbeResult> {
     let response = std::str::from_utf8(&buf[..n]).ok()?;
     if response.trim().starts_with("+PONG") {
         Some(ProbeResult {
-            port,
             banner: Some("Redis".to_string()),
             http_server: None,
             http_powered_by: None,
@@ -508,7 +505,6 @@ fn try_redis_ping(addr: IpAddr, port: u16) -> Option<ProbeResult> {
         // Redis error response (e.g., -NOAUTH) — still Redis
         let msg = response.trim().trim_start_matches('-');
         Some(ProbeResult {
-            port,
             banner: Some(format!("Redis ({})", msg.lines().next().unwrap_or("auth required"))),
             http_server: None,
             http_powered_by: None,

@@ -46,7 +46,6 @@ pub struct CountryActivity {
 
 pub struct CountryMarker {
     pub code: &'static str,
-    pub name: &'static str,
     pub count: usize,
     pub has_threat: bool,
     pub activity: CountryActivity,

@@ -284,24 +284,6 @@ fn extract_version_for_match(
     None
 }
 
-// ─── Utility: count active connections to a port ────────────────────────────
-
-/// Count active connections to a specific local port.
-/// Uses the existing connection data passed in.
-/// Excludes LISTEN-state entries so we only count actual client connections.
-pub fn count_connections_to_port(port: u16, connections: &[crate::types::Connection]) -> u32 {
-    connections
-        .iter()
-        .filter(|c| {
-            c.local_port == port
-                && c.state
-                    .as_ref()
-                    .map(|s| *s != crate::types::TcpState::Listen)
-                    .unwrap_or(true)
-        })
-        .count() as u32
-}
-
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 /// Extract version string from a header value like "nginx/1.24.0" or "Apache/2.4.58".
@@ -523,7 +505,6 @@ mod tests {
     #[test]
     fn test_classify_by_banner_ssh() {
         let probe = ProbeResult {
-            port: 22,
             banner: Some("SSH-2.0-OpenSSH_8.9p1 Ubuntu-3ubuntu0.6".to_string()),
             http_server: None,
             http_powered_by: None,
@@ -540,7 +521,6 @@ mod tests {
     #[test]
     fn test_classify_by_banner_smtp() {
         let probe = ProbeResult {
-            port: 25,
             banner: Some("220 mail.example.com ESMTP Postfix".to_string()),
             http_server: None,
             http_powered_by: None,
@@ -556,7 +536,6 @@ mod tests {
     #[test]
     fn test_classify_by_banner_redis() {
         let probe = ProbeResult {
-            port: 6379,
             banner: Some("+PONG".to_string()),
             http_server: None,
             http_powered_by: None,

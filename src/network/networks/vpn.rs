@@ -1039,7 +1039,6 @@ fn build_networks(
             subnet_mask: subnet.mask,
             subnet_cidr: cidr_str,
             gateway: None,
-            is_active: true,
             devices,
         });
     }
@@ -1102,7 +1101,6 @@ fn build_networks(
                 subnet_mask: Ipv4Addr::new(255, 255, 255, 0),
                 subnet_cidr: format!("{}/24", net),
                 gateway: None,
-                is_active: true,
                 devices,
             });
         }

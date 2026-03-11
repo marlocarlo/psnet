@@ -296,7 +296,6 @@ pub fn discover() -> Vec<RemoteNetwork> {
             subnet_mask,
             subnet_cidr,
             gateway: None,
-            is_active: true,
             devices,
         });
     }

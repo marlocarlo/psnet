@@ -115,7 +115,6 @@ fn discover_mobile_hotspot() -> Option<RemoteNetwork> {
         subnet_mask: Ipv4Addr::new(255, 255, 255, 0),
         subnet_cidr: format!("{}/24", hotspot_ip),
         gateway: None,
-        is_active: true,
         devices: if client_count > 0 { clients } else {
             vec![LanDevice {
                 ip: IpAddr::V4(hotspot_ip),
@@ -276,7 +275,6 @@ fn discover_usb_tethering() -> Vec<RemoteNetwork> {
             subnet_mask: Ipv4Addr::new(255, 255, 255, 0),
             subnet_cidr: format!("{}/24", ip),
             gateway: None,
-            is_active: true,
             devices: vec![LanDevice {
                 ip: IpAddr::V4(ip),
                 mac: String::new(),

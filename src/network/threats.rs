@@ -7,7 +7,7 @@
 use std::collections::HashSet;
 use std::net::{IpAddr, Ipv4Addr};
 
-use crate::types::{Connection, ThreatCategory, ThreatInfo, TcpState};
+use crate::types::{Connection, ThreatInfo, TcpState};
 
 /// Threat detection engine with embedded intelligence.
 pub struct ThreatDetector {
@@ -53,10 +53,6 @@ impl ThreatDetector {
         classify_ip(ip)
     }
 
-    /// Total flagged count this session.
-    pub fn flagged_count(&self) -> usize {
-        self.flagged.len()
-    }
 }
 
 /// Classify an IP address against threat intelligence databases.
@@ -79,7 +75,6 @@ fn classify_ipv4(ip: Ipv4Addr) -> Option<ThreatInfo> {
         return Some(ThreatInfo {
             ip: ip_addr,
             reason: "Bogon/reserved IP used as remote endpoint".to_string(),
-            category: ThreatCategory::Bogon,
         });
     }
 
@@ -88,7 +83,6 @@ fn classify_ipv4(ip: Ipv4Addr) -> Option<ThreatInfo> {
         return Some(ThreatInfo {
             ip: ip_addr,
             reason: "Known scanner/attacker IP range".to_string(),
-            category: ThreatCategory::Scanner,
         });
     }
 
@@ -97,7 +91,6 @@ fn classify_ipv4(ip: Ipv4Addr) -> Option<ThreatInfo> {
         return Some(ThreatInfo {
             ip: ip_addr,
             reason: "Known malware C2 IP range".to_string(),
-            category: ThreatCategory::KnownMalware,
         });
     }
 
@@ -145,13 +138,3 @@ fn is_known_malware_range(octets: [u8; 4]) -> bool {
     false
 }
 
-/// Check if an IP is a known Tor exit node.
-/// In a real implementation, this would query or cache the Tor exit list.
-pub fn is_tor_exit(_ip: IpAddr) -> bool {
-    false // Placeholder — would need periodic download of exit list
-}
-
-/// Check if an IP is a known open proxy.
-pub fn is_known_proxy(_ip: IpAddr) -> bool {
-    false // Placeholder — would need proxy list integration
-}

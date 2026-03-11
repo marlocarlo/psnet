@@ -245,13 +245,6 @@ impl SystemMonitor {
 
     // ── 2. Proxy settings monitoring ────────────────────────────────────
 
-    /// Query Windows proxy settings from the registry and compare to the
-    /// previously stored state. Returns a description if anything changed.
-    pub fn check_proxy_settings(&mut self) -> Option<String> {
-        let current = read_proxy_state();
-        self.process_proxy_result(current)
-    }
-
     /// Process a proxy state result (from background thread or direct call).
     fn process_proxy_result(&mut self, current: ProxyState) -> Option<String> {
         match &self.proxy_state {
@@ -300,17 +293,6 @@ impl SystemMonitor {
 
     // ── 3. WiFi / evil twin detection ───────────────────────────────────
 
-    /// Scan visible WiFi networks via `netsh wlan show networks` and check
-    /// for evil twin indicators:
-    /// - A previously-seen SSID appearing with a new/different BSSID
-    /// - A connected network losing its encryption
-    ///
-    /// Returns a list of warning strings (empty if nothing suspicious).
-    pub fn check_wifi_security(&mut self) -> Vec<String> {
-        let networks = scan_wifi_networks();
-        self.process_wifi_result(&networks)
-    }
-
     /// Process WiFi scan results (from background thread or direct call).
     fn process_wifi_result(&mut self, networks: &[WifiNetwork]) -> Vec<String> {
         if networks.is_empty() {
@@ -357,23 +339,6 @@ impl SystemMonitor {
     }
 
     // ── 4. App binary hash tracking ─────────────────────────────────────
-
-    /// Register an application for binary integrity monitoring.
-    /// The executable at `exe_path` is hashed immediately and stored
-    /// under `process_name`. If the file cannot be read, the app is
-    /// silently not tracked.
-    pub fn track_app(&mut self, process_name: &str, exe_path: &str) {
-        if let Ok(bytes) = fs::read(exe_path) {
-            let hash = fnv1a_hash(&bytes);
-            self.tracked_apps.insert(
-                process_name.to_string(),
-                TrackedApp {
-                    exe_path: exe_path.to_string(),
-                    hash,
-                },
-            );
-        }
-    }
 
     /// Re-hash every tracked application binary and return a list of
     /// `(process_name, description)` for any that changed since last check.
@@ -457,15 +422,6 @@ impl SystemMonitor {
         }
     }
 
-    /// Number of applications currently tracked for binary integrity.
-    pub fn tracked_app_count(&self) -> usize {
-        self.tracked_apps.len()
-    }
-
-    /// Number of known WiFi SSIDs being monitored.
-    pub fn known_wifi_count(&self) -> usize {
-        self.known_wifi.len()
-    }
 }
 
 // ─── Registry / system helpers ──────────────────────────────────────────────
@@ -736,9 +692,7 @@ SSID 2 : CoffeeShop
 
     #[test]
     fn system_monitor_new_is_clean() {
-        let mon = SystemMonitor::new();
-        assert_eq!(mon.tracked_app_count(), 0);
-        assert_eq!(mon.known_wifi_count(), 0);
+        let _mon = SystemMonitor::new();
     }
 
     #[test]

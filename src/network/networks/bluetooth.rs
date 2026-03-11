@@ -87,7 +87,6 @@ pub fn discover() -> Vec<RemoteNetwork> {
         subnet_mask: Ipv4Addr::new(255, 255, 255, 0),
         subnet_cidr: format!("{}/24", local_ip),
         gateway: None,
-        is_active: true,
         devices,
     }]
 }
