@@ -281,9 +281,9 @@ fn draw_summary_strip(
     }
 
     // Line 3: Top detected technologies with emoji icons
-    let mut kind_counts: HashMap<(&str, &str), usize> = HashMap::new();
+    let mut kind_counts: HashMap<(String, String), usize> = HashMap::new();
     for s in all_servers {
-        let key = (s.server_kind.unicode_icon(), s.server_kind.label());
+        let key = (s.server_kind.unicode_icon().to_string(), s.display_name());
         *kind_counts.entry(key).or_insert(0) += 1;
     }
     let mut kind_entries: Vec<_> = kind_counts.iter().collect();
@@ -524,8 +524,8 @@ fn render_server_line1(
         Style::default().fg(kind_color),
     ));
 
-    // Technology name (bold, colored by category)
-    let name = truncate(server.server_kind.label(), 22);
+    // Technology name (bold, colored by category) — uses runtime VersionInfo for Unknown
+    let name = truncate(&server.display_name(), 22);
     spans.push(Span::styled(
         name,
         Style::default()
@@ -629,9 +629,9 @@ fn render_server_line2(
     // Indent to align under the technology name
     spans.push(Span::styled("     ", Style::default()));
 
-    // Description (from ServerKind::description())
-    let desc = server.server_kind.description();
-    let desc_display = truncate(desc, 42);
+    // Description — uses runtime VersionInfo for Unknown/Generic entries
+    let desc = server.display_description();
+    let desc_display = truncate(&desc, 42);
     spans.push(Span::styled(
         desc_display,
         Style::default().fg(Color::Rgb(100, 120, 155)),
@@ -728,7 +728,7 @@ fn draw_detail_bar(
             Style::default().fg(kind_color),
         ),
         Span::styled(
-            server.server_kind.label().to_string(),
+            server.display_name(),
             Style::default()
                 .fg(kind_color)
                 .add_modifier(Modifier::BOLD),

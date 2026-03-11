@@ -129,6 +129,9 @@ impl ServersScanner {
                     entry.process_name = pi.name.clone();
                     entry.exe_path = pi.exe_path.clone();
                     entry.cmdline = pi.cmdline.clone();
+                    entry.product_name = pi.product_name.clone();
+                    entry.file_description = pi.file_description.clone();
+                    entry.company_name = pi.company_name.clone();
                 }
                 entry.pid = r.pid;
                 entry.bind_addr = r.bind_addr;
@@ -160,6 +163,9 @@ impl ServersScanner {
                     process_name: name.to_string(),
                     exe_path: exe.to_string(),
                     cmdline: cmd.to_string(),
+                    product_name: pi.map(|p| p.product_name.clone()).unwrap_or_default(),
+                    file_description: pi.map(|p| p.file_description.clone()).unwrap_or_default(),
+                    company_name: pi.map(|p| p.company_name.clone()).unwrap_or_default(),
                     server_kind: kind,
                     version,
                     http_title: None,
@@ -222,7 +228,8 @@ impl ServersScanner {
                 .iter()
                 .filter(|s| {
                     s.process_name.to_lowercase().contains(&f)
-                        || s.server_kind.label().to_lowercase().contains(&f)
+                        || s.display_name().to_lowercase().contains(&f)
+                        || s.product_name.to_lowercase().contains(&f)
                         || s.port.to_string().contains(&f)
                         || s.details.to_lowercase().contains(&f)
                         || s.exe_path.to_lowercase().contains(&f)
@@ -301,6 +308,9 @@ fn quick_scan() -> Vec<ListeningPort> {
                 process_name: name.to_string(),
                 exe_path: exe.to_string(),
                 cmdline: cmd.to_string(),
+                product_name: pi.map(|p| p.product_name.clone()).unwrap_or_default(),
+                file_description: pi.map(|p| p.file_description.clone()).unwrap_or_default(),
+                company_name: pi.map(|p| p.company_name.clone()).unwrap_or_default(),
                 server_kind: kind,
                 version,
                 http_title: None,
@@ -386,6 +396,9 @@ fn full_scan() -> Vec<ListeningPort> {
                 process_name: name.to_string(),
                 exe_path: exe.to_string(),
                 cmdline: cmd.to_string(),
+                product_name: pi.map(|p| p.product_name.clone()).unwrap_or_default(),
+                file_description: pi.map(|p| p.file_description.clone()).unwrap_or_default(),
+                company_name: pi.map(|p| p.company_name.clone()).unwrap_or_default(),
                 server_kind: kind,
                 version,
                 http_title: probe.and_then(|p| p.http_title.clone()),

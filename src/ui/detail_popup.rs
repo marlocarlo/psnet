@@ -477,7 +477,8 @@ fn draw_firewall_app_detail(f: &mut Frame, area: Rect, detail: &crate::types::Fi
 fn draw_server_detail(f: &mut Frame, area: Rect, detail: &DetailKind) {
     let DetailKind::Server {
         kind_label, kind_icon, category, port, proto, bind_addr,
-        pid, process_name, exe_path, cmdline, version, http_title,
+        pid, process_name, exe_path, cmdline, product_name, company_name,
+        version, http_title,
         banner, response_headers, active_connections, first_seen,
         is_responsive, tls_detected, details: _, category_color,
         detected_techs,
@@ -534,6 +535,13 @@ fn draw_server_detail(f: &mut Frame, area: Rect, detail: &DetailKind) {
         cmdline.clone()
     };
     lines.push(row("Command Line", cmd_display,                 Color::Rgb(150, 160, 190)));
+
+    if !product_name.is_empty() {
+        lines.push(row("Product",      product_name.clone(),    Color::Rgb(180, 200, 140)));
+    }
+    if !company_name.is_empty() {
+        lines.push(row("Company",      company_name.clone(),    Color::Rgb(160, 180, 140)));
+    }
 
     // ─── Detection ───
     lines.push(section_divider("Detection"));

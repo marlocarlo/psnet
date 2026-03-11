@@ -31,6 +31,12 @@ pub struct ProcessInfo {
     pub name: String,
     pub exe_path: String,
     pub cmdline: String,
+    /// Product name from the executable's VersionInfo resource (e.g. "Google Chrome").
+    pub product_name: String,
+    /// File description from the executable's VersionInfo resource.
+    pub file_description: String,
+    /// Company name from the executable's VersionInfo resource.
+    pub company_name: String,
 }
 
 // ─── Windows FFI declarations ────────────────────────────────────────────────
@@ -220,6 +226,128 @@ pub fn resolve_service_names(pids: &[u32]) -> HashMap<u32, Vec<String>> {
     result
 }
 
+// ─── Windows Version Info FFI (version.dll) ─────────────────────────────────
+
+#[link(name = "version")]
+extern "system" {
+    fn GetFileVersionInfoSizeW(lptstrFilename: *const u16, lpdwHandle: *mut u32) -> u32;
+    fn GetFileVersionInfoW(
+        lptstrFilename: *const u16,
+        dwHandle: u32,
+        dwLen: u32,
+        lpData: *mut u8,
+    ) -> i32;
+    fn VerQueryValueW(
+        pBlock: *const u8,
+        lpSubBlock: *const u16,
+        lplpBuffer: *mut *const u8,
+        puLen: *mut u32,
+    ) -> i32;
+}
+
+/// Product info extracted from a Windows PE executable's VersionInfo resource.
+#[derive(Debug, Clone, Default)]
+pub struct ExeVersionInfo {
+    pub product_name: String,
+    pub file_description: String,
+    pub company_name: String,
+}
+
+/// Encode a Rust string as null-terminated UTF-16 for Windows API calls.
+fn to_wide(s: &str) -> Vec<u16> {
+    s.encode_utf16().chain(std::iter::once(0)).collect()
+}
+
+/// Read VersionInfo strings from a PE executable file.
+/// Returns None if the file has no version resource or cannot be read.
+pub fn read_exe_version_info(exe_path: &str) -> Option<ExeVersionInfo> {
+    if exe_path.is_empty() {
+        return None;
+    }
+    let wide_path = to_wide(exe_path);
+    unsafe {
+        let mut handle: u32 = 0;
+        let size = GetFileVersionInfoSizeW(wide_path.as_ptr(), &mut handle);
+        if size == 0 {
+            return None;
+        }
+        let mut buf = vec![0u8; size as usize];
+        if GetFileVersionInfoW(wide_path.as_ptr(), 0, size, buf.as_mut_ptr()) == 0 {
+            return None;
+        }
+
+        // Try to find the translation table to get the right language/codepage
+        let translation_key = to_wide("\\VarFileInfo\\Translation");
+        let mut trans_ptr: *const u8 = std::ptr::null();
+        let mut trans_len: u32 = 0;
+        let has_translation = VerQueryValueW(
+            buf.as_ptr(),
+            translation_key.as_ptr(),
+            &mut trans_ptr,
+            &mut trans_len,
+        ) != 0 && trans_len >= 4;
+
+        // Build the lang/codepage prefix
+        let lang_cp = if has_translation {
+            let lang = *(trans_ptr as *const u16);
+            let cp = *((trans_ptr as *const u16).add(1));
+            format!("{:04x}{:04x}", lang, cp)
+        } else {
+            // Fallback: English US, Unicode codepage
+            "040904b0".to_string()
+        };
+
+        let mut info = ExeVersionInfo::default();
+
+        // Read each string field
+        for (field, target) in [
+            ("ProductName", &mut info.product_name),
+            ("FileDescription", &mut info.file_description),
+            ("CompanyName", &mut info.company_name),
+        ] {
+            let sub_key = to_wide(&format!("\\StringFileInfo\\{}\\{}", lang_cp, field));
+            let mut val_ptr: *const u8 = std::ptr::null();
+            let mut val_len: u32 = 0;
+            if VerQueryValueW(buf.as_ptr(), sub_key.as_ptr(), &mut val_ptr, &mut val_len) != 0
+                && val_len > 0
+                && !val_ptr.is_null()
+            {
+                // val_len includes null terminator, in characters (u16)
+                let chars = val_len.saturating_sub(1) as usize;
+                let slice = std::slice::from_raw_parts(val_ptr as *const u16, chars);
+                *target = String::from_utf16_lossy(slice);
+            }
+        }
+
+        // If we got nothing with the detected translation, try the common fallback
+        if info.product_name.is_empty() && info.file_description.is_empty() && has_translation {
+            let fallback_cp = "040904b0";
+            for (field, target) in [
+                ("ProductName", &mut info.product_name),
+                ("FileDescription", &mut info.file_description),
+                ("CompanyName", &mut info.company_name),
+            ] {
+                let sub_key = to_wide(&format!("\\StringFileInfo\\{}\\{}", fallback_cp, field));
+                let mut val_ptr: *const u8 = std::ptr::null();
+                let mut val_len: u32 = 0;
+                if VerQueryValueW(buf.as_ptr(), sub_key.as_ptr(), &mut val_ptr, &mut val_len) != 0
+                    && val_len > 0
+                    && !val_ptr.is_null()
+                {
+                    let chars = val_len.saturating_sub(1) as usize;
+                    let slice = std::slice::from_raw_parts(val_ptr as *const u16, chars);
+                    *target = String::from_utf16_lossy(slice);
+                }
+            }
+        }
+
+        if info.product_name.is_empty() && info.file_description.is_empty() {
+            return None;
+        }
+        Some(info)
+    }
+}
+
 // ─── MIB structs (repr C, matching Windows layout) ───────────────────────────
 
 #[repr(C)]
@@ -332,6 +460,9 @@ pub fn resolve_process_info(pids: &[u32]) -> HashMap<u32, ProcessInfo> {
     // Collect svchost PIDs that need service name resolution
     let mut svchost_pids: Vec<u32> = Vec::new();
 
+    // Cache VersionInfo by exe path to avoid reading the same file multiple times
+    let mut version_cache: HashMap<String, Option<ExeVersionInfo>> = HashMap::new();
+
     for &pid in pids {
         if let Some(proc) = sys.process(Pid::from_u32(pid)) {
             let name = proc.name().to_string_lossy().to_string();
@@ -345,10 +476,20 @@ pub fn resolve_process_info(pids: &[u32]) -> HashMap<u32, ProcessInfo> {
                 svchost_pids.push(pid);
             }
 
+            // Read VersionInfo from the exe (cached per path)
+            let ver_info = version_cache
+                .entry(exe_path.clone())
+                .or_insert_with(|| read_exe_version_info(&exe_path))
+                .clone()
+                .unwrap_or_default();
+
             map.insert(pid, ProcessInfo {
                 name,
                 exe_path,
                 cmdline,
+                product_name: ver_info.product_name,
+                file_description: ver_info.file_description,
+                company_name: ver_info.company_name,
             });
         }
     }

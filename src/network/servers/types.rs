@@ -90,6 +90,7 @@ pub enum ServerKind {
     VNC,
     WinRM,
     PrintSpooler,
+    HttpSys,
 
     // -- Web frameworks --
     Express,
@@ -352,6 +353,9 @@ pub enum ServerKind {
     AdGuardService,
     ChatGPTDesktop,
     ClaudeDesktop,
+    VSCode,
+    Psmux,
+    ChromeMdns,
 
     // -- Other / Unknown --
     CustomHttp,
@@ -440,6 +444,7 @@ impl ServerKind {
             Self::VNC => "VNC Server",
             Self::WinRM => "WinRM",
             Self::PrintSpooler => "Print Spooler",
+            Self::HttpSys => "Windows HTTP API",
 
             Self::Express => "Express.js",
             Self::Fastify => "Fastify",
@@ -685,6 +690,9 @@ impl ServerKind {
             Self::AdGuardService => "AdGuard",
             Self::ChatGPTDesktop => "ChatGPT Desktop",
             Self::ClaudeDesktop => "Claude Desktop",
+            Self::VSCode => "VS Code",
+            Self::Psmux => "Psmux",
+            Self::ChromeMdns => "Chrome mDNS",
 
             Self::CustomHttp => "HTTP Server",
             Self::GenericTcp => "TCP Listener",
@@ -933,6 +941,7 @@ impl ServerKind {
             | Self::VNC
             | Self::WinRM
             | Self::PrintSpooler
+            | Self::HttpSys
             | Self::Postfix
             | Self::Dovecot
             | Self::Sendmail
@@ -986,7 +995,10 @@ impl ServerKind {
             | Self::AsusSoftwareManager
             | Self::AdGuardService
             | Self::ChatGPTDesktop
-            | Self::ClaudeDesktop => ServerCategory::SystemService,
+            | Self::ClaudeDesktop
+            | Self::VSCode
+            | Self::Psmux
+            | Self::ChromeMdns => ServerCategory::SystemService,
 
             Self::CustomHttp
             | Self::GenericTcp
@@ -1072,6 +1084,7 @@ impl ServerKind {
             Self::VNC => "vn",
             Self::WinRM => "wr",
             Self::PrintSpooler => "pr",
+            Self::HttpSys => "HTP",
 
             // Web frameworks
             Self::Express => "ex",
@@ -1253,6 +1266,9 @@ impl ServerKind {
             Self::AdGuardService => "AG",
             Self::ChatGPTDesktop => "GPT",
             Self::ClaudeDesktop => "CLD",
+            Self::VSCode => "VSC",
+            Self::Psmux => "PMX",
+            Self::ChromeMdns => "CmD",
 
             // Other
             Self::CustomHttp => "h?",
@@ -1356,6 +1372,7 @@ impl ServerKind {
             Self::VNC => "Virtual Network Computing remote desktop server",
             Self::WinRM => "Windows Remote Management service for PowerShell",
             Self::PrintSpooler => "Windows print job management background service",
+            Self::HttpSys => "Windows HTTP.sys kernel-mode HTTP server (not IIS)",
 
             Self::Express => "Minimal Node.js web framework for APIs and apps",
             Self::Fastify => "High-performance Node.js web framework",
@@ -1601,6 +1618,9 @@ impl ServerKind {
             Self::AdGuardService => "AdGuard ad-blocking and privacy protection service",
             Self::ChatGPTDesktop => "OpenAI ChatGPT desktop application",
             Self::ClaudeDesktop => "Anthropic Claude desktop application",
+            Self::VSCode => "Microsoft Visual Studio Code editor with built-in server",
+            Self::Psmux => "Psmux terminal multiplexer",
+            Self::ChromeMdns => "Chrome mDNS for Chromecast and device discovery",
 
             Self::CustomHttp => "HTTP server responding on this port",
             Self::GenericTcp => "TCP service listening for connections",
@@ -1687,6 +1707,7 @@ impl ServerKind {
             Self::VNC => "\u{1F4F1}",
             Self::WinRM => "\u{1F4BB}",
             Self::PrintSpooler => "\u{1F5A8}",
+            Self::HttpSys => "\u{1F310}",
 
             // Web frameworks
             Self::Express | Self::Fastify | Self::Sanic | Self::Fiber => "\u{26A1}",
@@ -1860,6 +1881,9 @@ impl ServerKind {
             Self::AsusGlideX | Self::AsusSoftwareManager => "\u{1F4F1}",
             Self::AdGuardService => "\u{1F6E1}",
             Self::ChatGPTDesktop | Self::ClaudeDesktop => "\u{1F4AC}",
+            Self::VSCode => "\u{1F4DD}",
+            Self::Psmux => "\u{1F5A5}",
+            Self::ChromeMdns => "\u{1F4E1}",
 
             // Other
             Self::CustomHttp => "\u{1F310}",
@@ -1931,6 +1955,12 @@ pub struct ListeningPort {
     pub exe_path: String,
     /// Command line arguments.
     pub cmdline: String,
+    /// Product name from the executable's VersionInfo resource (e.g. "Google Chrome").
+    pub product_name: String,
+    /// File description from the executable's VersionInfo resource.
+    pub file_description: String,
+    /// Company name from the executable's VersionInfo resource.
+    pub company_name: String,
     /// Detected server technology.
     pub server_kind: ServerKind,
     /// Server version string (from banner/probe).
@@ -1952,6 +1982,75 @@ pub struct ListeningPort {
     /// Additional technologies detected via HTTP headers (Wappalyzer-style).
     /// Each entry: (technology_name, category, version_or_empty).
     pub detected_techs: Vec<DetectedTech>,
+}
+
+impl ListeningPort {
+    /// Returns a human-friendly display name for this listener.
+    /// For identified services, returns the ServerKind label.
+    /// For Unknown/Generic entries, derives a name from VersionInfo or process name.
+    pub fn display_name(&self) -> String {
+        match self.server_kind {
+            ServerKind::Unknown | ServerKind::GenericTcp | ServerKind::GenericUdp | ServerKind::CustomHttp => {
+                // Prefer product_name from PE VersionInfo
+                if !self.product_name.is_empty() {
+                    return self.product_name.clone();
+                }
+                // Fall back to file_description
+                if !self.file_description.is_empty() {
+                    return self.file_description.clone();
+                }
+                // Fall back to a cleaned-up process name
+                if !self.process_name.is_empty() && self.process_name != "System" {
+                    let stem = self.process_name.strip_suffix(".exe")
+                        .or_else(|| self.process_name.strip_suffix(".EXE"))
+                        .unwrap_or(&self.process_name);
+                    return stem.to_string();
+                }
+                // Last resort: use the ServerKind label
+                self.server_kind.label().to_string()
+            }
+            _ => self.server_kind.label().to_string(),
+        }
+    }
+
+    /// Returns a human-friendly description for this listener.
+    /// For Unknown/Generic entries, builds a description from runtime info.
+    pub fn display_description(&self) -> String {
+        match self.server_kind {
+            ServerKind::Unknown | ServerKind::GenericTcp | ServerKind::GenericUdp | ServerKind::CustomHttp => {
+                let mut parts = Vec::new();
+
+                if !self.file_description.is_empty() && self.file_description != self.product_name {
+                    parts.push(self.file_description.clone());
+                }
+                if !self.company_name.is_empty() {
+                    parts.push(format!("by {}", self.company_name));
+                }
+
+                if parts.is_empty() {
+                    // Build from exe path
+                    if !self.exe_path.is_empty() {
+                        let path_lower = self.exe_path.to_lowercase();
+                        if path_lower.contains("\\program files") {
+                            parts.push("Installed application".to_string());
+                        } else if path_lower.contains("\\appdata\\") {
+                            parts.push("User application".to_string());
+                        } else if path_lower.contains("\\windows\\system32") {
+                            parts.push("Windows system process".to_string());
+                        } else if path_lower.contains("\\workspace\\") || path_lower.contains("\\projects\\") {
+                            parts.push("Local development build".to_string());
+                        }
+                    }
+                    if parts.is_empty() {
+                        return self.server_kind.description().to_string();
+                    }
+                }
+
+                parts.join(" — ")
+            }
+            _ => self.server_kind.description().to_string(),
+        }
+    }
 }
 
 /// A technology detected via HTTP header fingerprinting (Wappalyzer-style).

@@ -926,7 +926,7 @@ impl App {
                         .count() as u32;
                     let has_tls = s.details.contains("TLS: yes");
                     Some(DetailKind::Server {
-                        kind_label: s.server_kind.label().to_string(),
+                        kind_label: s.display_name(),
                         kind_icon: s.server_kind.icon().to_string(),
                         category: s.server_kind.category().label().to_string(),
                         port: s.port,
@@ -936,6 +936,8 @@ impl App {
                         process_name: s.process_name.clone(),
                         exe_path: s.exe_path.clone(),
                         cmdline: s.cmdline.clone(),
+                        product_name: s.product_name.clone(),
+                        company_name: s.company_name.clone(),
                         version: s.version.clone().unwrap_or_default(),
                         http_title: s.http_title.clone().unwrap_or_default(),
                         banner: s.banner.clone().unwrap_or_default(),

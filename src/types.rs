@@ -1028,6 +1028,8 @@ pub enum DetailKind {
         process_name: String,
         exe_path: String,
         cmdline: String,
+        product_name: String,
+        company_name: String,
         version: String,
         http_title: String,
         banner: String,

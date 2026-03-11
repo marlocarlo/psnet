@@ -1,0 +1,11246 @@
+[
+  {
+    "default_ports": [
+      80,
+      443,
+      8080
+    ],
+    "exe_path_contains": [
+      "nginx"
+    ],
+    "html_title_contains": [
+      "welcome to nginx"
+    ],
+    "http_server_contains": [
+      "nginx",
+      "openresty",
+      "angie"
+    ],
+    "kind": "Nginx",
+    "priority": 10,
+    "process_names": [
+      "nginx"
+    ],
+    "version_from_header_prefix": "nginx"
+  },
+  {
+    "default_ports": [
+      80,
+      443,
+      8080,
+      8443
+    ],
+    "exe_path_contains": [
+      "apache2",
+      "httpd",
+      "xampp"
+    ],
+    "html_title_contains": [
+      "apache2 debian",
+      "apache2 ubuntu",
+      "it works!"
+    ],
+    "http_server_contains": [
+      "apache",
+      "mod_ssl",
+      "mod_perl",
+      "mod_python",
+      "mod_fastcgi",
+      "mod_dav"
+    ],
+    "kind": "Apache",
+    "priority": 10,
+    "process_names": [
+      "httpd",
+      "apache2",
+      "apache"
+    ],
+    "version_from_header_prefix": "apache"
+  },
+  {
+    "exe_path_contains": [
+      "iis",
+      "w3wp"
+    ],
+    "html_title_contains": [
+      "iis windows"
+    ],
+    "http_header_contains": [
+      [
+        "x-aspnet-version",
+        ""
+      ],
+      [
+        "x-powered-by",
+        "asp.net"
+      ]
+    ],
+    "http_powered_by_contains": [
+      "asp.net"
+    ],
+    "http_server_contains": [
+      "microsoft-iis"
+    ],
+    "kind": "IIS",
+    "priority": 10,
+    "process_names": [
+      "w3wp",
+      "iisexpress"
+    ],
+    "version_from_header_prefix": "microsoft-iis"
+  },
+  {
+    "default_ports": [
+      80,
+      443,
+      2015
+    ],
+    "exe_path_contains": [
+      "caddy"
+    ],
+    "html_title_contains": [
+      "caddy"
+    ],
+    "http_server_contains": [
+      "caddy"
+    ],
+    "kind": "Caddy",
+    "priority": 10,
+    "process_names": [
+      "caddy"
+    ],
+    "version_from_header_prefix": "caddy"
+  },
+  {
+    "default_ports": [
+      80,
+      443,
+      8088
+    ],
+    "exe_path_contains": [
+      "litespeed",
+      "lshttpd"
+    ],
+    "html_title_contains": [
+      "litespeed"
+    ],
+    "http_server_contains": [
+      "litespeed"
+    ],
+    "kind": "LiteSpeed",
+    "priority": 10,
+    "process_names": [
+      "litespeed",
+      "lshttpd",
+      "openlitespeed"
+    ],
+    "version_from_header_prefix": "litespeed"
+  },
+  {
+    "default_ports": [
+      80,
+      443,
+      8080,
+      8443
+    ],
+    "exe_path_contains": [
+      "traefik"
+    ],
+    "html_title_contains": [
+      "traefik"
+    ],
+    "http_server_contains": [
+      "traefik"
+    ],
+    "kind": "Traefik",
+    "priority": 10,
+    "process_names": [
+      "traefik"
+    ],
+    "version_from_header_prefix": "traefik"
+  },
+  {
+    "default_ports": [
+      80,
+      443,
+      8404,
+      1936
+    ],
+    "exe_path_contains": [
+      "haproxy"
+    ],
+    "html_title_contains": [
+      "haproxy statistics",
+      "haproxy stats"
+    ],
+    "http_header_contains": [
+      [
+        "via",
+        "haproxy"
+      ],
+      [
+        "x-haproxy-server-state",
+        ""
+      ]
+    ],
+    "http_server_contains": [
+      "haproxy"
+    ],
+    "kind": "HAProxy",
+    "priority": 10,
+    "process_names": [
+      "haproxy"
+    ],
+    "version_from_header_prefix": "haproxy"
+  },
+  {
+    "default_ports": [
+      80,
+      6081,
+      6082
+    ],
+    "exe_path_contains": [
+      "varnish"
+    ],
+    "http_header_contains": [
+      [
+        "x-varnish",
+        ""
+      ],
+      [
+        "via",
+        "varnish"
+      ]
+    ],
+    "http_server_contains": [
+      "varnish"
+    ],
+    "kind": "Varnish",
+    "priority": 10,
+    "process_names": [
+      "varnishd"
+    ],
+    "version_from_header_prefix": "varnish"
+  },
+  {
+    "cmdline_contains": [
+      "jetty"
+    ],
+    "cmdline_requires_process": [
+      "java"
+    ],
+    "default_ports": [
+      8080,
+      8443
+    ],
+    "exe_path_contains": [
+      "jetty"
+    ],
+    "http_powered_by_contains": [
+      "jetty"
+    ],
+    "http_server_contains": [
+      "jetty"
+    ],
+    "kind": "Jetty",
+    "priority": 10,
+    "version_from_header_prefix": "jetty"
+  },
+  {
+    "cmdline_contains": [
+      "express"
+    ],
+    "cmdline_requires_process": [
+      "node",
+      "bun"
+    ],
+    "default_ports": [
+      3000,
+      4000,
+      5000
+    ],
+    "http_header_contains": [
+      [
+        "x-powered-by",
+        "express"
+      ]
+    ],
+    "http_powered_by_contains": [
+      "express"
+    ],
+    "http_server_contains": [
+      "express"
+    ],
+    "kind": "Express",
+    "priority": 20
+  },
+  {
+    "cmdline_contains": [
+      "fastify"
+    ],
+    "cmdline_requires_process": [
+      "node",
+      "bun"
+    ],
+    "default_ports": [
+      3000
+    ],
+    "http_powered_by_contains": [
+      "fastify"
+    ],
+    "http_server_contains": [
+      "fastify"
+    ],
+    "kind": "Fastify",
+    "priority": 20
+  },
+  {
+    "cmdline_contains": [
+      "koa"
+    ],
+    "cmdline_requires_process": [
+      "node"
+    ],
+    "default_ports": [
+      3000
+    ],
+    "http_header_contains": [
+      [
+        "x-powered-by",
+        "koa"
+      ]
+    ],
+    "http_powered_by_contains": [
+      "koa"
+    ],
+    "http_server_contains": [
+      "koa"
+    ],
+    "kind": "Koa",
+    "priority": 20
+  },
+  {
+    "cmdline_contains": [
+      "nest"
+    ],
+    "cmdline_requires_process": [
+      "node"
+    ],
+    "default_ports": [
+      3000
+    ],
+    "http_header_contains": [
+      [
+        "x-powered-by",
+        "nest"
+      ]
+    ],
+    "http_powered_by_contains": [
+      "nestjs",
+      "express"
+    ],
+    "http_server_contains": [
+      "nestjs"
+    ],
+    "kind": "NestJS",
+    "priority": 20
+  },
+  {
+    "cmdline_contains": [
+      "hapi"
+    ],
+    "cmdline_requires_process": [
+      "node"
+    ],
+    "default_ports": [
+      3000
+    ],
+    "http_powered_by_contains": [
+      "hapi"
+    ],
+    "http_server_contains": [
+      "hapi"
+    ],
+    "kind": "Hapi",
+    "priority": 20
+  },
+  {
+    "cmdline_contains": [
+      "adonis",
+      "adonisjs"
+    ],
+    "cmdline_requires_process": [
+      "node"
+    ],
+    "default_ports": [
+      3333
+    ],
+    "http_powered_by_contains": [
+      "adonisjs"
+    ],
+    "kind": "AdonisJS",
+    "priority": 20
+  },
+  {
+    "cmdline_contains": [
+      "django",
+      "manage.py runserver"
+    ],
+    "cmdline_requires_process": [
+      "python",
+      "python3"
+    ],
+    "default_ports": [
+      8000
+    ],
+    "html_title_contains": [
+      "django",
+      "the install worked"
+    ],
+    "http_header_contains": [
+      [
+        "x-frame-options",
+        "deny"
+      ],
+      [
+        "x-powered-by",
+        "django"
+      ]
+    ],
+    "http_powered_by_contains": [
+      "django"
+    ],
+    "http_server_contains": [
+      "wsgiserver",
+      "django"
+    ],
+    "kind": "Django",
+    "priority": 15
+  },
+  {
+    "cmdline_contains": [
+      "flask"
+    ],
+    "cmdline_requires_process": [
+      "python",
+      "python3"
+    ],
+    "default_ports": [
+      5000
+    ],
+    "http_powered_by_contains": [
+      "flask"
+    ],
+    "http_server_contains": [
+      "werkzeug"
+    ],
+    "kind": "Flask",
+    "priority": 15,
+    "version_from_header_prefix": "werkzeug"
+  },
+  {
+    "cmdline_contains": [
+      "fastapi",
+      "uvicorn"
+    ],
+    "cmdline_requires_process": [
+      "python",
+      "python3",
+      "uvicorn"
+    ],
+    "default_ports": [
+      8000
+    ],
+    "html_title_contains": [
+      "fastapi"
+    ],
+    "http_powered_by_contains": [
+      "fastapi"
+    ],
+    "http_server_contains": [
+      "uvicorn"
+    ],
+    "kind": "FastAPI",
+    "priority": 15
+  },
+  {
+    "cmdline_contains": [
+      "tornado"
+    ],
+    "cmdline_requires_process": [
+      "python",
+      "python3"
+    ],
+    "default_ports": [
+      8888
+    ],
+    "http_powered_by_contains": [
+      "tornado"
+    ],
+    "http_server_contains": [
+      "tornadoserver",
+      "tornado"
+    ],
+    "kind": "Tornado",
+    "priority": 20,
+    "version_from_header_prefix": "tornadoserver"
+  },
+  {
+    "cmdline_contains": [
+      "sanic"
+    ],
+    "cmdline_requires_process": [
+      "python",
+      "python3",
+      "sanic"
+    ],
+    "default_ports": [
+      8000
+    ],
+    "http_powered_by_contains": [
+      "sanic"
+    ],
+    "http_server_contains": [
+      "sanic"
+    ],
+    "kind": "Sanic",
+    "priority": 20
+  },
+  {
+    "cmdline_contains": [
+      "starlette"
+    ],
+    "cmdline_requires_process": [
+      "python",
+      "python3",
+      "uvicorn"
+    ],
+    "default_ports": [
+      8000
+    ],
+    "http_powered_by_contains": [
+      "starlette"
+    ],
+    "http_server_contains": [
+      "uvicorn"
+    ],
+    "kind": "Starlette",
+    "priority": 20
+  },
+  {
+    "cmdline_contains": [
+      "bottle"
+    ],
+    "cmdline_requires_process": [
+      "python",
+      "python3"
+    ],
+    "default_ports": [
+      8080
+    ],
+    "http_powered_by_contains": [
+      "bottle"
+    ],
+    "http_server_contains": [
+      "wsgiref",
+      "bottle"
+    ],
+    "kind": "Bottle",
+    "priority": 20
+  },
+  {
+    "cmdline_contains": [
+      "cherrypy"
+    ],
+    "cmdline_requires_process": [
+      "python",
+      "python3"
+    ],
+    "default_ports": [
+      8080
+    ],
+    "http_powered_by_contains": [
+      "cherrypy"
+    ],
+    "http_server_contains": [
+      "cherrypy"
+    ],
+    "kind": "CherryPy",
+    "priority": 20,
+    "version_from_header_prefix": "cherrypy"
+  },
+  {
+    "cmdline_contains": [
+      "uvicorn"
+    ],
+    "cmdline_requires_process": [
+      "python",
+      "python3",
+      "uvicorn"
+    ],
+    "default_ports": [
+      8000
+    ],
+    "exe_path_contains": [
+      "uvicorn"
+    ],
+    "http_server_contains": [
+      "uvicorn"
+    ],
+    "kind": "Uvicorn",
+    "priority": 25,
+    "process_names": [
+      "uvicorn"
+    ],
+    "version_from_header_prefix": "uvicorn"
+  },
+  {
+    "cmdline_contains": [
+      "gunicorn"
+    ],
+    "cmdline_requires_process": [
+      "python",
+      "python3",
+      "gunicorn"
+    ],
+    "default_ports": [
+      8000
+    ],
+    "exe_path_contains": [
+      "gunicorn"
+    ],
+    "http_server_contains": [
+      "gunicorn"
+    ],
+    "kind": "Gunicorn",
+    "priority": 25,
+    "process_names": [
+      "gunicorn"
+    ],
+    "version_from_header_prefix": "gunicorn"
+  },
+  {
+    "cmdline_contains": [
+      "artisan serve",
+      "laravel"
+    ],
+    "cmdline_requires_process": [
+      "php"
+    ],
+    "default_ports": [
+      8000
+    ],
+    "exe_path_contains": [
+      "laravel"
+    ],
+    "html_title_contains": [
+      "laravel"
+    ],
+    "http_header_contains": [
+      [
+        "set-cookie",
+        "laravel_session"
+      ],
+      [
+        "x-powered-by",
+        "laravel"
+      ]
+    ],
+    "http_powered_by_contains": [
+      "laravel"
+    ],
+    "kind": "Laravel",
+    "priority": 15
+  },
+  {
+    "cmdline_contains": [
+      "symfony"
+    ],
+    "cmdline_requires_process": [
+      "php"
+    ],
+    "default_ports": [
+      8000
+    ],
+    "exe_path_contains": [
+      "symfony"
+    ],
+    "html_title_contains": [
+      "symfony"
+    ],
+    "http_header_contains": [
+      [
+        "x-debug-token",
+        ""
+      ],
+      [
+        "x-powered-by",
+        "symfony"
+      ]
+    ],
+    "http_powered_by_contains": [
+      "symfony"
+    ],
+    "kind": "Symfony",
+    "priority": 15
+  },
+  {
+    "banner_contains": [
+      "wp-content",
+      "wp-login",
+      "wp-includes"
+    ],
+    "exe_path_contains": [
+      "wordpress"
+    ],
+    "html_title_contains": [
+      "wordpress"
+    ],
+    "http_header_contains": [
+      [
+        "x-powered-by",
+        "wordpress"
+      ],
+      [
+        "link",
+        "wp-json"
+      ],
+      [
+        "x-generator",
+        "wordpress"
+      ]
+    ],
+    "http_powered_by_contains": [
+      "wordpress"
+    ],
+    "kind": "WordPress",
+    "priority": 15
+  },
+  {
+    "banner_contains": [
+      "drupal"
+    ],
+    "exe_path_contains": [
+      "drupal"
+    ],
+    "html_title_contains": [
+      "drupal"
+    ],
+    "http_header_contains": [
+      [
+        "x-drupal-cache",
+        ""
+      ],
+      [
+        "x-generator",
+        "drupal"
+      ]
+    ],
+    "http_powered_by_contains": [
+      "drupal"
+    ],
+    "kind": "Drupal",
+    "priority": 15
+  },
+  {
+    "cmdline_contains": [
+      "-s localhost",
+      "-s 0.0.0.0",
+      "-s 127.0.0.1"
+    ],
+    "cmdline_requires_process": [
+      "php"
+    ],
+    "default_ports": [
+      8000
+    ],
+    "exe_path_contains": [
+      "php"
+    ],
+    "http_header_contains": [
+      [
+        "x-powered-by",
+        "php"
+      ]
+    ],
+    "http_powered_by_contains": [
+      "php"
+    ],
+    "http_server_contains": [
+      "php"
+    ],
+    "kind": "PhpBuiltIn",
+    "priority": 30,
+    "process_names": [
+      "php",
+      "php-cgi"
+    ],
+    "version_from_header_prefix": "php"
+  },
+  {
+    "cmdline_contains": [
+      "rails server",
+      "rails s",
+      "puma",
+      "bin/rails"
+    ],
+    "cmdline_requires_process": [
+      "ruby",
+      "puma"
+    ],
+    "default_ports": [
+      3000
+    ],
+    "html_title_contains": [
+      "ruby on rails"
+    ],
+    "http_header_contains": [
+      [
+        "x-runtime",
+        ""
+      ],
+      [
+        "x-request-id",
+        ""
+      ],
+      [
+        "x-powered-by",
+        "rails"
+      ]
+    ],
+    "http_powered_by_contains": [
+      "rails",
+      "phusion passenger"
+    ],
+    "http_server_contains": [
+      "puma"
+    ],
+    "kind": "Rails",
+    "priority": 15
+  },
+  {
+    "default_ports": [
+      3000,
+      9292
+    ],
+    "exe_path_contains": [
+      "ruby"
+    ],
+    "http_server_contains": [
+      "webrick",
+      "puma",
+      "thin",
+      "unicorn"
+    ],
+    "kind": "Ruby",
+    "priority": 30,
+    "process_names": [
+      "ruby",
+      "puma"
+    ],
+    "version_from_header_prefix": "webrick"
+  },
+  {
+    "cmdline_contains": [
+      "spring-boot",
+      "org.springframework"
+    ],
+    "cmdline_requires_process": [
+      "java",
+      "javaw"
+    ],
+    "default_ports": [
+      8080
+    ],
+    "exe_path_contains": [
+      "spring-boot",
+      "spring"
+    ],
+    "html_title_contains": [
+      "spring",
+      "whitelabel error page"
+    ],
+    "http_header_contains": [
+      [
+        "x-powered-by",
+        "spring"
+      ]
+    ],
+    "http_powered_by_contains": [
+      "spring",
+      "spring-boot"
+    ],
+    "kind": "JavaSpringBoot",
+    "priority": 15
+  },
+  {
+    "cmdline_contains": [
+      "catalina",
+      "tomcat",
+      "org.apache.catalina"
+    ],
+    "cmdline_requires_process": [
+      "java",
+      "javaw"
+    ],
+    "default_ports": [
+      8080,
+      8443,
+      8005,
+      8009
+    ],
+    "exe_path_contains": [
+      "tomcat",
+      "catalina"
+    ],
+    "html_title_contains": [
+      "apache tomcat"
+    ],
+    "http_header_contains": [
+      [
+        "x-powered-by",
+        "servlet"
+      ],
+      [
+        "x-powered-by",
+        "jsp"
+      ]
+    ],
+    "http_powered_by_contains": [
+      "servlet",
+      "jsp"
+    ],
+    "http_server_contains": [
+      "apache-coyote",
+      "tomcat",
+      "coyote"
+    ],
+    "kind": "JavaTomcat",
+    "priority": 15,
+    "process_names": [
+      "catalina",
+      "tomcat"
+    ],
+    "version_from_header_prefix": "apache-coyote"
+  },
+  {
+    "cmdline_contains": [
+      "wildfly",
+      "jboss",
+      "org.jboss"
+    ],
+    "cmdline_requires_process": [
+      "java",
+      "javaw"
+    ],
+    "default_ports": [
+      8080,
+      9990,
+      8443
+    ],
+    "exe_path_contains": [
+      "wildfly",
+      "jboss"
+    ],
+    "html_title_contains": [
+      "wildfly",
+      "jboss"
+    ],
+    "http_header_contains": [
+      [
+        "x-powered-by",
+        "jboss"
+      ]
+    ],
+    "http_powered_by_contains": [
+      "undertow",
+      "wildfly"
+    ],
+    "http_server_contains": [
+      "wildfly",
+      "jboss"
+    ],
+    "kind": "WildFly",
+    "priority": 15,
+    "process_names": [
+      "wildfly",
+      "jboss"
+    ]
+  },
+  {
+    "cmdline_contains": [
+      "micronaut",
+      "io.micronaut"
+    ],
+    "cmdline_requires_process": [
+      "java",
+      "javaw"
+    ],
+    "default_ports": [
+      8080
+    ],
+    "exe_path_contains": [
+      "micronaut"
+    ],
+    "http_powered_by_contains": [
+      "micronaut"
+    ],
+    "http_server_contains": [
+      "micronaut"
+    ],
+    "kind": "Micronaut",
+    "priority": 20
+  },
+  {
+    "cmdline_contains": [
+      "quarkus",
+      "io.quarkus"
+    ],
+    "cmdline_requires_process": [
+      "java",
+      "javaw"
+    ],
+    "default_ports": [
+      8080
+    ],
+    "exe_path_contains": [
+      "quarkus"
+    ],
+    "http_powered_by_contains": [
+      "quarkus"
+    ],
+    "http_server_contains": [
+      "quarkus"
+    ],
+    "kind": "Quarkus",
+    "priority": 20
+  },
+  {
+    "cmdline_contains": [
+      "gin"
+    ],
+    "default_ports": [
+      8080
+    ],
+    "http_powered_by_contains": [
+      "gin"
+    ],
+    "http_server_contains": [
+      "gin"
+    ],
+    "kind": "Gin",
+    "priority": 20
+  },
+  {
+    "default_ports": [
+      1323
+    ],
+    "http_powered_by_contains": [
+      "echo"
+    ],
+    "http_server_contains": [
+      "echo"
+    ],
+    "kind": "Echo",
+    "priority": 20
+  },
+  {
+    "default_ports": [
+      3000
+    ],
+    "http_powered_by_contains": [
+      "fiber"
+    ],
+    "http_server_contains": [
+      "fiber"
+    ],
+    "kind": "Fiber",
+    "priority": 20
+  },
+  {
+    "banner_contains": [
+      "ghost"
+    ],
+    "cmdline_contains": [
+      "ghost"
+    ],
+    "cmdline_requires_process": [
+      "node"
+    ],
+    "default_ports": [
+      2368
+    ],
+    "exe_path_contains": [
+      "ghost"
+    ],
+    "html_title_contains": [
+      "ghost"
+    ],
+    "http_header_contains": [
+      [
+        "x-powered-by",
+        "ghost"
+      ]
+    ],
+    "http_powered_by_contains": [
+      "ghost"
+    ],
+    "kind": "Ghost",
+    "priority": 15,
+    "process_names": [
+      "ghost"
+    ]
+  },
+  {
+    "cmdline_contains": [
+      "strapi"
+    ],
+    "cmdline_requires_process": [
+      "node"
+    ],
+    "default_ports": [
+      1337
+    ],
+    "exe_path_contains": [
+      "strapi"
+    ],
+    "html_title_contains": [
+      "strapi"
+    ],
+    "http_header_contains": [
+      [
+        "x-powered-by",
+        "strapi"
+      ]
+    ],
+    "http_powered_by_contains": [
+      "strapi"
+    ],
+    "kind": "Strapi",
+    "priority": 15
+  },
+  {
+    "default_ports": [
+      3000,
+      5000,
+      8080
+    ],
+    "exe_path_contains": [
+      "node",
+      "nodejs",
+      "nvm"
+    ],
+    "http_server_contains": [
+      "node"
+    ],
+    "kind": "NodeJs",
+    "priority": 40,
+    "process_names": [
+      "node",
+      "nodejs"
+    ]
+  },
+  {
+    "default_ports": [
+      8000
+    ],
+    "exe_path_contains": [
+      "deno"
+    ],
+    "http_powered_by_contains": [
+      "deno"
+    ],
+    "http_server_contains": [
+      "deno"
+    ],
+    "kind": "Deno",
+    "priority": 30,
+    "process_names": [
+      "deno"
+    ]
+  },
+  {
+    "default_ports": [
+      3000
+    ],
+    "exe_path_contains": [
+      "bun"
+    ],
+    "http_powered_by_contains": [
+      "bun"
+    ],
+    "http_server_contains": [
+      "bun"
+    ],
+    "kind": "Bun",
+    "priority": 30,
+    "process_names": [
+      "bun"
+    ]
+  },
+  {
+    "cmdline_contains": [
+      "http.server"
+    ],
+    "cmdline_requires_process": [
+      "python",
+      "python3"
+    ],
+    "default_ports": [
+      8000,
+      8080
+    ],
+    "exe_path_contains": [
+      "python"
+    ],
+    "html_title_contains": [
+      "directory listing"
+    ],
+    "http_server_contains": [
+      "simplehttpserver",
+      "basehttpserver",
+      "python"
+    ],
+    "kind": "Python",
+    "priority": 40,
+    "process_names": [
+      "python",
+      "python3",
+      "python3.11",
+      "python3.12",
+      "python3.13"
+    ],
+    "version_from_header_prefix": "python"
+  },
+  {
+    "cmdline_contains": [
+      "dotnet"
+    ],
+    "default_ports": [
+      5000,
+      5001,
+      5272
+    ],
+    "exe_path_contains": [
+      "dotnet"
+    ],
+    "http_header_contains": [
+      [
+        "x-aspnet-version",
+        ""
+      ],
+      [
+        "x-powered-by",
+        "asp.net core"
+      ]
+    ],
+    "http_powered_by_contains": [
+      "asp.net"
+    ],
+    "http_server_contains": [
+      "kestrel",
+      "microsoft-kestrel"
+    ],
+    "kind": "DotNetKestrel",
+    "priority": 20,
+    "process_names": [
+      "dotnet"
+    ],
+    "version_from_header_prefix": "kestrel"
+  },
+  {
+    "default_ports": [
+      8080
+    ],
+    "http_powered_by_contains": [
+      "go"
+    ],
+    "http_server_contains": [
+      "go",
+      "golang"
+    ],
+    "kind": "GoHttp",
+    "priority": 40
+  },
+  {
+    "default_ports": [
+      8080
+    ],
+    "http_powered_by_contains": [
+      "actix"
+    ],
+    "http_server_contains": [
+      "actix-web",
+      "actix"
+    ],
+    "kind": "RustActix",
+    "priority": 20
+  },
+  {
+    "default_ports": [
+      3000
+    ],
+    "http_powered_by_contains": [
+      "axum"
+    ],
+    "http_server_contains": [
+      "axum"
+    ],
+    "kind": "RustAxum",
+    "priority": 20
+  },
+  {
+    "banner_contains": [
+      "postgresql",
+      "postgres"
+    ],
+    "default_ports": [
+      5432
+    ],
+    "exe_path_contains": [
+      "postgres",
+      "postgresql",
+      "pgsql"
+    ],
+    "kind": "PostgreSQL",
+    "priority": 10,
+    "process_names": [
+      "postgres",
+      "postgresql",
+      "pg_ctl",
+      "postmaster"
+    ]
+  },
+  {
+    "banner_contains": [
+      "mysql"
+    ],
+    "default_ports": [
+      3306
+    ],
+    "exe_path_contains": [
+      "mysql"
+    ],
+    "kind": "MySQL",
+    "priority": 10,
+    "process_names": [
+      "mysqld",
+      "mysql"
+    ]
+  },
+  {
+    "banner_contains": [
+      "mariadb"
+    ],
+    "default_ports": [
+      3306
+    ],
+    "exe_path_contains": [
+      "mariadb"
+    ],
+    "kind": "MariaDB",
+    "priority": 9,
+    "process_names": [
+      "mariadbd",
+      "mariadb"
+    ]
+  },
+  {
+    "banner_contains": [
+      "mongodb",
+      "mongod"
+    ],
+    "default_ports": [
+      27017,
+      27018,
+      27019
+    ],
+    "exe_path_contains": [
+      "mongodb",
+      "mongod"
+    ],
+    "kind": "MongoDB",
+    "priority": 10,
+    "process_names": [
+      "mongod",
+      "mongos"
+    ]
+  },
+  {
+    "banner_contains": [
+      "redis",
+      "+pong"
+    ],
+    "default_ports": [
+      6379,
+      6380
+    ],
+    "exe_path_contains": [
+      "redis"
+    ],
+    "kind": "Redis",
+    "priority": 10,
+    "process_names": [
+      "redis-server",
+      "redis"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "sqlite"
+    ],
+    "html_title_contains": [
+      "sqlite"
+    ],
+    "kind": "SQLite",
+    "priority": 30,
+    "process_names": [
+      "sqlite3",
+      "sqlite"
+    ]
+  },
+  {
+    "banner_contains": [
+      "memcached"
+    ],
+    "default_ports": [
+      11211
+    ],
+    "exe_path_contains": [
+      "memcached"
+    ],
+    "kind": "Memcached",
+    "priority": 10,
+    "process_names": [
+      "memcached"
+    ]
+  },
+  {
+    "banner_contains": [
+      "cluster_name",
+      "elasticsearch",
+      "you know, for search"
+    ],
+    "cmdline_contains": [
+      "elasticsearch",
+      "org.elasticsearch"
+    ],
+    "cmdline_requires_process": [
+      "java",
+      "javaw"
+    ],
+    "default_ports": [
+      9200,
+      9300
+    ],
+    "exe_path_contains": [
+      "elasticsearch"
+    ],
+    "http_header_contains": [
+      [
+        "x-elastic-product",
+        "elasticsearch"
+      ]
+    ],
+    "http_server_contains": [
+      "elasticsearch"
+    ],
+    "kind": "Elasticsearch",
+    "priority": 10,
+    "process_names": [
+      "elasticsearch"
+    ]
+  },
+  {
+    "banner_contains": [
+      "clickhouse"
+    ],
+    "default_ports": [
+      8123,
+      9000,
+      9440
+    ],
+    "exe_path_contains": [
+      "clickhouse"
+    ],
+    "html_title_contains": [
+      "clickhouse"
+    ],
+    "http_server_contains": [
+      "clickhouse"
+    ],
+    "kind": "ClickHouse",
+    "priority": 10,
+    "process_names": [
+      "clickhouse-server",
+      "clickhouse"
+    ]
+  },
+  {
+    "banner_contains": [
+      "cockroachdb"
+    ],
+    "default_ports": [
+      26257,
+      8080
+    ],
+    "exe_path_contains": [
+      "cockroach"
+    ],
+    "html_title_contains": [
+      "cockroachdb"
+    ],
+    "http_server_contains": [
+      "cockroachdb"
+    ],
+    "kind": "CockroachDB",
+    "priority": 10,
+    "process_names": [
+      "cockroach"
+    ]
+  },
+  {
+    "banner_contains": [
+      "sqlserver",
+      "mssql"
+    ],
+    "default_ports": [
+      1433,
+      1434
+    ],
+    "exe_path_contains": [
+      "mssql",
+      "sqlserver",
+      "microsoft sql server"
+    ],
+    "kind": "MSSQL",
+    "priority": 10,
+    "process_names": [
+      "sqlservr",
+      "sqlserver"
+    ]
+  },
+  {
+    "banner_contains": [
+      "couchdb",
+      "welcome"
+    ],
+    "cmdline_contains": [
+      "couchdb"
+    ],
+    "default_ports": [
+      5984
+    ],
+    "exe_path_contains": [
+      "couchdb"
+    ],
+    "http_server_contains": [
+      "couchdb"
+    ],
+    "kind": "CouchDB",
+    "priority": 10,
+    "process_names": [
+      "couchdb",
+      "beam.smp"
+    ],
+    "version_from_header_prefix": "couchdb"
+  },
+  {
+    "banner_contains": [
+      "neo4j"
+    ],
+    "cmdline_contains": [
+      "neo4j",
+      "org.neo4j"
+    ],
+    "cmdline_requires_process": [
+      "java",
+      "javaw"
+    ],
+    "default_ports": [
+      7474,
+      7687
+    ],
+    "exe_path_contains": [
+      "neo4j"
+    ],
+    "html_title_contains": [
+      "neo4j browser"
+    ],
+    "http_server_contains": [
+      "neo4j"
+    ],
+    "kind": "Neo4j",
+    "priority": 10,
+    "process_names": [
+      "neo4j"
+    ]
+  },
+  {
+    "banner_contains": [
+      "influxdb"
+    ],
+    "default_ports": [
+      8086
+    ],
+    "exe_path_contains": [
+      "influxdb",
+      "influxd"
+    ],
+    "html_title_contains": [
+      "influxdb"
+    ],
+    "http_header_contains": [
+      [
+        "x-influxdb-version",
+        ""
+      ],
+      [
+        "x-influxdb-build",
+        ""
+      ]
+    ],
+    "http_server_contains": [
+      "influxdb"
+    ],
+    "kind": "InfluxDB",
+    "priority": 10,
+    "process_names": [
+      "influxd",
+      "influxdb"
+    ]
+  },
+  {
+    "banner_contains": [
+      "cassandra"
+    ],
+    "cmdline_contains": [
+      "cassandra",
+      "org.apache.cassandra"
+    ],
+    "cmdline_requires_process": [
+      "java",
+      "javaw"
+    ],
+    "default_ports": [
+      9042,
+      7000,
+      7001
+    ],
+    "exe_path_contains": [
+      "cassandra"
+    ],
+    "kind": "Cassandra",
+    "priority": 10,
+    "process_names": [
+      "cassandra"
+    ]
+  },
+  {
+    "banner_contains": [
+      "solr"
+    ],
+    "cmdline_contains": [
+      "solr",
+      "org.apache.solr"
+    ],
+    "cmdline_requires_process": [
+      "java",
+      "javaw"
+    ],
+    "default_ports": [
+      8983
+    ],
+    "exe_path_contains": [
+      "solr"
+    ],
+    "html_title_contains": [
+      "solr admin"
+    ],
+    "http_server_contains": [
+      "solr"
+    ],
+    "kind": "Solr",
+    "priority": 10,
+    "process_names": [
+      "solr"
+    ]
+  },
+  {
+    "banner_contains": [
+      "meilisearch"
+    ],
+    "default_ports": [
+      7700
+    ],
+    "exe_path_contains": [
+      "meilisearch"
+    ],
+    "html_title_contains": [
+      "meilisearch"
+    ],
+    "http_powered_by_contains": [
+      "meilisearch"
+    ],
+    "http_server_contains": [
+      "meilisearch"
+    ],
+    "kind": "MeiliSearch",
+    "priority": 10,
+    "process_names": [
+      "meilisearch"
+    ]
+  },
+  {
+    "banner_contains": [
+      "typesense"
+    ],
+    "default_ports": [
+      8108
+    ],
+    "exe_path_contains": [
+      "typesense"
+    ],
+    "http_server_contains": [
+      "typesense"
+    ],
+    "kind": "Typesense",
+    "priority": 10,
+    "process_names": [
+      "typesense-server",
+      "typesense"
+    ]
+  },
+  {
+    "banner_contains": [
+      "rabbitmq",
+      "amqp"
+    ],
+    "banner_starts_with": [
+      "AMQP"
+    ],
+    "cmdline_contains": [
+      "rabbitmq"
+    ],
+    "default_ports": [
+      5672,
+      15672,
+      25672
+    ],
+    "exe_path_contains": [
+      "rabbitmq"
+    ],
+    "html_title_contains": [
+      "rabbitmq management"
+    ],
+    "http_server_contains": [
+      "cowboy"
+    ],
+    "kind": "RabbitMQ",
+    "priority": 10,
+    "process_names": [
+      "rabbitmq-server",
+      "beam.smp",
+      "rabbitmq"
+    ]
+  },
+  {
+    "banner_contains": [
+      "kafka"
+    ],
+    "cmdline_contains": [
+      "kafka.kafka",
+      "kafka-server",
+      "org.apache.kafka"
+    ],
+    "cmdline_requires_process": [
+      "java",
+      "javaw"
+    ],
+    "default_ports": [
+      9092,
+      9093
+    ],
+    "exe_path_contains": [
+      "kafka"
+    ],
+    "kind": "Kafka",
+    "priority": 10,
+    "process_names": [
+      "kafka"
+    ]
+  },
+  {
+    "banner_contains": [
+      "nats",
+      "server_id"
+    ],
+    "banner_starts_with": [
+      "INFO {"
+    ],
+    "default_ports": [
+      4222,
+      8222,
+      6222
+    ],
+    "exe_path_contains": [
+      "nats-server",
+      "gnatsd"
+    ],
+    "kind": "NATS",
+    "priority": 10,
+    "process_names": [
+      "nats-server",
+      "gnatsd"
+    ]
+  },
+  {
+    "banner_contains": [
+      "mosquitto",
+      "mqtt"
+    ],
+    "default_ports": [
+      1883,
+      8883,
+      9001
+    ],
+    "exe_path_contains": [
+      "mosquitto"
+    ],
+    "kind": "Mosquitto",
+    "priority": 10,
+    "process_names": [
+      "mosquitto"
+    ]
+  },
+  {
+    "cmdline_contains": [
+      "vite",
+      "node_modules/.bin/vite",
+      "node_modules/vite"
+    ],
+    "cmdline_requires_process": [
+      "node",
+      "bun"
+    ],
+    "default_ports": [
+      5173,
+      5174,
+      3000
+    ],
+    "html_title_contains": [
+      "vite"
+    ],
+    "http_server_contains": [
+      "vite"
+    ],
+    "kind": "ViteDevServer",
+    "priority": 5
+  },
+  {
+    "cmdline_contains": [
+      "webpack",
+      "webpack-dev-server",
+      "webpack serve"
+    ],
+    "cmdline_requires_process": [
+      "node"
+    ],
+    "default_ports": [
+      8080,
+      9000
+    ],
+    "html_title_contains": [
+      "webpack"
+    ],
+    "http_server_contains": [
+      "webpack-dev-server"
+    ],
+    "kind": "WebpackDevServer",
+    "priority": 5
+  },
+  {
+    "cmdline_contains": [
+      "next dev",
+      "next start",
+      "next-server",
+      "node_modules/next"
+    ],
+    "cmdline_requires_process": [
+      "node"
+    ],
+    "default_ports": [
+      3000
+    ],
+    "http_header_contains": [
+      [
+        "x-powered-by",
+        "next.js"
+      ],
+      [
+        "x-nextjs-page",
+        ""
+      ]
+    ],
+    "http_powered_by_contains": [
+      "next.js"
+    ],
+    "http_server_contains": [
+      "next.js"
+    ],
+    "kind": "NextJs",
+    "priority": 5
+  },
+  {
+    "cmdline_contains": [
+      "nuxt",
+      "node_modules/nuxt",
+      "nuxi dev"
+    ],
+    "cmdline_requires_process": [
+      "node"
+    ],
+    "default_ports": [
+      3000
+    ],
+    "http_header_contains": [
+      [
+        "x-powered-by",
+        "nuxt"
+      ]
+    ],
+    "http_powered_by_contains": [
+      "nuxt"
+    ],
+    "http_server_contains": [
+      "nuxt"
+    ],
+    "kind": "Nuxt",
+    "priority": 5
+  },
+  {
+    "cmdline_contains": [
+      "remix dev",
+      "node_modules/remix",
+      "@remix-run"
+    ],
+    "cmdline_requires_process": [
+      "node"
+    ],
+    "default_ports": [
+      3000
+    ],
+    "http_powered_by_contains": [
+      "remix"
+    ],
+    "kind": "Remix",
+    "priority": 5
+  },
+  {
+    "cmdline_contains": [
+      "react-scripts start",
+      "react-scripts"
+    ],
+    "cmdline_requires_process": [
+      "node"
+    ],
+    "default_ports": [
+      3000
+    ],
+    "html_title_contains": [
+      "react app"
+    ],
+    "kind": "CreateReactApp",
+    "priority": 5
+  },
+  {
+    "cmdline_contains": [
+      "ng serve",
+      "@angular/cli",
+      "angular-cli"
+    ],
+    "cmdline_requires_process": [
+      "node"
+    ],
+    "default_ports": [
+      4200
+    ],
+    "html_title_contains": [
+      "angular"
+    ],
+    "kind": "AngularCli",
+    "priority": 5
+  },
+  {
+    "cmdline_contains": [
+      "vue-cli-service serve",
+      "@vue/cli-service",
+      "vue-cli"
+    ],
+    "cmdline_requires_process": [
+      "node"
+    ],
+    "default_ports": [
+      8080
+    ],
+    "html_title_contains": [
+      "vue"
+    ],
+    "kind": "VueCli",
+    "priority": 5
+  },
+  {
+    "cmdline_contains": [
+      "svelte-kit",
+      "sveltekit",
+      "node_modules/@sveltejs"
+    ],
+    "cmdline_requires_process": [
+      "node"
+    ],
+    "default_ports": [
+      5173
+    ],
+    "html_title_contains": [
+      "sveltekit",
+      "svelte"
+    ],
+    "http_powered_by_contains": [
+      "sveltekit"
+    ],
+    "http_server_contains": [
+      "sveltekit"
+    ],
+    "kind": "SvelteKit",
+    "priority": 5
+  },
+  {
+    "cmdline_contains": [
+      "astro dev",
+      "node_modules/astro",
+      "astro preview"
+    ],
+    "cmdline_requires_process": [
+      "node"
+    ],
+    "default_ports": [
+      4321,
+      3000
+    ],
+    "html_title_contains": [
+      "astro"
+    ],
+    "http_powered_by_contains": [
+      "astro"
+    ],
+    "http_server_contains": [
+      "astro"
+    ],
+    "kind": "Astro",
+    "priority": 5
+  },
+  {
+    "cmdline_contains": [
+      "hugo server",
+      "hugo serve"
+    ],
+    "cmdline_requires_process": [
+      "hugo"
+    ],
+    "default_ports": [
+      1313
+    ],
+    "exe_path_contains": [
+      "hugo"
+    ],
+    "http_server_contains": [
+      "hugo"
+    ],
+    "kind": "Hugo",
+    "priority": 5,
+    "process_names": [
+      "hugo"
+    ]
+  },
+  {
+    "cmdline_contains": [
+      "gatsby develop",
+      "gatsby serve",
+      "node_modules/gatsby"
+    ],
+    "cmdline_requires_process": [
+      "node"
+    ],
+    "default_ports": [
+      8000,
+      9000
+    ],
+    "html_title_contains": [
+      "gatsby"
+    ],
+    "http_header_contains": [
+      [
+        "x-powered-by",
+        "gatsby"
+      ]
+    ],
+    "http_powered_by_contains": [
+      "gatsby"
+    ],
+    "kind": "Gatsby",
+    "priority": 5
+  },
+  {
+    "cmdline_contains": [
+      "storybook",
+      "start-storybook",
+      "node_modules/@storybook"
+    ],
+    "cmdline_requires_process": [
+      "node"
+    ],
+    "default_ports": [
+      6006
+    ],
+    "html_title_contains": [
+      "storybook"
+    ],
+    "kind": "Storybook",
+    "priority": 5
+  },
+  {
+    "cmdline_contains": [
+      "jupyter",
+      "notebook",
+      "jupyterlab"
+    ],
+    "cmdline_requires_process": [
+      "python",
+      "python3"
+    ],
+    "default_ports": [
+      8888,
+      8889
+    ],
+    "exe_path_contains": [
+      "jupyter"
+    ],
+    "html_title_contains": [
+      "jupyter",
+      "jupyterlab"
+    ],
+    "http_server_contains": [
+      "tornado"
+    ],
+    "kind": "Jupyter",
+    "priority": 5,
+    "process_names": [
+      "jupyter",
+      "jupyter-notebook",
+      "jupyter-lab"
+    ]
+  },
+  {
+    "cmdline_contains": [
+      "pgadmin"
+    ],
+    "cmdline_requires_process": [
+      "python",
+      "python3"
+    ],
+    "default_ports": [
+      5050
+    ],
+    "exe_path_contains": [
+      "pgadmin"
+    ],
+    "html_title_contains": [
+      "pgadmin"
+    ],
+    "kind": "PgAdmin",
+    "priority": 5,
+    "process_names": [
+      "pgadmin4",
+      "pgadmin"
+    ]
+  },
+  {
+    "banner_contains": [
+      "swagger"
+    ],
+    "cmdline_contains": [
+      "swagger"
+    ],
+    "default_ports": [
+      8080
+    ],
+    "html_title_contains": [
+      "swagger ui",
+      "swagger editor",
+      "swagger"
+    ],
+    "kind": "Swagger",
+    "priority": 5
+  },
+  {
+    "default_ports": [
+      2375,
+      2376
+    ],
+    "exe_path_contains": [
+      "docker"
+    ],
+    "http_header_contains": [
+      [
+        "docker-experimental",
+        ""
+      ],
+      [
+        "api-version",
+        ""
+      ]
+    ],
+    "http_server_contains": [
+      "docker"
+    ],
+    "kind": "Docker",
+    "priority": 10,
+    "process_names": [
+      "dockerd",
+      "docker-proxy",
+      "com.docker.backend"
+    ]
+  },
+  {
+    "banner_contains": [
+      "kubernetes"
+    ],
+    "default_ports": [
+      6443,
+      8443,
+      10250
+    ],
+    "exe_path_contains": [
+      "kubernetes",
+      "kube"
+    ],
+    "kind": "Kubernetes",
+    "priority": 10,
+    "process_names": [
+      "kube-apiserver",
+      "kubelet",
+      "kube-proxy"
+    ]
+  },
+  {
+    "banner_contains": [
+      "prometheus"
+    ],
+    "default_ports": [
+      9090
+    ],
+    "exe_path_contains": [
+      "prometheus"
+    ],
+    "html_title_contains": [
+      "prometheus time series"
+    ],
+    "kind": "Prometheus",
+    "priority": 10,
+    "process_names": [
+      "prometheus"
+    ]
+  },
+  {
+    "default_ports": [
+      3000
+    ],
+    "exe_path_contains": [
+      "grafana"
+    ],
+    "html_title_contains": [
+      "grafana"
+    ],
+    "http_server_contains": [
+      "grafana"
+    ],
+    "kind": "Grafana",
+    "priority": 10,
+    "process_names": [
+      "grafana-server",
+      "grafana"
+    ]
+  },
+  {
+    "cmdline_contains": [
+      "jenkins",
+      "jenkins.war"
+    ],
+    "cmdline_requires_process": [
+      "java",
+      "javaw"
+    ],
+    "default_ports": [
+      8080,
+      50000
+    ],
+    "exe_path_contains": [
+      "jenkins"
+    ],
+    "html_title_contains": [
+      "jenkins",
+      "dashboard [jenkins]"
+    ],
+    "http_header_contains": [
+      [
+        "x-jenkins",
+        ""
+      ],
+      [
+        "x-hudson",
+        ""
+      ]
+    ],
+    "http_server_contains": [
+      "jetty",
+      "jenkins"
+    ],
+    "kind": "Jenkins",
+    "priority": 10,
+    "process_names": [
+      "jenkins"
+    ]
+  },
+  {
+    "default_ports": [
+      8093
+    ],
+    "exe_path_contains": [
+      "gitlab-runner"
+    ],
+    "html_title_contains": [
+      "gitlab"
+    ],
+    "kind": "GitLabRunner",
+    "priority": 10,
+    "process_names": [
+      "gitlab-runner"
+    ]
+  },
+  {
+    "default_ports": [
+      8500,
+      8501,
+      8300,
+      8301,
+      8302,
+      8600
+    ],
+    "exe_path_contains": [
+      "consul"
+    ],
+    "html_title_contains": [
+      "consul"
+    ],
+    "http_header_contains": [
+      [
+        "x-consul-index",
+        ""
+      ]
+    ],
+    "http_server_contains": [
+      "consul"
+    ],
+    "kind": "Consul",
+    "priority": 10,
+    "process_names": [
+      "consul"
+    ]
+  },
+  {
+    "cmdline_contains": [
+      "vault server"
+    ],
+    "cmdline_requires_process": [
+      "vault"
+    ],
+    "default_ports": [
+      8200
+    ],
+    "exe_path_contains": [
+      "vault"
+    ],
+    "html_title_contains": [
+      "vault"
+    ],
+    "http_header_contains": [
+      [
+        "x-vault-request",
+        ""
+      ]
+    ],
+    "kind": "Vault",
+    "priority": 10,
+    "process_names": [
+      "vault"
+    ]
+  },
+  {
+    "cmdline_contains": [
+      "minio server"
+    ],
+    "cmdline_requires_process": [
+      "minio"
+    ],
+    "default_ports": [
+      9000,
+      9001
+    ],
+    "exe_path_contains": [
+      "minio"
+    ],
+    "html_title_contains": [
+      "minio"
+    ],
+    "http_header_contains": [
+      [
+        "server",
+        "minio"
+      ]
+    ],
+    "http_server_contains": [
+      "minio"
+    ],
+    "kind": "MinIO",
+    "priority": 10,
+    "process_names": [
+      "minio"
+    ]
+  },
+  {
+    "cmdline_contains": [
+      "nginx-proxy-manager"
+    ],
+    "default_ports": [
+      81
+    ],
+    "exe_path_contains": [
+      "nginx-proxy-manager"
+    ],
+    "html_title_contains": [
+      "nginx proxy manager"
+    ],
+    "kind": "NginxProxyManager",
+    "priority": 8
+  },
+  {
+    "default_ports": [
+      9901,
+      10000
+    ],
+    "exe_path_contains": [
+      "envoy"
+    ],
+    "http_header_contains": [
+      [
+        "server",
+        "envoy"
+      ],
+      [
+        "x-envoy-upstream-service-time",
+        ""
+      ]
+    ],
+    "http_server_contains": [
+      "envoy"
+    ],
+    "kind": "Envoy",
+    "priority": 10,
+    "process_names": [
+      "envoy"
+    ]
+  },
+  {
+    "default_ports": [
+      16686,
+      14268,
+      14250,
+      6831
+    ],
+    "exe_path_contains": [
+      "jaeger"
+    ],
+    "html_title_contains": [
+      "jaeger ui",
+      "jaeger"
+    ],
+    "kind": "Jaeger",
+    "priority": 10,
+    "process_names": [
+      "jaeger",
+      "jaeger-all-in-one",
+      "jaeger-collector",
+      "jaeger-query"
+    ]
+  },
+  {
+    "cmdline_contains": [
+      "zipkin"
+    ],
+    "cmdline_requires_process": [
+      "java",
+      "javaw"
+    ],
+    "default_ports": [
+      9411
+    ],
+    "exe_path_contains": [
+      "zipkin"
+    ],
+    "html_title_contains": [
+      "zipkin"
+    ],
+    "kind": "Zipkin",
+    "priority": 10,
+    "process_names": [
+      "zipkin"
+    ]
+  },
+  {
+    "cmdline_contains": [
+      "keycloak",
+      "org.keycloak"
+    ],
+    "cmdline_requires_process": [
+      "java",
+      "javaw"
+    ],
+    "default_ports": [
+      8080,
+      8443
+    ],
+    "exe_path_contains": [
+      "keycloak"
+    ],
+    "html_title_contains": [
+      "keycloak"
+    ],
+    "http_header_contains": [
+      [
+        "x-powered-by",
+        "keycloak"
+      ]
+    ],
+    "kind": "Keycloak",
+    "priority": 10,
+    "process_names": [
+      "keycloak"
+    ]
+  },
+  {
+    "cmdline_contains": [
+      "kong"
+    ],
+    "default_ports": [
+      8000,
+      8001,
+      8443,
+      8444
+    ],
+    "exe_path_contains": [
+      "kong"
+    ],
+    "http_header_contains": [
+      [
+        "via",
+        "kong"
+      ],
+      [
+        "server",
+        "kong"
+      ]
+    ],
+    "http_server_contains": [
+      "kong"
+    ],
+    "kind": "Kong",
+    "priority": 10,
+    "process_names": [
+      "kong"
+    ],
+    "version_from_header_prefix": "kong"
+  },
+  {
+    "banner_contains": [
+      "openssh",
+      "ssh-2.0"
+    ],
+    "banner_starts_with": [
+      "SSH-"
+    ],
+    "default_ports": [
+      22
+    ],
+    "exe_path_contains": [
+      "ssh",
+      "openssh"
+    ],
+    "kind": "OpenSSH",
+    "priority": 5,
+    "process_names": [
+      "sshd"
+    ]
+  },
+  {
+    "banner_contains": [
+      "smb",
+      "samba"
+    ],
+    "default_ports": [
+      445,
+      139
+    ],
+    "exe_path_contains": [
+      "samba"
+    ],
+    "kind": "SMB",
+    "priority": 5,
+    "process_names": [
+      "smbd"
+    ]
+  },
+  {
+    "default_ports": [
+      53
+    ],
+    "exe_path_contains": [
+      "named",
+      "bind",
+      "unbound",
+      "dnsmasq",
+      "coredns"
+    ],
+    "kind": "DNS",
+    "priority": 5,
+    "process_names": [
+      "named",
+      "bind9",
+      "unbound",
+      "dnsmasq",
+      "coredns"
+    ]
+  },
+  {
+    "default_ports": [
+      67,
+      68
+    ],
+    "exe_path_contains": [
+      "dhcp"
+    ],
+    "kind": "DHCP",
+    "priority": 5,
+    "process_names": [
+      "dhcpd",
+      "dhcpcd",
+      "dhcp-server",
+      "isc-dhcp-server"
+    ]
+  },
+  {
+    "banner_contains": [
+      "ftp",
+      "filezilla",
+      "vsftpd",
+      "proftpd"
+    ],
+    "banner_starts_with": [
+      "220 ",
+      "220-"
+    ],
+    "default_ports": [
+      21,
+      990
+    ],
+    "exe_path_contains": [
+      "vsftpd",
+      "proftpd",
+      "pure-ftpd",
+      "filezilla server"
+    ],
+    "kind": "FTP",
+    "priority": 5,
+    "process_names": [
+      "vsftpd",
+      "proftpd",
+      "pure-ftpd",
+      "ftpd"
+    ]
+  },
+  {
+    "banner_contains": [
+      "smtp",
+      "esmtp",
+      "mail",
+      "postfix",
+      "exim",
+      "sendmail"
+    ],
+    "banner_starts_with": [
+      "220 "
+    ],
+    "default_ports": [
+      25,
+      465,
+      587
+    ],
+    "exe_path_contains": [
+      "postfix",
+      "exim",
+      "sendmail"
+    ],
+    "kind": "SMTP",
+    "priority": 5,
+    "process_names": [
+      "smtpd",
+      "master"
+    ]
+  },
+  {
+    "banner_contains": [
+      "postfix"
+    ],
+    "cmdline_contains": [
+      "postfix"
+    ],
+    "default_ports": [
+      25,
+      465,
+      587
+    ],
+    "exe_path_contains": [
+      "postfix"
+    ],
+    "kind": "Postfix",
+    "priority": 4,
+    "process_names": [
+      "master"
+    ]
+  },
+  {
+    "banner_contains": [
+      "dovecot",
+      "imap"
+    ],
+    "default_ports": [
+      143,
+      993,
+      110,
+      995
+    ],
+    "exe_path_contains": [
+      "dovecot"
+    ],
+    "kind": "Dovecot",
+    "priority": 4,
+    "process_names": [
+      "dovecot"
+    ]
+  },
+  {
+    "cmdline_contains": [
+      "termservice"
+    ],
+    "cmdline_requires_process": [
+      "svchost"
+    ],
+    "default_ports": [
+      3389
+    ],
+    "kind": "RDP",
+    "priority": 5
+  },
+  {
+    "banner_contains": [
+      "rfb",
+      "vnc"
+    ],
+    "banner_starts_with": [
+      "RFB "
+    ],
+    "default_ports": [
+      5900,
+      5901,
+      5902
+    ],
+    "exe_path_contains": [
+      "vnc",
+      "tigervnc",
+      "tightvnc",
+      "realvnc"
+    ],
+    "kind": "VNC",
+    "priority": 5,
+    "process_names": [
+      "vncserver",
+      "x11vnc",
+      "tigervnc",
+      "Xvnc"
+    ]
+  },
+  {
+    "cmdline_contains": [
+      "winrm"
+    ],
+    "cmdline_requires_process": [
+      "svchost"
+    ],
+    "default_ports": [
+      5985,
+      5986
+    ],
+    "http_server_contains": [
+      "microsoft-httpapi"
+    ],
+    "kind": "WinRM",
+    "priority": 5
+  },
+  {
+    "default_ports": [
+      515,
+      631,
+      9100
+    ],
+    "exe_path_contains": [
+      "spoolsv"
+    ],
+    "kind": "PrintSpooler",
+    "priority": 5,
+    "process_names": [
+      "spoolsv"
+    ]
+  },
+  {
+    "banner_contains": [
+      "plex"
+    ],
+    "default_ports": [
+      32400
+    ],
+    "exe_path_contains": [
+      "plex"
+    ],
+    "html_title_contains": [
+      "plex"
+    ],
+    "http_header_contains": [
+      [
+        "x-plex-protocol",
+        ""
+      ]
+    ],
+    "kind": "Plex",
+    "priority": 10,
+    "process_names": [
+      "plex media server",
+      "plexmediaserver"
+    ]
+  },
+  {
+    "default_ports": [
+      8096,
+      8920
+    ],
+    "exe_path_contains": [
+      "jellyfin"
+    ],
+    "html_title_contains": [
+      "jellyfin"
+    ],
+    "http_header_contains": [
+      [
+        "x-emby-authorization",
+        ""
+      ]
+    ],
+    "http_server_contains": [
+      "jellyfin"
+    ],
+    "kind": "Jellyfin",
+    "priority": 10,
+    "process_names": [
+      "jellyfin"
+    ]
+  },
+  {
+    "default_ports": [
+      80,
+      443
+    ],
+    "exe_path_contains": [
+      "openresty"
+    ],
+    "html_title_contains": [
+      "openresty"
+    ],
+    "http_server_contains": [
+      "openresty"
+    ],
+    "kind": "Nginx",
+    "priority": 11,
+    "process_names": [
+      "openresty"
+    ],
+    "version_from_header_prefix": "openresty"
+  },
+  {
+    "default_ports": [
+      80,
+      443
+    ],
+    "exe_path_contains": [
+      "tengine"
+    ],
+    "http_server_contains": [
+      "tengine"
+    ],
+    "kind": "Nginx",
+    "priority": 11,
+    "process_names": [
+      "tengine"
+    ],
+    "version_from_header_prefix": "tengine"
+  },
+  {
+    "default_ports": [
+      80,
+      443
+    ],
+    "exe_path_contains": [
+      "xampp",
+      "wamp",
+      "mamp",
+      "lampp"
+    ],
+    "html_title_contains": [
+      "xampp",
+      "wamp",
+      "mamp"
+    ],
+    "kind": "Apache",
+    "priority": 11
+  },
+  {
+    "http_header_contains": [
+      [
+        "x-aspnetmvc-version",
+        ""
+      ]
+    ],
+    "http_powered_by_contains": [
+      "asp.net core"
+    ],
+    "kind": "IIS",
+    "priority": 11
+  },
+  {
+    "cmdline_contains": [
+      "node_modules/express",
+      "ts-node"
+    ],
+    "cmdline_requires_process": [
+      "node",
+      "ts-node"
+    ],
+    "default_ports": [
+      3001,
+      4000,
+      5000,
+      8080
+    ],
+    "exe_path_contains": [
+      "node_modules/express"
+    ],
+    "http_header_contains": [
+      [
+        "etag",
+        "w/"
+      ]
+    ],
+    "kind": "Express",
+    "priority": 21
+  },
+  {
+    "cmdline_contains": [
+      "@nestjs",
+      "nest start"
+    ],
+    "cmdline_requires_process": [
+      "node"
+    ],
+    "default_ports": [
+      3000
+    ],
+    "exe_path_contains": [
+      "node_modules/@nestjs"
+    ],
+    "kind": "NestJS",
+    "priority": 21
+  },
+  {
+    "default_ports": [
+      8000,
+      8001
+    ],
+    "exe_path_contains": [
+      "django"
+    ],
+    "html_title_contains": [
+      "django administration",
+      "log in | django"
+    ],
+    "http_header_contains": [
+      [
+        "set-cookie",
+        "csrftoken"
+      ]
+    ],
+    "kind": "Django",
+    "priority": 16,
+    "process_names": [
+      "manage.py"
+    ]
+  },
+  {
+    "banner_contains": [
+      "werkzeug"
+    ],
+    "default_ports": [
+      5000,
+      5001
+    ],
+    "html_title_contains": [
+      "werkzeug debugger"
+    ],
+    "kind": "Flask",
+    "priority": 16
+  },
+  {
+    "default_ports": [
+      8000
+    ],
+    "html_title_contains": [
+      "fastapi - swagger ui"
+    ],
+    "kind": "FastAPI",
+    "priority": 16
+  },
+  {
+    "cmdline_contains": [
+      "artisan"
+    ],
+    "cmdline_requires_process": [
+      "php"
+    ],
+    "default_ports": [
+      8000
+    ],
+    "http_header_contains": [
+      [
+        "set-cookie",
+        "xsrf-token"
+      ]
+    ],
+    "http_server_contains": [
+      "php"
+    ],
+    "kind": "Laravel",
+    "priority": 16
+  },
+  {
+    "banner_contains": [
+      "wp-json",
+      "xmlrpc.php"
+    ],
+    "html_title_contains": [
+      "log in",
+      "wp-admin"
+    ],
+    "http_header_contains": [
+      [
+        "link",
+        "rest_route"
+      ],
+      [
+        "x-wp-total",
+        ""
+      ]
+    ],
+    "kind": "WordPress",
+    "priority": 16
+  },
+  {
+    "banner_contains": [
+      "actuator",
+      "spring"
+    ],
+    "cmdline_contains": [
+      "spring.main",
+      "-jar"
+    ],
+    "cmdline_requires_process": [
+      "java",
+      "javaw"
+    ],
+    "default_ports": [
+      8080,
+      8081
+    ],
+    "kind": "JavaSpringBoot",
+    "priority": 16
+  },
+  {
+    "banner_contains": [
+      "pgbouncer"
+    ],
+    "default_ports": [
+      5432,
+      6432
+    ],
+    "exe_path_contains": [
+      "pgbouncer"
+    ],
+    "kind": "PostgreSQL",
+    "priority": 11,
+    "process_names": [
+      "pgbouncer"
+    ]
+  },
+  {
+    "banner_contains": [
+      "percona"
+    ],
+    "default_ports": [
+      3306
+    ],
+    "exe_path_contains": [
+      "percona"
+    ],
+    "kind": "MySQL",
+    "priority": 11,
+    "process_names": [
+      "percona-server"
+    ]
+  },
+  {
+    "banner_contains": [
+      "ismaster",
+      "iswritableprimary"
+    ],
+    "default_ports": [
+      27017
+    ],
+    "exe_path_contains": [
+      "mongosh"
+    ],
+    "kind": "MongoDB",
+    "priority": 11,
+    "process_names": [
+      "mongosh"
+    ]
+  },
+  {
+    "banner_contains": [
+      "keydb",
+      "dragonfly"
+    ],
+    "default_ports": [
+      6379
+    ],
+    "exe_path_contains": [
+      "keydb",
+      "dragonfly"
+    ],
+    "kind": "Redis",
+    "priority": 11,
+    "process_names": [
+      "keydb-server",
+      "dragonfly"
+    ]
+  },
+  {
+    "banner_contains": [
+      "opensearch"
+    ],
+    "cmdline_contains": [
+      "opensearch"
+    ],
+    "cmdline_requires_process": [
+      "java",
+      "javaw"
+    ],
+    "default_ports": [
+      9200,
+      9300
+    ],
+    "exe_path_contains": [
+      "opensearch"
+    ],
+    "http_server_contains": [
+      "opensearch"
+    ],
+    "kind": "Elasticsearch",
+    "priority": 11,
+    "process_names": [
+      "opensearch"
+    ]
+  },
+  {
+    "banner_contains": [
+      "sql server"
+    ],
+    "default_ports": [
+      1433
+    ],
+    "exe_path_contains": [
+      "sql server"
+    ],
+    "kind": "MSSQL",
+    "priority": 11,
+    "process_names": [
+      "sqlserver"
+    ]
+  },
+  {
+    "default_ports": [
+      15672
+    ],
+    "html_title_contains": [
+      "rabbitmq"
+    ],
+    "kind": "RabbitMQ",
+    "priority": 11
+  },
+  {
+    "default_ports": [
+      2375,
+      2376
+    ],
+    "exe_path_contains": [
+      "docker desktop"
+    ],
+    "kind": "Docker",
+    "priority": 11,
+    "process_names": [
+      "com.docker.service",
+      "docker desktop"
+    ]
+  },
+  {
+    "default_ports": [
+      6443
+    ],
+    "exe_path_contains": [
+      "k3s",
+      "microk8s"
+    ],
+    "kind": "Kubernetes",
+    "priority": 11,
+    "process_names": [
+      "k3s",
+      "k3s-server",
+      "k3s-agent",
+      "microk8s"
+    ]
+  },
+  {
+    "cmdline_contains": [
+      "grafana-server",
+      "grafana server"
+    ],
+    "cmdline_requires_process": [
+      "grafana"
+    ],
+    "default_ports": [
+      3000
+    ],
+    "http_header_contains": [
+      [
+        "x-grafana-org-id",
+        ""
+      ]
+    ],
+    "kind": "Grafana",
+    "priority": 11,
+    "process_names": [
+      "grafana"
+    ]
+  },
+  {
+    "default_ports": [
+      50000
+    ],
+    "html_title_contains": [
+      "sign in [jenkins]"
+    ],
+    "http_header_contains": [
+      [
+        "x-jenkins-session",
+        ""
+      ],
+      [
+        "x-ssh-endpoint",
+        ""
+      ]
+    ],
+    "kind": "Jenkins",
+    "priority": 11
+  },
+  {
+    "banner_contains": [
+      "dropbear"
+    ],
+    "banner_starts_with": [
+      "SSH-2.0-dropbear"
+    ],
+    "default_ports": [
+      22
+    ],
+    "exe_path_contains": [
+      "dropbear"
+    ],
+    "kind": "OpenSSH",
+    "priority": 6,
+    "process_names": [
+      "dropbear"
+    ]
+  },
+  {
+    "banner_contains": [
+      "filezilla"
+    ],
+    "default_ports": [
+      21
+    ],
+    "exe_path_contains": [
+      "filezilla server"
+    ],
+    "kind": "FTP",
+    "priority": 6,
+    "process_names": [
+      "filezilla server"
+    ]
+  },
+  {
+    "banner_contains": [
+      "exim"
+    ],
+    "default_ports": [
+      25,
+      465,
+      587
+    ],
+    "exe_path_contains": [
+      "exim"
+    ],
+    "kind": "SMTP",
+    "priority": 6,
+    "process_names": [
+      "exim",
+      "exim4"
+    ]
+  },
+  {
+    "default_ports": [
+      53,
+      80
+    ],
+    "exe_path_contains": [
+      "pihole"
+    ],
+    "html_title_contains": [
+      "pi-hole"
+    ],
+    "http_server_contains": [
+      "lighttpd"
+    ],
+    "kind": "DNS",
+    "priority": 6,
+    "process_names": [
+      "pihole-ftl"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "\\nginx\\",
+      "program files\\nginx"
+    ],
+    "kind": "Nginx",
+    "priority": 12
+  },
+  {
+    "exe_path_contains": [
+      "\\apache24\\",
+      "\\apache2\\",
+      "program files\\apache"
+    ],
+    "kind": "Apache",
+    "priority": 12
+  },
+  {
+    "exe_path_contains": [
+      "npx",
+      "pnpm",
+      "yarn"
+    ],
+    "kind": "NodeJs",
+    "priority": 41
+  },
+  {
+    "cmdline_contains": [
+      "aspnet",
+      "blazor"
+    ],
+    "cmdline_requires_process": [
+      "dotnet"
+    ],
+    "default_ports": [
+      5000,
+      5001
+    ],
+    "exe_path_contains": [
+      "aspnet",
+      "blazor"
+    ],
+    "http_header_contains": [
+      [
+        "blazor-environment",
+        ""
+      ]
+    ],
+    "http_powered_by_contains": [
+      "blazor"
+    ],
+    "kind": "DotNetKestrel",
+    "priority": 21
+  },
+  {
+    "default_ports": [
+      1936,
+      8404
+    ],
+    "html_title_contains": [
+      "statistics report for haproxy",
+      "stats report"
+    ],
+    "kind": "HAProxy",
+    "priority": 11
+  },
+  {
+    "default_ports": [
+      6081
+    ],
+    "http_header_contains": [
+      [
+        "x-cache",
+        "hit"
+      ],
+      [
+        "x-cache-hits",
+        ""
+      ],
+      [
+        "age",
+        ""
+      ]
+    ],
+    "kind": "Varnish",
+    "priority": 11
+  },
+  {
+    "http_header_contains": [
+      [
+        "x-envoy-decorator-operation",
+        ""
+      ],
+      [
+        "x-envoy-attempt-count",
+        ""
+      ]
+    ],
+    "kind": "Envoy",
+    "priority": 11
+  },
+  {
+    "default_ports": [
+      8001,
+      8444
+    ],
+    "http_header_contains": [
+      [
+        "x-kong-upstream-latency",
+        ""
+      ],
+      [
+        "x-kong-proxy-latency",
+        ""
+      ]
+    ],
+    "kind": "Kong",
+    "priority": 11
+  },
+  {
+    "cmdline_contains": [
+      "consul agent"
+    ],
+    "cmdline_requires_process": [
+      "consul"
+    ],
+    "default_ports": [
+      8600
+    ],
+    "html_title_contains": [
+      "consul by hashicorp"
+    ],
+    "kind": "Consul",
+    "priority": 11
+  },
+  {
+    "default_ports": [
+      1900,
+      32469
+    ],
+    "exe_path_contains": [
+      "plex media server"
+    ],
+    "http_header_contains": [
+      [
+        "x-plex-content-original-length",
+        ""
+      ]
+    ],
+    "kind": "Plex",
+    "priority": 11,
+    "process_names": [
+      "plex media scanner",
+      "plex tuner service"
+    ]
+  },
+  {
+    "cmdline_contains": [
+      ".next/standalone"
+    ],
+    "cmdline_requires_process": [
+      "node"
+    ],
+    "default_ports": [
+      3000
+    ],
+    "exe_path_contains": [
+      ".next"
+    ],
+    "http_header_contains": [
+      [
+        "x-nextjs-cache",
+        ""
+      ],
+      [
+        "x-nextjs-matched-path",
+        ""
+      ]
+    ],
+    "kind": "NextJs",
+    "priority": 6
+  },
+  {
+    "default_ports": [
+      3000
+    ],
+    "exe_path_contains": [
+      ".nuxt",
+      "node_modules/nuxt3"
+    ],
+    "http_header_contains": [
+      [
+        "x-nuxt-no-ssr",
+        ""
+      ]
+    ],
+    "kind": "Nuxt",
+    "priority": 6
+  },
+  {
+    "cmdline_contains": [
+      "vitest",
+      "vite preview",
+      "vite build"
+    ],
+    "cmdline_requires_process": [
+      "node"
+    ],
+    "default_ports": [
+      5173,
+      4173
+    ],
+    "kind": "ViteDevServer",
+    "priority": 6
+  },
+  {
+    "cmdline_contains": [
+      "webpack-dev-middleware"
+    ],
+    "cmdline_requires_process": [
+      "node"
+    ],
+    "default_ports": [
+      8080
+    ],
+    "kind": "WebpackDevServer",
+    "priority": 6
+  },
+  {
+    "default_ports": [
+      9100,
+      9182
+    ],
+    "exe_path_contains": [
+      "node_exporter",
+      "windows_exporter"
+    ],
+    "html_title_contains": [
+      "node exporter",
+      "windows exporter"
+    ],
+    "kind": "Prometheus",
+    "priority": 11,
+    "process_names": [
+      "node_exporter",
+      "windows_exporter",
+      "prometheus-node"
+    ]
+  },
+  {
+    "default_ports": [
+      9001
+    ],
+    "html_title_contains": [
+      "minio console",
+      "minio browser"
+    ],
+    "http_server_contains": [
+      "minio console"
+    ],
+    "kind": "MinIO",
+    "priority": 11
+  },
+  {
+    "default_ports": [
+      8125
+    ],
+    "exe_path_contains": [
+      "telegraf"
+    ],
+    "kind": "InfluxDB",
+    "priority": 11,
+    "process_names": [
+      "telegraf"
+    ]
+  },
+  {
+    "banner_contains": [
+      "bolt"
+    ],
+    "default_ports": [
+      7687
+    ],
+    "html_title_contains": [
+      "neo4j browser"
+    ],
+    "kind": "Neo4j",
+    "priority": 11
+  },
+  {
+    "banner_contains": [
+      "realms",
+      "openid-configuration"
+    ],
+    "default_ports": [
+      8080,
+      8443
+    ],
+    "html_title_contains": [
+      "keycloak - administration console",
+      "keycloak account"
+    ],
+    "kind": "Keycloak",
+    "priority": 11
+  },
+  {
+    "banner_contains": [
+      "sites/default",
+      "modules/system"
+    ],
+    "http_header_contains": [
+      [
+        "x-drupal-dynamic-cache",
+        ""
+      ],
+      [
+        "x-drupal-page-cache-debug",
+        ""
+      ]
+    ],
+    "kind": "Drupal",
+    "priority": 16
+  },
+  {
+    "banner_contains": [
+      "ghost/api"
+    ],
+    "default_ports": [
+      2368
+    ],
+    "http_header_contains": [
+      [
+        "x-ghost-cache-status",
+        ""
+      ]
+    ],
+    "kind": "Ghost",
+    "priority": 16
+  },
+  {
+    "cmdline_contains": [
+      "jupyterhub"
+    ],
+    "cmdline_requires_process": [
+      "python",
+      "python3"
+    ],
+    "default_ports": [
+      8000
+    ],
+    "exe_path_contains": [
+      "jupyterhub"
+    ],
+    "html_title_contains": [
+      "jupyterhub"
+    ],
+    "kind": "Jupyter",
+    "priority": 6,
+    "process_names": [
+      "jupyterhub",
+      "jupyterhub-singleuser"
+    ]
+  },
+  {
+    "cmdline_contains": [
+      "cockroach start"
+    ],
+    "cmdline_requires_process": [
+      "cockroach"
+    ],
+    "default_ports": [
+      8080,
+      26257
+    ],
+    "html_title_contains": [
+      "cockroachdb console"
+    ],
+    "kind": "CockroachDB",
+    "priority": 11
+  },
+  {
+    "default_ports": [
+      9000,
+      9440
+    ],
+    "http_header_contains": [
+      [
+        "x-clickhouse-server-display-name",
+        ""
+      ]
+    ],
+    "kind": "ClickHouse",
+    "priority": 11
+  },
+  {
+    "default_ports": [
+      8983
+    ],
+    "html_title_contains": [
+      "solr admin",
+      "solr administration"
+    ],
+    "kind": "Solr",
+    "priority": 11
+  },
+  {
+    "cmdline_contains": [
+      "confluent"
+    ],
+    "cmdline_requires_process": [
+      "java",
+      "javaw"
+    ],
+    "default_ports": [
+      8081,
+      8082,
+      8088
+    ],
+    "exe_path_contains": [
+      "confluent"
+    ],
+    "kind": "Kafka",
+    "priority": 11,
+    "process_names": [
+      "schema-registry",
+      "ksqldb-server",
+      "kafka-rest"
+    ]
+  },
+  {
+    "banner_contains": [
+      "mqtt"
+    ],
+    "default_ports": [
+      9001
+    ],
+    "http_header_contains": [
+      [
+        "upgrade",
+        "websocket"
+      ]
+    ],
+    "kind": "Mosquitto",
+    "priority": 11
+  },
+  {
+    "cmdline_contains": [
+      "cassandra.yaml"
+    ],
+    "cmdline_requires_process": [
+      "java",
+      "javaw"
+    ],
+    "default_ports": [
+      7199
+    ],
+    "kind": "Cassandra",
+    "priority": 11
+  },
+  {
+    "banner_contains": [
+      "ultravnc"
+    ],
+    "default_ports": [
+      5900
+    ],
+    "exe_path_contains": [
+      "ultravnc"
+    ],
+    "kind": "VNC",
+    "priority": 6,
+    "process_names": [
+      "winvnc",
+      "uvnc_service"
+    ]
+  },
+  {
+    "banner_contains": [
+      "starlette"
+    ],
+    "default_ports": [
+      8000
+    ],
+    "html_title_contains": [
+      "starlette"
+    ],
+    "kind": "Starlette",
+    "priority": 21
+  },
+  {
+    "banner_contains": [
+      "openapi",
+      "swagger-ui"
+    ],
+    "html_title_contains": [
+      "redoc",
+      "api documentation",
+      "openapi"
+    ],
+    "kind": "Swagger",
+    "priority": 6
+  },
+  {
+    "cmdline_contains": [
+      "undertow"
+    ],
+    "cmdline_requires_process": [
+      "java",
+      "javaw"
+    ],
+    "default_ports": [
+      8080
+    ],
+    "exe_path_contains": [
+      "undertow"
+    ],
+    "html_title_contains": [
+      "welcome to wildfly"
+    ],
+    "http_server_contains": [
+      "undertow"
+    ],
+    "kind": "WildFly",
+    "priority": 16
+  },
+  {
+    "cmdline_contains": [
+      "org.eclipse.jetty"
+    ],
+    "cmdline_requires_process": [
+      "java",
+      "javaw"
+    ],
+    "default_ports": [
+      8080
+    ],
+    "exe_path_contains": [
+      "eclipse"
+    ],
+    "kind": "Jetty",
+    "priority": 11
+  },
+  {
+    "cmdline_contains": [
+      "caddy file-server",
+      "caddy reverse-proxy"
+    ],
+    "cmdline_requires_process": [
+      "caddy"
+    ],
+    "default_ports": [
+      80,
+      443
+    ],
+    "kind": "Caddy",
+    "priority": 11
+  },
+  {
+    "cmdline_contains": [
+      "--api.dashboard"
+    ],
+    "cmdline_requires_process": [
+      "traefik"
+    ],
+    "default_ports": [
+      8080
+    ],
+    "html_title_contains": [
+      "traefik dashboard"
+    ],
+    "kind": "Traefik",
+    "priority": 11
+  },
+  {
+    "default_ports": [
+      7080
+    ],
+    "html_title_contains": [
+      "openlitespeed"
+    ],
+    "http_server_contains": [
+      "openlitespeed"
+    ],
+    "kind": "LiteSpeed",
+    "priority": 11,
+    "version_from_header_prefix": "openlitespeed"
+  },
+  {
+    "banner_contains": [
+      "vault",
+      "sealed"
+    ],
+    "default_ports": [
+      8200
+    ],
+    "html_title_contains": [
+      "vault - hashicorp"
+    ],
+    "http_header_contains": [
+      [
+        "x-vault-cluster-addr",
+        ""
+      ]
+    ],
+    "kind": "Vault",
+    "priority": 11
+  },
+  {
+    "banner_contains": [
+      "opentelemetry"
+    ],
+    "default_ports": [
+      4317,
+      4318
+    ],
+    "kind": "Jaeger",
+    "priority": 11
+  },
+  {
+    "default_ports": [
+      9411
+    ],
+    "html_title_contains": [
+      "zipkin - lens"
+    ],
+    "kind": "Zipkin",
+    "priority": 11
+  },
+  {
+    "banner_starts_with": [
+      "+OK Dovecot"
+    ],
+    "default_ports": [
+      110,
+      995
+    ],
+    "kind": "Dovecot",
+    "priority": 5
+  },
+  {
+    "banner_contains": [
+      "postfix",
+      "esmtp postfix"
+    ],
+    "banner_starts_with": [
+      "220 "
+    ],
+    "default_ports": [
+      587
+    ],
+    "kind": "Postfix",
+    "priority": 5
+  },
+  {
+    "cmdline_contains": [
+      "strapi develop",
+      "strapi start"
+    ],
+    "cmdline_requires_process": [
+      "node"
+    ],
+    "default_ports": [
+      1337
+    ],
+    "html_title_contains": [
+      "strapi admin"
+    ],
+    "kind": "Strapi",
+    "priority": 16
+  },
+  {
+    "banner_contains": [
+      "jellyfin"
+    ],
+    "default_ports": [
+      1900,
+      7359
+    ],
+    "kind": "Jellyfin",
+    "priority": 11
+  },
+  {
+    "default_ports": [
+      5984
+    ],
+    "html_title_contains": [
+      "fauxton",
+      "project fauxton"
+    ],
+    "kind": "CouchDB",
+    "priority": 11
+  },
+  {
+    "default_ports": [
+      7700
+    ],
+    "html_title_contains": [
+      "meilisearch mini-dashboard"
+    ],
+    "kind": "MeiliSearch",
+    "priority": 11
+  },
+  {
+    "default_ports": [
+      81
+    ],
+    "html_title_contains": [
+      "login - nginx proxy manager"
+    ],
+    "kind": "NginxProxyManager",
+    "priority": 9
+  },
+  {
+    "cmdline_contains": [
+      "gitlab-runner run"
+    ],
+    "cmdline_requires_process": [
+      "gitlab-runner"
+    ],
+    "exe_path_contains": [
+      "gitlab-ci"
+    ],
+    "kind": "GitLabRunner",
+    "priority": 11,
+    "process_names": [
+      "gitlab-ci-multi-runner"
+    ]
+  },
+  {
+    "cmdline_contains": [
+      "symfony serve",
+      "bin/console server:start"
+    ],
+    "cmdline_requires_process": [
+      "php",
+      "symfony"
+    ],
+    "default_ports": [
+      8000
+    ],
+    "html_title_contains": [
+      "symfony profiler"
+    ],
+    "http_header_contains": [
+      [
+        "x-debug-token-link",
+        ""
+      ]
+    ],
+    "kind": "Symfony",
+    "priority": 16
+  },
+  {
+    "cmdline_contains": [
+      "sanic server",
+      "--reload"
+    ],
+    "cmdline_requires_process": [
+      "python",
+      "python3",
+      "sanic"
+    ],
+    "default_ports": [
+      8000
+    ],
+    "kind": "Sanic",
+    "priority": 21,
+    "process_names": [
+      "sanic"
+    ]
+  },
+  {
+    "default_ports": [
+      8888
+    ],
+    "http_header_contains": [
+      [
+        "etag",
+        ""
+      ],
+      [
+        "content-type",
+        "text/html"
+      ]
+    ],
+    "http_server_contains": [
+      "tornadoserver"
+    ],
+    "kind": "Tornado",
+    "priority": 21
+  },
+  {
+    "default_ports": [
+      5050,
+      5051
+    ],
+    "html_title_contains": [
+      "pgadmin 4",
+      "pgadmin - login"
+    ],
+    "kind": "PgAdmin",
+    "priority": 6
+  },
+  {
+    "banner_contains": [
+      "livereload"
+    ],
+    "cmdline_contains": [
+      "hugo server --watch"
+    ],
+    "cmdline_requires_process": [
+      "hugo"
+    ],
+    "default_ports": [
+      1313
+    ],
+    "kind": "Hugo",
+    "priority": 6
+  },
+  {
+    "cmdline_contains": [
+      "ng build",
+      "ng test"
+    ],
+    "cmdline_requires_process": [
+      "node"
+    ],
+    "default_ports": [
+      4200,
+      9876
+    ],
+    "exe_path_contains": [
+      "@angular"
+    ],
+    "kind": "AngularCli",
+    "priority": 6
+  },
+  {
+    "banner_starts_with": [
+      "HTTP/"
+    ],
+    "default_ports": [
+      80,
+      443,
+      8080,
+      8443
+    ],
+    "kind": "CustomHttp",
+    "priority": 90
+  },
+  {
+    "kind": "GenericTcp",
+    "priority": 95
+  },
+  {
+    "kind": "GenericUdp",
+    "priority": 95
+  },
+  {
+    "kind": "Unknown",
+    "priority": 99
+  },
+  {
+    "exe_path_contains": [
+      "visual studio code",
+      "vscode",
+      "code-insiders"
+    ],
+    "kind": "CustomHttp",
+    "priority": 5,
+    "process_names": [
+      "code",
+      "code-insiders",
+      "code-tunnel"
+    ]
+  },
+  {
+    "cmdline_contains": [
+      "--type="
+    ],
+    "exe_path_contains": [
+      "electron"
+    ],
+    "kind": "CustomHttp",
+    "priority": 8,
+    "process_names": [
+      "electron",
+      "slack",
+      "discord",
+      "teams",
+      "spotify",
+      "signal-desktop",
+      "telegram-desktop",
+      "whatsapp",
+      "obs64",
+      "obs",
+      "postman",
+      "insomnia"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "chrome",
+      "chromium",
+      "edge",
+      "brave",
+      "vivaldi",
+      "opera"
+    ],
+    "kind": "CustomHttp",
+    "priority": 5,
+    "process_names": [
+      "chrome",
+      "chromium",
+      "msedge",
+      "brave",
+      "vivaldi",
+      "opera"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "\\lsass.exe"
+    ],
+    "kind": "LocalSecurityAuthority",
+    "priority": 5,
+    "process_names": [
+      "lsass"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "\\services.exe"
+    ],
+    "kind": "ServiceControlManager",
+    "priority": 5,
+    "process_names": [
+      "services"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "\\wininit.exe"
+    ],
+    "kind": "WindowsInitProcess",
+    "priority": 5,
+    "process_names": [
+      "wininit"
+    ]
+  },
+  {
+    "default_ports": [
+      3702
+    ],
+    "exe_path_contains": [
+      "dashost.exe"
+    ],
+    "kind": "DeviceAssociationService",
+    "priority": 5,
+    "process_names": [
+      "dashost"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "\\explorer.exe"
+    ],
+    "kind": "WindowsExplorer",
+    "priority": 5,
+    "process_names": [
+      "explorer"
+    ]
+  },
+  {
+    "default_ports": [
+      7,
+      9,
+      13,
+      17,
+      19
+    ],
+    "exe_path_contains": [
+      "tcpsvcs.exe"
+    ],
+    "kind": "SimpleTcpServices",
+    "priority": 5,
+    "process_names": [
+      "tcpsvcs"
+    ]
+  },
+  {
+    "default_ports": [
+      3702
+    ],
+    "exe_path_contains": [
+      "multipoint server",
+      "wmssvc"
+    ],
+    "kind": "WindowsMultiPointServer",
+    "priority": 5,
+    "process_names": [
+      "wmssvc"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "glidex"
+    ],
+    "kind": "AsusGlideX",
+    "priority": 5,
+    "process_names": [
+      "glidexservice",
+      "glidexnearservice"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "asussoftwaremanager",
+      "asus\\software"
+    ],
+    "kind": "AsusSoftwareManager",
+    "priority": 5,
+    "process_names": [
+      "asussoftwaremanager"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "adguard"
+    ],
+    "kind": "AdGuardService",
+    "priority": 5,
+    "process_names": [
+      "adguardsvc"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "chatgpt"
+    ],
+    "kind": "ChatGPTDesktop",
+    "priority": 5,
+    "process_names": [
+      "chatgpt"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "claude"
+    ],
+    "kind": "ClaudeDesktop",
+    "priority": 5,
+    "process_names": [
+      "claude"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "\\microsoft vs code\\",
+      "\\programs\\microsoft vs code\\",
+      "\\code.exe"
+    ],
+    "kind": "VSCode",
+    "priority": 5,
+    "process_names": [
+      "code"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "psmux"
+    ],
+    "kind": "Psmux",
+    "priority": 5,
+    "process_names": [
+      "psmux"
+    ]
+  },
+  {
+    "default_ports": [
+      5353
+    ],
+    "exe_path_contains": [
+      "\\google\\chrome\\"
+    ],
+    "kind": "ChromeMdns",
+    "priority": 3,
+    "process_names": [
+      "chrome"
+    ]
+  },
+  {
+    "kind": "GenericTcp",
+    "priority": 15,
+    "process_names": [
+      "csrss",
+      "smss",
+      "searchindexer",
+      "searchprotocolhost",
+      "msdtc",
+      "vmcompute",
+      "vmwp",
+      "taskhostw",
+      "sihost"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "jetbrains"
+    ],
+    "kind": "CustomHttp",
+    "priority": 5,
+    "process_names": [
+      "idea64",
+      "idea",
+      "webstorm64",
+      "webstorm",
+      "pycharm64",
+      "pycharm",
+      "goland64",
+      "goland",
+      "clion64",
+      "clion",
+      "rider64",
+      "rider",
+      "phpstorm64",
+      "phpstorm",
+      "rubymine64",
+      "rubymine",
+      "datagrip64",
+      "datagrip"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "git"
+    ],
+    "kind": "GenericTcp",
+    "priority": 12,
+    "process_names": [
+      "git",
+      "git-remote-https",
+      "git-credential-manager",
+      "github desktop",
+      "gitkraken"
+    ]
+  },
+  {
+    "default_ports": [
+      51820
+    ],
+    "exe_path_contains": [
+      "wireguard",
+      "openvpn"
+    ],
+    "kind": "GenericUdp",
+    "priority": 12,
+    "process_names": [
+      "wireguard",
+      "openvpn",
+      "openvpn-gui"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "windows defender",
+      "kaspersky",
+      "norton",
+      "avast",
+      "avg",
+      "bitdefender",
+      "eset",
+      "malwarebytes",
+      "crowdstrike",
+      "sentinelone",
+      "carbon black",
+      "sophos"
+    ],
+    "kind": "GenericTcp",
+    "priority": 15,
+    "process_names": [
+      "msmpeng",
+      "nissrv",
+      "mssense",
+      "securityhealthservice",
+      "avgnt",
+      "avguard",
+      "avp",
+      "kavtray",
+      "norton",
+      "ccsvchst",
+      "rtvscan",
+      "mbam",
+      "mbamservice",
+      "crowdstrike",
+      "csfalcon",
+      "csagent",
+      "carbonblack",
+      "cb",
+      "sentinelagent",
+      "sophos",
+      "savservice"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "onedrive",
+      "dropbox",
+      "google drive",
+      "icloud",
+      "syncthing",
+      "resilio"
+    ],
+    "kind": "GenericTcp",
+    "priority": 15,
+    "process_names": [
+      "onedrive",
+      "dropbox",
+      "googledrivesync",
+      "icloudservices",
+      "syncthing",
+      "resilio-sync",
+      "btsync",
+      "nextcloud",
+      "owncloud"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "dbeaver",
+      "tableplus",
+      "navicat",
+      "heidisql"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "dbeaver",
+      "tableplus",
+      "datagrip64",
+      "heidisql",
+      "navicat",
+      "mysqlworkbench",
+      "mongosh",
+      "redis-cli"
+    ]
+  },
+  {
+    "cmdline_contains": [
+      "rpcss"
+    ],
+    "cmdline_requires_process": [
+      "svchost"
+    ],
+    "default_ports": [
+      135
+    ],
+    "kind": "RpcEndpointMapper",
+    "priority": 5
+  },
+  {
+    "cmdline_contains": [
+      "dnscache"
+    ],
+    "cmdline_requires_process": [
+      "svchost"
+    ],
+    "default_ports": [
+      53
+    ],
+    "kind": "DNS",
+    "priority": 5
+  },
+  {
+    "cmdline_contains": [
+      "dns"
+    ],
+    "cmdline_requires_process": [
+      "svchost"
+    ],
+    "default_ports": [
+      53
+    ],
+    "kind": "DNS",
+    "priority": 5
+  },
+  {
+    "cmdline_contains": [
+      "dhcp"
+    ],
+    "cmdline_requires_process": [
+      "svchost"
+    ],
+    "default_ports": [
+      67,
+      68
+    ],
+    "kind": "DHCP",
+    "priority": 5
+  },
+  {
+    "cmdline_contains": [
+      "w3svc"
+    ],
+    "cmdline_requires_process": [
+      "svchost"
+    ],
+    "kind": "IIS",
+    "priority": 5
+  },
+  {
+    "cmdline_contains": [
+      "iisadmin"
+    ],
+    "cmdline_requires_process": [
+      "svchost"
+    ],
+    "kind": "IIS",
+    "priority": 5
+  },
+  {
+    "cmdline_contains": [
+      "lanmanserver"
+    ],
+    "cmdline_requires_process": [
+      "svchost"
+    ],
+    "default_ports": [
+      445
+    ],
+    "kind": "SMB",
+    "priority": 5
+  },
+  {
+    "cmdline_contains": [
+      "lanmanworkstation"
+    ],
+    "cmdline_requires_process": [
+      "svchost"
+    ],
+    "default_ports": [
+      445
+    ],
+    "kind": "SMB",
+    "priority": 6
+  },
+  {
+    "cmdline_contains": [
+      "ftpsvc"
+    ],
+    "cmdline_requires_process": [
+      "svchost"
+    ],
+    "default_ports": [
+      21
+    ],
+    "kind": "FTP",
+    "priority": 5
+  },
+  {
+    "cmdline_contains": [
+      "sshd"
+    ],
+    "cmdline_requires_process": [
+      "svchost"
+    ],
+    "default_ports": [
+      22
+    ],
+    "kind": "OpenSSH",
+    "priority": 5
+  },
+  {
+    "cmdline_contains": [
+      "smtpsvc"
+    ],
+    "cmdline_requires_process": [
+      "svchost"
+    ],
+    "default_ports": [
+      25,
+      465,
+      587
+    ],
+    "kind": "SMTP",
+    "priority": 5
+  },
+  {
+    "cmdline_contains": [
+      "eventlog"
+    ],
+    "cmdline_requires_process": [
+      "svchost"
+    ],
+    "kind": "WindowsEventLog",
+    "priority": 5
+  },
+  {
+    "cmdline_contains": [
+      "schedule"
+    ],
+    "cmdline_requires_process": [
+      "svchost"
+    ],
+    "kind": "TaskScheduler",
+    "priority": 5
+  },
+  {
+    "cmdline_contains": [
+      "wuauserv"
+    ],
+    "cmdline_requires_process": [
+      "svchost"
+    ],
+    "kind": "GenericTcp",
+    "priority": 8
+  },
+  {
+    "cmdline_contains": [
+      "bits"
+    ],
+    "cmdline_requires_process": [
+      "svchost"
+    ],
+    "kind": "GenericTcp",
+    "priority": 8
+  },
+  {
+    "cmdline_contains": [
+      "mpssvc"
+    ],
+    "cmdline_requires_process": [
+      "svchost"
+    ],
+    "kind": "GenericTcp",
+    "priority": 8
+  },
+  {
+    "cmdline_contains": [
+      "bfe"
+    ],
+    "cmdline_requires_process": [
+      "svchost"
+    ],
+    "kind": "GenericTcp",
+    "priority": 8
+  },
+  {
+    "cmdline_contains": [
+      "policyagent"
+    ],
+    "cmdline_requires_process": [
+      "svchost"
+    ],
+    "kind": "IPsec",
+    "priority": 5
+  },
+  {
+    "cmdline_contains": [
+      "ssdpsrv"
+    ],
+    "cmdline_requires_process": [
+      "svchost"
+    ],
+    "default_ports": [
+      1900
+    ],
+    "kind": "SSDP",
+    "priority": 5
+  },
+  {
+    "cmdline_contains": [
+      "cdpsvc"
+    ],
+    "cmdline_requires_process": [
+      "svchost"
+    ],
+    "default_ports": [
+      5040
+    ],
+    "kind": "CDPSvc",
+    "priority": 5
+  },
+  {
+    "cmdline_contains": [
+      "dosvc"
+    ],
+    "cmdline_requires_process": [
+      "svchost"
+    ],
+    "default_ports": [
+      7680
+    ],
+    "kind": "GenericTcp",
+    "priority": 8
+  },
+  {
+    "cmdline_contains": [
+      "iphlpsvc"
+    ],
+    "cmdline_requires_process": [
+      "svchost"
+    ],
+    "kind": "IpHelper",
+    "priority": 5
+  },
+  {
+    "cmdline_contains": [
+      "ikeext"
+    ],
+    "cmdline_requires_process": [
+      "svchost"
+    ],
+    "default_ports": [
+      500,
+      4500
+    ],
+    "kind": "IPsec",
+    "priority": 5
+  },
+  {
+    "cmdline_contains": [
+      "sharedaccess"
+    ],
+    "cmdline_requires_process": [
+      "svchost"
+    ],
+    "kind": "InternetConnectionSharing",
+    "priority": 5
+  },
+  {
+    "cmdline_contains": [
+      "hvhost"
+    ],
+    "cmdline_requires_process": [
+      "svchost"
+    ],
+    "kind": "GenericTcp",
+    "priority": 8
+  },
+  {
+    "cmdline_contains": [
+      "hns"
+    ],
+    "cmdline_requires_process": [
+      "svchost"
+    ],
+    "kind": "GenericTcp",
+    "priority": 8
+  },
+  {
+    "cmdline_contains": [
+      "dcomlaunch"
+    ],
+    "cmdline_requires_process": [
+      "svchost"
+    ],
+    "kind": "GenericTcp",
+    "priority": 8
+  },
+  {
+    "cmdline_contains": [
+      "networkservice"
+    ],
+    "cmdline_requires_process": [
+      "svchost"
+    ],
+    "kind": "GenericTcp",
+    "priority": 12
+  },
+  {
+    "cmdline_contains": [
+      "localservice"
+    ],
+    "cmdline_requires_process": [
+      "svchost"
+    ],
+    "kind": "GenericTcp",
+    "priority": 12
+  },
+  {
+    "cmdline_contains": [
+      "netsvcs"
+    ],
+    "cmdline_requires_process": [
+      "svchost"
+    ],
+    "kind": "GenericTcp",
+    "priority": 12
+  },
+  {
+    "cmdline_contains": [
+      "localservicehttp"
+    ],
+    "cmdline_requires_process": [
+      "svchost"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10
+  },
+  {
+    "cmdline_contains": [
+      "audiosrv"
+    ],
+    "cmdline_requires_process": [
+      "svchost"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10
+  },
+  {
+    "cmdline_contains": [
+      "wsearch"
+    ],
+    "cmdline_requires_process": [
+      "svchost"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10
+  },
+  {
+    "cmdline_contains": [
+      "bthserv"
+    ],
+    "cmdline_requires_process": [
+      "svchost"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10
+  },
+  {
+    "cmdline_contains": [
+      "wlansvc"
+    ],
+    "cmdline_requires_process": [
+      "svchost"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10
+  },
+  {
+    "cmdline_contains": [
+      "netprofm"
+    ],
+    "cmdline_requires_process": [
+      "svchost"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10
+  },
+  {
+    "cmdline_contains": [
+      "netman"
+    ],
+    "cmdline_requires_process": [
+      "svchost"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10
+  },
+  {
+    "cmdline_contains": [
+      "wcmsvc"
+    ],
+    "cmdline_requires_process": [
+      "svchost"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10
+  },
+  {
+    "cmdline_contains": [
+      "wpnservice"
+    ],
+    "cmdline_requires_process": [
+      "svchost"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10
+  },
+  {
+    "cmdline_contains": [
+      "sysmain"
+    ],
+    "cmdline_requires_process": [
+      "svchost"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10
+  },
+  {
+    "cmdline_contains": [
+      "msdtc"
+    ],
+    "cmdline_requires_process": [
+      "svchost"
+    ],
+    "exe_path_contains": [
+      "msdtc"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "msdtc"
+    ]
+  },
+  {
+    "cmdline_contains": [
+      "wsaifabricsvc"
+    ],
+    "cmdline_requires_process": [
+      "svchost"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10
+  },
+  {
+    "cmdline_contains": [
+      "spooler"
+    ],
+    "cmdline_requires_process": [
+      "svchost"
+    ],
+    "kind": "PrintSpooler",
+    "priority": 8
+  },
+  {
+    "cmdline_contains": [
+      "usermanager"
+    ],
+    "cmdline_requires_process": [
+      "svchost"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10
+  },
+  {
+    "cmdline_contains": [
+      "winmgmt"
+    ],
+    "cmdline_requires_process": [
+      "svchost"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10
+  },
+  {
+    "cmdline_contains": [
+      "dps"
+    ],
+    "cmdline_requires_process": [
+      "svchost"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10
+  },
+  {
+    "cmdline_contains": [
+      "lfsvc"
+    ],
+    "cmdline_requires_process": [
+      "svchost"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10
+  },
+  {
+    "cmdline_contains": [
+      "appinfo"
+    ],
+    "cmdline_requires_process": [
+      "svchost"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10
+  },
+  {
+    "cmdline_contains": [
+      "usosvc"
+    ],
+    "cmdline_requires_process": [
+      "svchost"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10
+  },
+  {
+    "cmdline_contains": [
+      "tokenbroker"
+    ],
+    "cmdline_requires_process": [
+      "svchost"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10
+  },
+  {
+    "default_ports": [
+      5432
+    ],
+    "exe_path_contains": [
+      "postgresql",
+      "postgres",
+      "pgsql"
+    ],
+    "kind": "PostgreSQL",
+    "priority": 10,
+    "process_names": [
+      "postgres",
+      "postgresql"
+    ]
+  },
+  {
+    "banner_contains": [
+      "mysql",
+      "mariadb"
+    ],
+    "default_ports": [
+      3306
+    ],
+    "exe_path_contains": [
+      "mysql",
+      "mariadb"
+    ],
+    "kind": "MySQL",
+    "priority": 10,
+    "process_names": [
+      "mysqld",
+      "mariadbd",
+      "mariadb"
+    ]
+  },
+  {
+    "default_ports": [
+      27017,
+      27018,
+      27019
+    ],
+    "exe_path_contains": [
+      "mongodb",
+      "mongo"
+    ],
+    "kind": "MongoDB",
+    "priority": 10,
+    "process_names": [
+      "mongod",
+      "mongos"
+    ]
+  },
+  {
+    "banner_contains": [
+      "redis"
+    ],
+    "banner_starts_with": [
+      "+PONG",
+      "-ERR"
+    ],
+    "default_ports": [
+      6379
+    ],
+    "exe_path_contains": [
+      "redis"
+    ],
+    "kind": "Redis",
+    "priority": 10,
+    "process_names": [
+      "redis-server",
+      "redis"
+    ]
+  },
+  {
+    "default_ports": [
+      11211
+    ],
+    "exe_path_contains": [
+      "memcached"
+    ],
+    "kind": "Memcached",
+    "priority": 10,
+    "process_names": [
+      "memcached"
+    ]
+  },
+  {
+    "default_ports": [
+      1433,
+      1434
+    ],
+    "exe_path_contains": [
+      "mssql",
+      "sql server"
+    ],
+    "kind": "MSSQL",
+    "priority": 10,
+    "process_names": [
+      "sqlservr"
+    ]
+  },
+  {
+    "banner_contains": [
+      "oracle",
+      "tns"
+    ],
+    "default_ports": [
+      1521,
+      1522
+    ],
+    "exe_path_contains": [
+      "oracle"
+    ],
+    "kind": "OracleDB",
+    "priority": 10,
+    "process_names": [
+      "oracle",
+      "tnslsnr"
+    ]
+  },
+  {
+    "default_ports": [
+      5984
+    ],
+    "exe_path_contains": [
+      "couchdb"
+    ],
+    "http_server_contains": [
+      "couchdb"
+    ],
+    "kind": "CouchDB",
+    "priority": 10,
+    "process_names": [
+      "couchdb",
+      "beam.smp"
+    ],
+    "version_from_header_prefix": "couchdb"
+  },
+  {
+    "cmdline_contains": [
+      "cassandra"
+    ],
+    "cmdline_requires_process": [
+      "java"
+    ],
+    "default_ports": [
+      9042,
+      7000,
+      7001
+    ],
+    "exe_path_contains": [
+      "cassandra"
+    ],
+    "kind": "Cassandra",
+    "priority": 10,
+    "process_names": [
+      "cassandra"
+    ]
+  },
+  {
+    "default_ports": [
+      8123,
+      9000,
+      9440
+    ],
+    "exe_path_contains": [
+      "clickhouse"
+    ],
+    "http_header_contains": [
+      [
+        "x-clickhouse-server-display-name",
+        ""
+      ]
+    ],
+    "http_server_contains": [
+      "clickhouse"
+    ],
+    "kind": "ClickHouse",
+    "priority": 10,
+    "process_names": [
+      "clickhouse-server",
+      "clickhouse"
+    ]
+  },
+  {
+    "default_ports": [
+      8086
+    ],
+    "exe_path_contains": [
+      "influxdb",
+      "influxd"
+    ],
+    "http_header_contains": [
+      [
+        "x-influxdb-version",
+        ""
+      ],
+      [
+        "x-influxdb-build",
+        ""
+      ]
+    ],
+    "http_server_contains": [
+      "influxdb"
+    ],
+    "kind": "InfluxDB",
+    "priority": 10,
+    "process_names": [
+      "influxd"
+    ]
+  },
+  {
+    "cmdline_contains": [
+      "neo4j"
+    ],
+    "cmdline_requires_process": [
+      "java"
+    ],
+    "default_ports": [
+      7474,
+      7687
+    ],
+    "exe_path_contains": [
+      "neo4j"
+    ],
+    "html_title_contains": [
+      "neo4j browser"
+    ],
+    "kind": "Neo4j",
+    "priority": 10,
+    "process_names": [
+      "neo4j"
+    ]
+  },
+  {
+    "default_ports": [
+      8529
+    ],
+    "exe_path_contains": [
+      "arangodb"
+    ],
+    "html_title_contains": [
+      "arangodb"
+    ],
+    "http_server_contains": [
+      "arangodb"
+    ],
+    "kind": "ArangoDB",
+    "priority": 10,
+    "process_names": [
+      "arangod",
+      "arangodb"
+    ]
+  },
+  {
+    "default_ports": [
+      26257,
+      8080
+    ],
+    "exe_path_contains": [
+      "cockroach"
+    ],
+    "html_title_contains": [
+      "cockroachdb"
+    ],
+    "kind": "CockroachDB",
+    "priority": 10,
+    "process_names": [
+      "cockroach"
+    ]
+  },
+  {
+    "default_ports": [
+      2379,
+      2380
+    ],
+    "exe_path_contains": [
+      "etcd"
+    ],
+    "http_header_contains": [
+      [
+        "x-etcd-cluster-id",
+        ""
+      ]
+    ],
+    "kind": "Etcd",
+    "priority": 10,
+    "process_names": [
+      "etcd"
+    ]
+  },
+  {
+    "default_ports": [
+      8500,
+      8501,
+      8600
+    ],
+    "exe_path_contains": [
+      "consul"
+    ],
+    "html_title_contains": [
+      "consul"
+    ],
+    "http_header_contains": [
+      [
+        "x-consul-index",
+        ""
+      ]
+    ],
+    "kind": "Consul",
+    "priority": 10,
+    "process_names": [
+      "consul"
+    ]
+  },
+  {
+    "cmdline_contains": [
+      "server"
+    ],
+    "cmdline_requires_process": [
+      "vault"
+    ],
+    "default_ports": [
+      8200
+    ],
+    "exe_path_contains": [
+      "vault"
+    ],
+    "html_title_contains": [
+      "vault"
+    ],
+    "http_header_contains": [
+      [
+        "x-vault-token",
+        ""
+      ]
+    ],
+    "kind": "Vault",
+    "priority": 10,
+    "process_names": [
+      "vault"
+    ]
+  },
+  {
+    "default_ports": [
+      28015,
+      8080
+    ],
+    "exe_path_contains": [
+      "rethinkdb"
+    ],
+    "html_title_contains": [
+      "rethinkdb"
+    ],
+    "kind": "RethinkDB",
+    "priority": 10,
+    "process_names": [
+      "rethinkdb"
+    ]
+  },
+  {
+    "default_ports": [
+      4000,
+      10080
+    ],
+    "exe_path_contains": [
+      "tidb"
+    ],
+    "kind": "TiDB",
+    "priority": 10,
+    "process_names": [
+      "tidb-server"
+    ]
+  },
+  {
+    "default_ports": [
+      9042,
+      19042
+    ],
+    "exe_path_contains": [
+      "scylla"
+    ],
+    "kind": "ScyllaDB",
+    "priority": 10,
+    "process_names": [
+      "scylla"
+    ]
+  },
+  {
+    "default_ports": [
+      8080,
+      9080
+    ],
+    "exe_path_contains": [
+      "dgraph"
+    ],
+    "html_title_contains": [
+      "dgraph"
+    ],
+    "kind": "DGraph",
+    "priority": 10,
+    "process_names": [
+      "dgraph"
+    ]
+  },
+  {
+    "default_ports": [
+      6432
+    ],
+    "exe_path_contains": [
+      "pgbouncer"
+    ],
+    "kind": "PgBouncer",
+    "priority": 10,
+    "process_names": [
+      "pgbouncer"
+    ]
+  },
+  {
+    "cmdline_contains": [
+      "questdb"
+    ],
+    "cmdline_requires_process": [
+      "java"
+    ],
+    "default_ports": [
+      9000,
+      8812,
+      9009
+    ],
+    "exe_path_contains": [
+      "questdb"
+    ],
+    "html_title_contains": [
+      "questdb"
+    ],
+    "http_server_contains": [
+      "questdb"
+    ],
+    "kind": "QuestDB",
+    "priority": 10,
+    "process_names": [
+      "questdb"
+    ]
+  },
+  {
+    "default_ports": [
+      3050
+    ],
+    "exe_path_contains": [
+      "firebird"
+    ],
+    "kind": "Firebird",
+    "priority": 10,
+    "process_names": [
+      "firebird",
+      "fbserver",
+      "fbguard"
+    ]
+  },
+  {
+    "banner_contains": [
+      "elasticsearch",
+      "opensearch"
+    ],
+    "default_ports": [
+      9200,
+      9300
+    ],
+    "exe_path_contains": [
+      "elasticsearch",
+      "opensearch"
+    ],
+    "http_header_contains": [
+      [
+        "x-elastic-product",
+        ""
+      ]
+    ],
+    "kind": "Elasticsearch",
+    "priority": 10,
+    "process_names": [
+      "elasticsearch",
+      "opensearch"
+    ]
+  },
+  {
+    "default_ports": [
+      7700
+    ],
+    "exe_path_contains": [
+      "meilisearch"
+    ],
+    "html_title_contains": [
+      "meilisearch"
+    ],
+    "kind": "MeiliSearch",
+    "priority": 10,
+    "process_names": [
+      "meilisearch"
+    ]
+  },
+  {
+    "cmdline_contains": [
+      "solr"
+    ],
+    "cmdline_requires_process": [
+      "java"
+    ],
+    "default_ports": [
+      8983
+    ],
+    "exe_path_contains": [
+      "solr"
+    ],
+    "html_title_contains": [
+      "solr"
+    ],
+    "kind": "Solr",
+    "priority": 10,
+    "process_names": [
+      "solr"
+    ]
+  },
+  {
+    "banner_starts_with": [
+      "AMQP"
+    ],
+    "cmdline_contains": [
+      "rabbit"
+    ],
+    "cmdline_requires_process": [
+      "beam.smp",
+      "erl"
+    ],
+    "default_ports": [
+      5672,
+      15672,
+      25672
+    ],
+    "exe_path_contains": [
+      "rabbitmq"
+    ],
+    "html_title_contains": [
+      "rabbitmq"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "rabbitmq-server",
+      "beam.smp"
+    ]
+  },
+  {
+    "cmdline_contains": [
+      "kafka"
+    ],
+    "cmdline_requires_process": [
+      "java"
+    ],
+    "default_ports": [
+      9092,
+      9093
+    ],
+    "exe_path_contains": [
+      "kafka"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "kafka"
+    ]
+  },
+  {
+    "cmdline_contains": [
+      "activemq"
+    ],
+    "cmdline_requires_process": [
+      "java"
+    ],
+    "default_ports": [
+      61616,
+      8161
+    ],
+    "exe_path_contains": [
+      "activemq"
+    ],
+    "html_title_contains": [
+      "activemq"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "activemq"
+    ]
+  },
+  {
+    "banner_contains": [
+      "nats"
+    ],
+    "banner_starts_with": [
+      "INFO {"
+    ],
+    "default_ports": [
+      4222,
+      8222
+    ],
+    "exe_path_contains": [
+      "nats"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "nats-server",
+      "nats"
+    ]
+  },
+  {
+    "default_ports": [
+      1883,
+      8883,
+      9001
+    ],
+    "exe_path_contains": [
+      "mosquitto"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "mosquitto"
+    ]
+  },
+  {
+    "default_ports": [
+      4150,
+      4151,
+      4160,
+      4161
+    ],
+    "exe_path_contains": [
+      "nsq"
+    ],
+    "html_title_contains": [
+      "nsq"
+    ],
+    "http_server_contains": [
+      "nsq"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "nsqd",
+      "nsqlookupd"
+    ]
+  },
+  {
+    "cmdline_contains": [
+      "pulsar"
+    ],
+    "cmdline_requires_process": [
+      "java"
+    ],
+    "default_ports": [
+      6650,
+      8080
+    ],
+    "exe_path_contains": [
+      "pulsar"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "pulsar"
+    ]
+  },
+  {
+    "default_ports": [
+      11300
+    ],
+    "exe_path_contains": [
+      "beanstalkd"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "beanstalkd"
+    ]
+  },
+  {
+    "default_ports": [
+      9090
+    ],
+    "exe_path_contains": [
+      "prometheus"
+    ],
+    "html_title_contains": [
+      "prometheus"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "prometheus"
+    ]
+  },
+  {
+    "default_ports": [
+      3000
+    ],
+    "exe_path_contains": [
+      "grafana"
+    ],
+    "html_title_contains": [
+      "grafana"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "grafana",
+      "grafana-server"
+    ]
+  },
+  {
+    "default_ports": [
+      5601
+    ],
+    "exe_path_contains": [
+      "kibana"
+    ],
+    "html_title_contains": [
+      "kibana",
+      "elastic"
+    ],
+    "http_header_contains": [
+      [
+        "kbn-name",
+        ""
+      ],
+      [
+        "kbn-version",
+        ""
+      ]
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "kibana"
+    ]
+  },
+  {
+    "cmdline_contains": [
+      "logstash"
+    ],
+    "cmdline_requires_process": [
+      "java"
+    ],
+    "default_ports": [
+      5044,
+      9600
+    ],
+    "exe_path_contains": [
+      "logstash"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "logstash"
+    ]
+  },
+  {
+    "default_ports": [
+      24224,
+      2020
+    ],
+    "exe_path_contains": [
+      "fluentd",
+      "fluent-bit"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "fluentd",
+      "fluentbit",
+      "fluent-bit"
+    ]
+  },
+  {
+    "default_ports": [
+      16686,
+      14268
+    ],
+    "exe_path_contains": [
+      "jaeger"
+    ],
+    "html_title_contains": [
+      "jaeger"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "jaeger"
+    ]
+  },
+  {
+    "cmdline_contains": [
+      "zipkin"
+    ],
+    "cmdline_requires_process": [
+      "java"
+    ],
+    "default_ports": [
+      9411
+    ],
+    "exe_path_contains": [
+      "zipkin"
+    ],
+    "html_title_contains": [
+      "zipkin"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "zipkin"
+    ]
+  },
+  {
+    "default_ports": [
+      9093
+    ],
+    "exe_path_contains": [
+      "alertmanager"
+    ],
+    "html_title_contains": [
+      "alertmanager"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "alertmanager"
+    ]
+  },
+  {
+    "default_ports": [
+      19999
+    ],
+    "exe_path_contains": [
+      "netdata"
+    ],
+    "html_title_contains": [
+      "netdata"
+    ],
+    "http_server_contains": [
+      "netdata"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "netdata"
+    ]
+  },
+  {
+    "cmdline_contains": [
+      "uptime-kuma"
+    ],
+    "cmdline_requires_process": [
+      "node"
+    ],
+    "default_ports": [
+      3001
+    ],
+    "exe_path_contains": [
+      "uptime-kuma"
+    ],
+    "html_title_contains": [
+      "uptime kuma"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "uptime-kuma"
+    ]
+  },
+  {
+    "cmdline_contains": [
+      "graylog"
+    ],
+    "cmdline_requires_process": [
+      "java"
+    ],
+    "default_ports": [
+      9000,
+      12201
+    ],
+    "exe_path_contains": [
+      "graylog"
+    ],
+    "html_title_contains": [
+      "graylog"
+    ],
+    "http_header_contains": [
+      [
+        "x-graylog-node-id",
+        ""
+      ]
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "graylog"
+    ]
+  },
+  {
+    "banner_starts_with": [
+      "ZBXD"
+    ],
+    "default_ports": [
+      10051,
+      10050
+    ],
+    "exe_path_contains": [
+      "zabbix"
+    ],
+    "html_title_contains": [
+      "zabbix"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "zabbix_server",
+      "zabbix_agentd"
+    ]
+  },
+  {
+    "default_ports": [
+      8125
+    ],
+    "exe_path_contains": [
+      "telegraf"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "telegraf"
+    ]
+  },
+  {
+    "default_ports": [
+      2375,
+      2376
+    ],
+    "exe_path_contains": [
+      "docker"
+    ],
+    "http_header_contains": [
+      [
+        "docker-experimental",
+        ""
+      ],
+      [
+        "ostype",
+        ""
+      ]
+    ],
+    "http_server_contains": [
+      "docker"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "dockerd",
+      "docker"
+    ]
+  },
+  {
+    "default_ports": [
+      10010
+    ],
+    "exe_path_contains": [
+      "containerd"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "containerd"
+    ]
+  },
+  {
+    "default_ports": [
+      6443,
+      8443
+    ],
+    "exe_path_contains": [
+      "kubernetes"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "kube-apiserver"
+    ]
+  },
+  {
+    "default_ports": [
+      9000,
+      9443
+    ],
+    "exe_path_contains": [
+      "portainer"
+    ],
+    "html_title_contains": [
+      "portainer"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "portainer"
+    ]
+  },
+  {
+    "default_ports": [
+      53,
+      9153
+    ],
+    "exe_path_contains": [
+      "coredns"
+    ],
+    "kind": "DNS",
+    "priority": 10,
+    "process_names": [
+      "coredns"
+    ]
+  },
+  {
+    "default_ports": [
+      4646,
+      4647,
+      4648
+    ],
+    "exe_path_contains": [
+      "nomad"
+    ],
+    "html_title_contains": [
+      "nomad"
+    ],
+    "http_header_contains": [
+      [
+        "x-nomad-knownleader",
+        ""
+      ]
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "nomad"
+    ]
+  },
+  {
+    "default_ports": [
+      3000
+    ],
+    "exe_path_contains": [
+      "gitea"
+    ],
+    "html_title_contains": [
+      "gitea"
+    ],
+    "http_server_contains": [
+      "gitea"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "gitea"
+    ]
+  },
+  {
+    "default_ports": [
+      3000
+    ],
+    "exe_path_contains": [
+      "gogs"
+    ],
+    "html_title_contains": [
+      "gogs"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "gogs"
+    ]
+  },
+  {
+    "default_ports": [
+      80,
+      443,
+      8929
+    ],
+    "exe_path_contains": [
+      "gitlab"
+    ],
+    "html_title_contains": [
+      "gitlab"
+    ],
+    "http_header_contains": [
+      [
+        "x-gitlab-meta",
+        ""
+      ]
+    ],
+    "http_server_contains": [
+      "gitlab-workhorse"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "gitlab-workhorse",
+      "gitlab-rails",
+      "puma"
+    ]
+  },
+  {
+    "default_ports": [
+      80,
+      443
+    ],
+    "exe_path_contains": [
+      "drone"
+    ],
+    "html_title_contains": [
+      "drone"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "drone-server",
+      "drone"
+    ]
+  },
+  {
+    "cmdline_contains": [
+      "teamcity"
+    ],
+    "cmdline_requires_process": [
+      "java"
+    ],
+    "default_ports": [
+      8111
+    ],
+    "exe_path_contains": [
+      "teamcity"
+    ],
+    "html_title_contains": [
+      "teamcity"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "teamcity"
+    ]
+  },
+  {
+    "default_ports": [
+      8080
+    ],
+    "exe_path_contains": [
+      "concourse"
+    ],
+    "html_title_contains": [
+      "concourse"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "concourse"
+    ]
+  },
+  {
+    "default_ports": [
+      8080,
+      8443
+    ],
+    "exe_path_contains": [
+      "argocd"
+    ],
+    "html_title_contains": [
+      "argo cd"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "argocd-server"
+    ]
+  },
+  {
+    "default_ports": [
+      80,
+      443
+    ],
+    "exe_path_contains": [
+      "harbor"
+    ],
+    "html_title_contains": [
+      "harbor"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "harbor-core"
+    ]
+  },
+  {
+    "cmdline_contains": [
+      "nexus"
+    ],
+    "cmdline_requires_process": [
+      "java"
+    ],
+    "default_ports": [
+      8081
+    ],
+    "exe_path_contains": [
+      "nexus",
+      "sonatype"
+    ],
+    "html_title_contains": [
+      "nexus repository"
+    ],
+    "http_server_contains": [
+      "nexus"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "nexus"
+    ]
+  },
+  {
+    "cmdline_contains": [
+      "verdaccio"
+    ],
+    "cmdline_requires_process": [
+      "node"
+    ],
+    "default_ports": [
+      4873
+    ],
+    "exe_path_contains": [
+      "verdaccio"
+    ],
+    "html_title_contains": [
+      "verdaccio"
+    ],
+    "http_powered_by_contains": [
+      "verdaccio"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "verdaccio"
+    ]
+  },
+  {
+    "cmdline_contains": [
+      "go.jar"
+    ],
+    "cmdline_requires_process": [
+      "java"
+    ],
+    "default_ports": [
+      8153,
+      8154
+    ],
+    "exe_path_contains": [
+      "gocd",
+      "go-server"
+    ],
+    "html_title_contains": [
+      "gocd"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "gocd"
+    ]
+  },
+  {
+    "cmdline_contains": [
+      "jupyter"
+    ],
+    "cmdline_requires_process": [
+      "python",
+      "python3"
+    ],
+    "default_ports": [
+      8888
+    ],
+    "exe_path_contains": [
+      "jupyter"
+    ],
+    "html_title_contains": [
+      "jupyter"
+    ],
+    "http_server_contains": [
+      "tornadoserver"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "jupyter-notebook",
+      "jupyter-lab",
+      "jupyter"
+    ]
+  },
+  {
+    "cmdline_contains": [
+      "code-server"
+    ],
+    "cmdline_requires_process": [
+      "node"
+    ],
+    "default_ports": [
+      8080
+    ],
+    "exe_path_contains": [
+      "code-server"
+    ],
+    "html_title_contains": [
+      "code-server",
+      "code - oss"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "code-server"
+    ]
+  },
+  {
+    "cmdline_contains": [
+      "storybook"
+    ],
+    "cmdline_requires_process": [
+      "node"
+    ],
+    "default_ports": [
+      6006
+    ],
+    "exe_path_contains": [
+      "storybook"
+    ],
+    "html_title_contains": [
+      "storybook"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "storybook"
+    ]
+  },
+  {
+    "cmdline_contains": [
+      "webpack"
+    ],
+    "cmdline_requires_process": [
+      "node"
+    ],
+    "default_ports": [
+      8080,
+      9000
+    ],
+    "exe_path_contains": [
+      "webpack"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "webpack"
+    ]
+  },
+  {
+    "cmdline_contains": [
+      "vite"
+    ],
+    "cmdline_requires_process": [
+      "node"
+    ],
+    "default_ports": [
+      5173
+    ],
+    "kind": "NodeJs",
+    "priority": 10
+  },
+  {
+    "default_ports": [
+      4040
+    ],
+    "exe_path_contains": [
+      "ngrok"
+    ],
+    "html_title_contains": [
+      "ngrok"
+    ],
+    "http_header_contains": [
+      [
+        "ngrok-agent-ips",
+        ""
+      ]
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "ngrok"
+    ]
+  },
+  {
+    "default_ports": [
+      32400
+    ],
+    "exe_path_contains": [
+      "plex"
+    ],
+    "html_title_contains": [
+      "plex"
+    ],
+    "http_header_contains": [
+      [
+        "x-plex-protocol",
+        ""
+      ]
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "plexmediaserver",
+      "plex media server"
+    ]
+  },
+  {
+    "default_ports": [
+      8096,
+      8920
+    ],
+    "exe_path_contains": [
+      "jellyfin"
+    ],
+    "html_title_contains": [
+      "jellyfin"
+    ],
+    "http_header_contains": [
+      [
+        "x-emby-authorization",
+        ""
+      ]
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "jellyfin"
+    ]
+  },
+  {
+    "default_ports": [
+      8096,
+      8920
+    ],
+    "exe_path_contains": [
+      "emby"
+    ],
+    "html_title_contains": [
+      "emby"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "embyserver",
+      "emby"
+    ]
+  },
+  {
+    "default_ports": [
+      4533
+    ],
+    "exe_path_contains": [
+      "navidrome"
+    ],
+    "html_title_contains": [
+      "navidrome"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "navidrome"
+    ]
+  },
+  {
+    "default_ports": [
+      8000
+    ],
+    "exe_path_contains": [
+      "icecast"
+    ],
+    "html_title_contains": [
+      "icecast"
+    ],
+    "http_server_contains": [
+      "icecast"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "icecast"
+    ],
+    "version_from_header_prefix": "icecast"
+  },
+  {
+    "default_ports": [
+      64738
+    ],
+    "exe_path_contains": [
+      "mumble"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "mumble-server",
+      "murmurd"
+    ]
+  },
+  {
+    "banner_starts_with": [
+      "TS3"
+    ],
+    "default_ports": [
+      9987,
+      10011,
+      30033
+    ],
+    "exe_path_contains": [
+      "teamspeak"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "ts3server",
+      "teamspeak"
+    ]
+  },
+  {
+    "cmdline_contains": [
+      "homeassistant"
+    ],
+    "cmdline_requires_process": [
+      "python",
+      "python3"
+    ],
+    "default_ports": [
+      8123
+    ],
+    "exe_path_contains": [
+      "homeassistant",
+      "home-assistant"
+    ],
+    "html_title_contains": [
+      "home assistant"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "hass",
+      "homeassistant"
+    ]
+  },
+  {
+    "cmdline_contains": [
+      "node-red"
+    ],
+    "cmdline_requires_process": [
+      "node"
+    ],
+    "default_ports": [
+      1880
+    ],
+    "exe_path_contains": [
+      "node-red"
+    ],
+    "html_title_contains": [
+      "node-red"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "node-red"
+    ]
+  },
+  {
+    "default_ports": [
+      80,
+      53
+    ],
+    "exe_path_contains": [
+      "pihole"
+    ],
+    "html_title_contains": [
+      "pi-hole"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "pihole-ftl"
+    ]
+  },
+  {
+    "default_ports": [
+      3000,
+      53
+    ],
+    "exe_path_contains": [
+      "adguardhome"
+    ],
+    "html_title_contains": [
+      "adguard home"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "adguardhome"
+    ]
+  },
+  {
+    "cmdline_contains": [
+      "homebridge"
+    ],
+    "cmdline_requires_process": [
+      "node"
+    ],
+    "default_ports": [
+      8581,
+      51826
+    ],
+    "exe_path_contains": [
+      "homebridge"
+    ],
+    "html_title_contains": [
+      "homebridge"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "homebridge"
+    ]
+  },
+  {
+    "default_ports": [
+      1194
+    ],
+    "exe_path_contains": [
+      "openvpn"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "openvpn"
+    ]
+  },
+  {
+    "default_ports": [
+      51820
+    ],
+    "exe_path_contains": [
+      "wireguard"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "wireguard",
+      "wg"
+    ]
+  },
+  {
+    "default_ports": [
+      41641
+    ],
+    "exe_path_contains": [
+      "tailscale"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "tailscaled"
+    ]
+  },
+  {
+    "default_ports": [
+      9993
+    ],
+    "exe_path_contains": [
+      "zerotier"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "zerotier-one",
+      "zerotier"
+    ]
+  },
+  {
+    "default_ports": [
+      8080
+    ],
+    "exe_path_contains": [
+      "headscale"
+    ],
+    "html_title_contains": [
+      "headscale"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "headscale"
+    ]
+  },
+  {
+    "banner_contains": [
+      "postfix",
+      "esmtp"
+    ],
+    "banner_starts_with": [
+      "220 "
+    ],
+    "default_ports": [
+      25,
+      587,
+      465
+    ],
+    "exe_path_contains": [
+      "postfix"
+    ],
+    "kind": "SMTP",
+    "priority": 10,
+    "process_names": [
+      "postfix",
+      "master"
+    ]
+  },
+  {
+    "banner_contains": [
+      "exim"
+    ],
+    "banner_starts_with": [
+      "220 "
+    ],
+    "default_ports": [
+      25,
+      587,
+      465
+    ],
+    "exe_path_contains": [
+      "exim"
+    ],
+    "kind": "SMTP",
+    "priority": 10,
+    "process_names": [
+      "exim",
+      "exim4"
+    ]
+  },
+  {
+    "banner_contains": [
+      "sendmail"
+    ],
+    "banner_starts_with": [
+      "220 "
+    ],
+    "default_ports": [
+      25,
+      587
+    ],
+    "exe_path_contains": [
+      "sendmail"
+    ],
+    "kind": "SMTP",
+    "priority": 10,
+    "process_names": [
+      "sendmail"
+    ]
+  },
+  {
+    "banner_contains": [
+      "dovecot"
+    ],
+    "banner_starts_with": [
+      "* OK "
+    ],
+    "default_ports": [
+      143,
+      993,
+      110,
+      995
+    ],
+    "exe_path_contains": [
+      "dovecot"
+    ],
+    "kind": "SMTP",
+    "priority": 10,
+    "process_names": [
+      "dovecot"
+    ]
+  },
+  {
+    "banner_contains": [
+      "hmailserver"
+    ],
+    "banner_starts_with": [
+      "220 "
+    ],
+    "default_ports": [
+      25,
+      587,
+      143,
+      110
+    ],
+    "exe_path_contains": [
+      "hmailserver"
+    ],
+    "kind": "SMTP",
+    "priority": 10,
+    "process_names": [
+      "hmailserver"
+    ]
+  },
+  {
+    "cmdline_contains": [
+      "minecraft",
+      "spigot",
+      "paper",
+      "bukkit",
+      "forge"
+    ],
+    "cmdline_requires_process": [
+      "java"
+    ],
+    "default_ports": [
+      25565
+    ],
+    "kind": "Minecraft",
+    "priority": 10,
+    "process_names": [
+      "java"
+    ]
+  },
+  {
+    "default_ports": [
+      19132
+    ],
+    "exe_path_contains": [
+      "bedrock"
+    ],
+    "kind": "Minecraft",
+    "priority": 10,
+    "process_names": [
+      "bedrock_server"
+    ]
+  },
+  {
+    "default_ports": [
+      34197
+    ],
+    "exe_path_contains": [
+      "factorio"
+    ],
+    "kind": "Factorio",
+    "priority": 10,
+    "process_names": [
+      "factorio"
+    ]
+  },
+  {
+    "default_ports": [
+      7777
+    ],
+    "exe_path_contains": [
+      "terraria"
+    ],
+    "kind": "Terraria",
+    "priority": 10,
+    "process_names": [
+      "terrariaserver",
+      "tshock"
+    ]
+  },
+  {
+    "default_ports": [
+      2456,
+      2457
+    ],
+    "exe_path_contains": [
+      "valheim"
+    ],
+    "kind": "Valheim",
+    "priority": 10,
+    "process_names": [
+      "valheim_server",
+      "valheim"
+    ]
+  },
+  {
+    "default_ports": [
+      27015,
+      27016
+    ],
+    "exe_path_contains": [
+      "srcds"
+    ],
+    "kind": "SourceEngine",
+    "priority": 10,
+    "process_names": [
+      "srcds",
+      "srcds_linux",
+      "srcds_run"
+    ]
+  },
+  {
+    "default_ports": [
+      28015,
+      28016
+    ],
+    "exe_path_contains": [
+      "rustdedicated"
+    ],
+    "kind": "RustGame",
+    "priority": 10,
+    "process_names": [
+      "rustdedicated",
+      "rust"
+    ]
+  },
+  {
+    "default_ports": [
+      7777,
+      27015
+    ],
+    "exe_path_contains": [
+      "ark"
+    ],
+    "kind": "ArkServer",
+    "priority": 10,
+    "process_names": [
+      "arkserver",
+      "shootergame"
+    ]
+  },
+  {
+    "default_ports": [
+      80,
+      443,
+      2019
+    ],
+    "exe_path_contains": [
+      "caddy"
+    ],
+    "html_title_contains": [
+      "caddy"
+    ],
+    "http_server_contains": [
+      "caddy"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "caddy"
+    ],
+    "version_from_header_prefix": "caddy"
+  },
+  {
+    "default_ports": [
+      80,
+      443,
+      8080
+    ],
+    "exe_path_contains": [
+      "traefik"
+    ],
+    "html_title_contains": [
+      "traefik"
+    ],
+    "http_server_contains": [
+      "traefik"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "traefik"
+    ]
+  },
+  {
+    "default_ports": [
+      9901,
+      10000
+    ],
+    "exe_path_contains": [
+      "envoy"
+    ],
+    "http_header_contains": [
+      [
+        "x-envoy-upstream-service-time",
+        ""
+      ]
+    ],
+    "http_server_contains": [
+      "envoy"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "envoy"
+    ]
+  },
+  {
+    "default_ports": [
+      80,
+      443
+    ],
+    "exe_path_contains": [
+      "lighttpd"
+    ],
+    "http_server_contains": [
+      "lighttpd"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "lighttpd"
+    ],
+    "version_from_header_prefix": "lighttpd"
+  },
+  {
+    "default_ports": [
+      6081,
+      6082
+    ],
+    "exe_path_contains": [
+      "varnish"
+    ],
+    "http_header_contains": [
+      [
+        "x-varnish",
+        ""
+      ],
+      [
+        "via",
+        "varnish"
+      ]
+    ],
+    "http_server_contains": [
+      "varnish"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "varnishd"
+    ]
+  },
+  {
+    "default_ports": [
+      3128,
+      3129
+    ],
+    "exe_path_contains": [
+      "squid"
+    ],
+    "html_title_contains": [
+      "squid"
+    ],
+    "http_header_contains": [
+      [
+        "x-squid-error",
+        ""
+      ]
+    ],
+    "http_server_contains": [
+      "squid"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "squid"
+    ],
+    "version_from_header_prefix": "squid"
+  },
+  {
+    "default_ports": [
+      80,
+      443,
+      7080
+    ],
+    "exe_path_contains": [
+      "litespeed",
+      "lsws"
+    ],
+    "http_header_contains": [
+      [
+        "x-litespeed-cache",
+        ""
+      ]
+    ],
+    "http_server_contains": [
+      "litespeed"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "litespeed",
+      "lsws",
+      "lshttpd"
+    ],
+    "version_from_header_prefix": "litespeed"
+  },
+  {
+    "default_ports": [
+      80,
+      443
+    ],
+    "exe_path_contains": [
+      "tengine"
+    ],
+    "http_server_contains": [
+      "tengine"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "tengine"
+    ],
+    "version_from_header_prefix": "tengine"
+  },
+  {
+    "default_ports": [
+      80,
+      443
+    ],
+    "exe_path_contains": [
+      "h2o"
+    ],
+    "http_server_contains": [
+      "h2o"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "h2o"
+    ],
+    "version_from_header_prefix": "h2o"
+  },
+  {
+    "cmdline_contains": [
+      "next"
+    ],
+    "cmdline_requires_process": [
+      "node"
+    ],
+    "default_ports": [
+      3000
+    ],
+    "http_header_contains": [
+      [
+        "x-nextjs-cache",
+        ""
+      ],
+      [
+        "x-nextjs-matched-path",
+        ""
+      ]
+    ],
+    "http_powered_by_contains": [
+      "next.js"
+    ],
+    "kind": "NodeJs",
+    "priority": 20
+  },
+  {
+    "cmdline_contains": [
+      "nuxt"
+    ],
+    "cmdline_requires_process": [
+      "node"
+    ],
+    "default_ports": [
+      3000
+    ],
+    "http_header_contains": [
+      [
+        "x-nuxt-cache",
+        ""
+      ]
+    ],
+    "http_powered_by_contains": [
+      "nuxt"
+    ],
+    "kind": "NodeJs",
+    "priority": 20
+  },
+  {
+    "cmdline_contains": [
+      "remix"
+    ],
+    "cmdline_requires_process": [
+      "node"
+    ],
+    "default_ports": [
+      3000
+    ],
+    "http_powered_by_contains": [
+      "remix"
+    ],
+    "kind": "NodeJs",
+    "priority": 20
+  },
+  {
+    "cmdline_contains": [
+      "astro"
+    ],
+    "cmdline_requires_process": [
+      "node"
+    ],
+    "default_ports": [
+      4321
+    ],
+    "kind": "NodeJs",
+    "priority": 20
+  },
+  {
+    "cmdline_contains": [
+      "svelte-kit",
+      "sveltekit"
+    ],
+    "cmdline_requires_process": [
+      "node"
+    ],
+    "default_ports": [
+      5173
+    ],
+    "http_powered_by_contains": [
+      "sveltekit"
+    ],
+    "kind": "NodeJs",
+    "priority": 20
+  },
+  {
+    "cmdline_contains": [
+      "gatsby"
+    ],
+    "cmdline_requires_process": [
+      "node"
+    ],
+    "default_ports": [
+      8000,
+      9000
+    ],
+    "http_header_contains": [
+      [
+        "x-gatsby-cache",
+        ""
+      ]
+    ],
+    "http_powered_by_contains": [
+      "gatsby"
+    ],
+    "kind": "NodeJs",
+    "priority": 20
+  },
+  {
+    "cmdline_contains": [
+      "fastify"
+    ],
+    "cmdline_requires_process": [
+      "node"
+    ],
+    "default_ports": [
+      3000
+    ],
+    "http_powered_by_contains": [
+      "fastify"
+    ],
+    "kind": "NodeJs",
+    "priority": 20
+  },
+  {
+    "cmdline_contains": [
+      "koa"
+    ],
+    "cmdline_requires_process": [
+      "node"
+    ],
+    "default_ports": [
+      3000
+    ],
+    "http_powered_by_contains": [
+      "koa"
+    ],
+    "kind": "NodeJs",
+    "priority": 20
+  },
+  {
+    "cmdline_contains": [
+      "hapi"
+    ],
+    "cmdline_requires_process": [
+      "node"
+    ],
+    "default_ports": [
+      3000
+    ],
+    "http_powered_by_contains": [
+      "hapi"
+    ],
+    "kind": "NodeJs",
+    "priority": 20
+  },
+  {
+    "cmdline_contains": [
+      "fastapi"
+    ],
+    "cmdline_requires_process": [
+      "python",
+      "python3",
+      "uvicorn"
+    ],
+    "default_ports": [
+      8000
+    ],
+    "html_title_contains": [
+      "fastapi"
+    ],
+    "http_powered_by_contains": [
+      "fastapi"
+    ],
+    "http_server_contains": [
+      "uvicorn"
+    ],
+    "kind": "Python",
+    "priority": 20
+  },
+  {
+    "cmdline_contains": [
+      "starlette"
+    ],
+    "cmdline_requires_process": [
+      "python",
+      "python3",
+      "uvicorn"
+    ],
+    "default_ports": [
+      8000
+    ],
+    "http_server_contains": [
+      "uvicorn"
+    ],
+    "kind": "Python",
+    "priority": 20,
+    "process_names": [
+      "uvicorn",
+      "gunicorn",
+      "hypercorn"
+    ]
+  },
+  {
+    "cmdline_contains": [
+      "flask"
+    ],
+    "cmdline_requires_process": [
+      "python",
+      "python3"
+    ],
+    "default_ports": [
+      5000
+    ],
+    "http_powered_by_contains": [
+      "flask"
+    ],
+    "http_server_contains": [
+      "werkzeug"
+    ],
+    "kind": "Python",
+    "priority": 20
+  },
+  {
+    "cmdline_contains": [
+      "tornado"
+    ],
+    "cmdline_requires_process": [
+      "python",
+      "python3"
+    ],
+    "default_ports": [
+      8888
+    ],
+    "http_powered_by_contains": [
+      "tornado"
+    ],
+    "http_server_contains": [
+      "tornadoserver"
+    ],
+    "kind": "Python",
+    "priority": 20
+  },
+  {
+    "cmdline_contains": [
+      "bottle"
+    ],
+    "cmdline_requires_process": [
+      "python",
+      "python3"
+    ],
+    "default_ports": [
+      8080
+    ],
+    "http_powered_by_contains": [
+      "bottle"
+    ],
+    "kind": "Python",
+    "priority": 20
+  },
+  {
+    "cmdline_contains": [
+      "laravel"
+    ],
+    "cmdline_requires_process": [
+      "php",
+      "php-fpm"
+    ],
+    "default_ports": [
+      8000
+    ],
+    "html_title_contains": [
+      "laravel"
+    ],
+    "http_header_contains": [
+      [
+        "x-powered-by",
+        "laravel"
+      ]
+    ],
+    "http_powered_by_contains": [
+      "laravel"
+    ],
+    "kind": "CustomHttp",
+    "priority": 20
+  },
+  {
+    "cmdline_contains": [
+      "symfony"
+    ],
+    "cmdline_requires_process": [
+      "php",
+      "php-fpm"
+    ],
+    "default_ports": [
+      8000
+    ],
+    "html_title_contains": [
+      "symfony"
+    ],
+    "http_header_contains": [
+      [
+        "x-debug-token",
+        ""
+      ]
+    ],
+    "http_powered_by_contains": [
+      "symfony"
+    ],
+    "kind": "CustomHttp",
+    "priority": 20
+  },
+  {
+    "cmdline_contains": [
+      "codeigniter"
+    ],
+    "cmdline_requires_process": [
+      "php"
+    ],
+    "default_ports": [
+      8080
+    ],
+    "exe_path_contains": [
+      "codeigniter"
+    ],
+    "http_powered_by_contains": [
+      "codeigniter"
+    ],
+    "kind": "CustomHttp",
+    "priority": 20
+  },
+  {
+    "cmdline_contains": [
+      "sinatra"
+    ],
+    "cmdline_requires_process": [
+      "ruby"
+    ],
+    "default_ports": [
+      4567
+    ],
+    "html_title_contains": [
+      "sinatra"
+    ],
+    "http_header_contains": [
+      [
+        "x-powered-by",
+        "sinatra"
+      ]
+    ],
+    "http_powered_by_contains": [
+      "sinatra"
+    ],
+    "kind": "CustomHttp",
+    "priority": 20
+  },
+  {
+    "default_ports": [
+      8080
+    ],
+    "http_powered_by_contains": [
+      "gin"
+    ],
+    "kind": "CustomHttp",
+    "priority": 20,
+    "process_names": [
+      "gin"
+    ]
+  },
+  {
+    "default_ports": [
+      3000
+    ],
+    "http_powered_by_contains": [
+      "fiber"
+    ],
+    "http_server_contains": [
+      "fiber"
+    ],
+    "kind": "CustomHttp",
+    "priority": 20
+  },
+  {
+    "default_ports": [
+      1323
+    ],
+    "http_powered_by_contains": [
+      "echo"
+    ],
+    "kind": "CustomHttp",
+    "priority": 20
+  },
+  {
+    "cmdline_contains": [
+      "micronaut"
+    ],
+    "cmdline_requires_process": [
+      "java"
+    ],
+    "default_ports": [
+      8080
+    ],
+    "http_powered_by_contains": [
+      "micronaut"
+    ],
+    "kind": "CustomHttp",
+    "priority": 20
+  },
+  {
+    "cmdline_contains": [
+      "quarkus"
+    ],
+    "cmdline_requires_process": [
+      "java"
+    ],
+    "default_ports": [
+      8080
+    ],
+    "http_powered_by_contains": [
+      "quarkus"
+    ],
+    "kind": "CustomHttp",
+    "priority": 20
+  },
+  {
+    "cmdline_contains": [
+      "play"
+    ],
+    "cmdline_requires_process": [
+      "java"
+    ],
+    "default_ports": [
+      9000
+    ],
+    "http_powered_by_contains": [
+      "play"
+    ],
+    "kind": "CustomHttp",
+    "priority": 20
+  },
+  {
+    "default_ports": [
+      5000,
+      5001
+    ],
+    "http_powered_by_contains": [
+      "asp.net core"
+    ],
+    "http_server_contains": [
+      "kestrel"
+    ],
+    "kind": "CustomHttp",
+    "priority": 20
+  },
+  {
+    "default_ports": [
+      8080
+    ],
+    "http_server_contains": [
+      "actix-web"
+    ],
+    "kind": "CustomHttp",
+    "priority": 20,
+    "process_names": [
+      "actix"
+    ]
+  },
+  {
+    "default_ports": [
+      8000
+    ],
+    "http_powered_by_contains": [
+      "rocket"
+    ],
+    "http_server_contains": [
+      "rocket"
+    ],
+    "kind": "CustomHttp",
+    "priority": 20
+  },
+  {
+    "default_ports": [
+      3030
+    ],
+    "http_server_contains": [
+      "warp"
+    ],
+    "kind": "CustomHttp",
+    "priority": 20
+  },
+  {
+    "default_ports": [
+      8384,
+      22000
+    ],
+    "exe_path_contains": [
+      "syncthing"
+    ],
+    "html_title_contains": [
+      "syncthing"
+    ],
+    "http_header_contains": [
+      [
+        "x-syncthing-id",
+        ""
+      ]
+    ],
+    "http_server_contains": [
+      "syncthing"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "syncthing"
+    ]
+  },
+  {
+    "default_ports": [
+      80,
+      443
+    ],
+    "exe_path_contains": [
+      "nextcloud"
+    ],
+    "html_title_contains": [
+      "nextcloud"
+    ],
+    "http_header_contains": [
+      [
+        "x-nextcloud-version",
+        ""
+      ]
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "nextcloud"
+    ]
+  },
+  {
+    "default_ports": [
+      80,
+      443
+    ],
+    "exe_path_contains": [
+      "owncloud"
+    ],
+    "html_title_contains": [
+      "owncloud"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "owncloud"
+    ]
+  },
+  {
+    "default_ports": [
+      8000,
+      8082
+    ],
+    "exe_path_contains": [
+      "seafile"
+    ],
+    "html_title_contains": [
+      "seafile"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "seafile"
+    ]
+  },
+  {
+    "default_ports": [
+      9000,
+      9001
+    ],
+    "exe_path_contains": [
+      "minio"
+    ],
+    "html_title_contains": [
+      "minio"
+    ],
+    "http_header_contains": [
+      [
+        "x-amz-request-id",
+        ""
+      ]
+    ],
+    "http_server_contains": [
+      "minio"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "minio"
+    ]
+  },
+  {
+    "banner_contains": [
+      "filezilla"
+    ],
+    "banner_starts_with": [
+      "220-FileZilla",
+      "220 FileZilla"
+    ],
+    "default_ports": [
+      21
+    ],
+    "exe_path_contains": [
+      "filezilla server"
+    ],
+    "kind": "FTP",
+    "priority": 10,
+    "process_names": [
+      "filezilla server",
+      "filezillaserver"
+    ]
+  },
+  {
+    "default_ports": [
+      80
+    ],
+    "exe_path_contains": [
+      "everything"
+    ],
+    "html_title_contains": [
+      "everything"
+    ],
+    "http_server_contains": [
+      "everything"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "everything"
+    ]
+  },
+  {
+    "default_ports": [
+      8080
+    ],
+    "exe_path_contains": [
+      "bitwarden"
+    ],
+    "html_title_contains": [
+      "bitwarden"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "bitwarden"
+    ]
+  },
+  {
+    "default_ports": [
+      80,
+      3012
+    ],
+    "exe_path_contains": [
+      "vaultwarden"
+    ],
+    "html_title_contains": [
+      "vaultwarden"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "vaultwarden"
+    ]
+  },
+  {
+    "banner_starts_with": [
+      "RFB "
+    ],
+    "default_ports": [
+      5900,
+      5800
+    ],
+    "exe_path_contains": [
+      "tightvnc"
+    ],
+    "kind": "VNC",
+    "priority": 10,
+    "process_names": [
+      "tvnserver",
+      "tightvnc"
+    ]
+  },
+  {
+    "banner_starts_with": [
+      "RFB "
+    ],
+    "default_ports": [
+      5900,
+      5800
+    ],
+    "exe_path_contains": [
+      "ultravnc",
+      "uvnc"
+    ],
+    "kind": "VNC",
+    "priority": 10,
+    "process_names": [
+      "winvnc",
+      "ultravnc"
+    ]
+  },
+  {
+    "cmdline_contains": [
+      "fork-server"
+    ],
+    "cmdline_requires_process": [
+      "adb"
+    ],
+    "default_ports": [
+      5037
+    ],
+    "exe_path_contains": [
+      "adb"
+    ],
+    "kind": "AndroidAdb",
+    "priority": 10,
+    "process_names": [
+      "adb"
+    ]
+  },
+  {
+    "default_ports": [
+      5353,
+      5354
+    ],
+    "exe_path_contains": [
+      "bonjour"
+    ],
+    "kind": "Bonjour",
+    "priority": 10,
+    "process_names": [
+      "mdnsresponder"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "nordvpn"
+    ],
+    "kind": "NordVPN",
+    "priority": 10,
+    "process_names": [
+      "nordvpn-service",
+      "nordvpn"
+    ]
+  },
+  {
+    "default_ports": [
+      27015
+    ],
+    "exe_path_contains": [
+      "apple\\mobile device support",
+      "apple/mobile device support"
+    ],
+    "kind": "AppleMobileDevice",
+    "priority": 10,
+    "process_names": [
+      "applemobiledeviceservice"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "intel\\sur",
+      "intel/sur"
+    ],
+    "kind": "IntelSUR",
+    "priority": 10,
+    "process_names": [
+      "esrv"
+    ]
+  },
+  {
+    "default_ports": [
+      2179
+    ],
+    "exe_path_contains": [
+      "vmms"
+    ],
+    "kind": "HyperVManager",
+    "priority": 10,
+    "process_names": [
+      "vmms"
+    ]
+  },
+  {
+    "default_ports": [
+      7,
+      9,
+      13,
+      17,
+      19
+    ],
+    "exe_path_contains": [
+      "tcpsvcs"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "tcpsvcs"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "adguard"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "adguardsvc"
+    ]
+  },
+  {
+    "default_ports": [
+      80,
+      443,
+      8443,
+      47001
+    ],
+    "http_server_contains": [
+      "microsoft-httpapi"
+    ],
+    "kind": "HttpSys",
+    "priority": 20,
+    "version_from_header_prefix": "microsoft-httpapi"
+  },
+  {
+    "http_header_contains": [
+      [
+        "x-aspnet-version",
+        ""
+      ]
+    ],
+    "http_powered_by_contains": [
+      "asp.net"
+    ],
+    "http_server_contains": [
+      "microsoft-iis"
+    ],
+    "kind": "IIS",
+    "priority": 19,
+    "version_from_header_prefix": "microsoft-iis"
+  },
+  {
+    "default_ports": [
+      139,
+      445
+    ],
+    "kind": "SMB",
+    "priority": 10
+  },
+  {
+    "default_ports": [
+      5985,
+      5986
+    ],
+    "http_server_contains": [
+      "microsoft-httpapi"
+    ],
+    "kind": "WinRM",
+    "priority": 10
+  },
+  {
+    "default_ports": [
+      5357,
+      5358
+    ],
+    "kind": "GenericTcp",
+    "priority": 10
+  },
+  {
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "runtimebroker"
+    ]
+  },
+  {
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "dllhost"
+    ]
+  },
+  {
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "wmiprvse"
+    ]
+  },
+  {
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "lsaiso"
+    ]
+  },
+  {
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "fontdrvhost"
+    ]
+  },
+  {
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "dwm"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "steam"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "steam",
+      "steamwebhelper",
+      "steamservice"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "epic games"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "epicgameslauncher",
+      "epiconlineservices",
+      "eosoverlaypluginprocesshost"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "gog galaxy"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "galaxyclient",
+      "galaxyclientservice"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "battle.net"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "battle.net"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "electronic arts"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "ealauncher",
+      "eadesktop",
+      "origin"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "ubisoft"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "ubisoftconnect",
+      "ubisoftgamelauncher"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "gamebar"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "gamebar",
+      "gamebarft"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "riot games"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "riotclientservices",
+      "riotclientux"
+    ]
+  },
+  {
+    "default_ports": [
+      6463
+    ],
+    "exe_path_contains": [
+      "discord"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "discord"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "spotify"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "spotify"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "mozilla firefox"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "firefox"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "slack"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "slack"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "teams"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "teams",
+      "ms-teams"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "zoom"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "zoom"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "skype"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "skype"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "whatsapp"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "whatsapp"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "telegram"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "telegram"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "signal"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "signal"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "webex"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "ciscowebex",
+      "webexmta"
+    ]
+  },
+  {
+    "default_ports": [
+      5938
+    ],
+    "exe_path_contains": [
+      "teamviewer"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "teamviewer",
+      "teamviewer_service"
+    ]
+  },
+  {
+    "default_ports": [
+      7070
+    ],
+    "exe_path_contains": [
+      "anydesk"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "anydesk"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "parsec"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "parsecd",
+      "parsecvdd"
+    ]
+  },
+  {
+    "default_ports": [
+      47984,
+      47989,
+      47990,
+      48010
+    ],
+    "exe_path_contains": [
+      "sunshine"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "sunshine"
+    ]
+  },
+  {
+    "default_ports": [
+      21115,
+      21116,
+      21117,
+      21118
+    ],
+    "exe_path_contains": [
+      "rustdesk"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "rustdesk"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "chrome remote desktop"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "remoting_host"
+    ]
+  },
+  {
+    "banner_contains": [
+      "vnc"
+    ],
+    "banner_starts_with": [
+      "RFB "
+    ],
+    "default_ports": [
+      5900
+    ],
+    "exe_path_contains": [
+      "realvnc"
+    ],
+    "kind": "VNC",
+    "priority": 10,
+    "process_names": [
+      "vncviewer"
+    ]
+  },
+  {
+    "default_ports": [
+      4000
+    ],
+    "exe_path_contains": [
+      "nomachine"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "nxserver",
+      "nxnode"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "winscp"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "winscp"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "putty"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "putty",
+      "pageant",
+      "plink"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "mobaxterm"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "mobaxterm"
+    ]
+  },
+  {
+    "default_ports": [
+      8080
+    ],
+    "exe_path_contains": [
+      "qbittorrent"
+    ],
+    "html_title_contains": [
+      "qbittorrent"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "qbittorrent"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "utorrent"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "utorrent"
+    ]
+  },
+  {
+    "default_ports": [
+      9091
+    ],
+    "exe_path_contains": [
+      "transmission"
+    ],
+    "html_title_contains": [
+      "transmission"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "transmission-daemon",
+      "transmission-qt"
+    ]
+  },
+  {
+    "default_ports": [
+      8112
+    ],
+    "exe_path_contains": [
+      "deluge"
+    ],
+    "html_title_contains": [
+      "deluge"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "deluge",
+      "deluged"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "bittorrent"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "bittorrent"
+    ]
+  },
+  {
+    "default_ports": [
+      6800
+    ],
+    "exe_path_contains": [
+      "aria2"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "aria2c"
+    ]
+  },
+  {
+    "default_ports": [
+      8080
+    ],
+    "exe_path_contains": [
+      "videolan"
+    ],
+    "html_title_contains": [
+      "vlc"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "vlc"
+    ]
+  },
+  {
+    "default_ports": [
+      8080
+    ],
+    "exe_path_contains": [
+      "kodi"
+    ],
+    "html_title_contains": [
+      "kodi"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "kodi"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "foobar2000"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "foobar2000"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "musicbee"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "musicbee"
+    ]
+  },
+  {
+    "default_ports": [
+      8080
+    ],
+    "exe_path_contains": [
+      "calibre"
+    ],
+    "html_title_contains": [
+      "calibre"
+    ],
+    "http_server_contains": [
+      "calibre"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "calibre"
+    ]
+  },
+  {
+    "default_ports": [
+      4455
+    ],
+    "exe_path_contains": [
+      "obs-studio"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "obs64",
+      "obs32",
+      "obs-studio"
+    ]
+  },
+  {
+    "default_ports": [
+      18083
+    ],
+    "exe_path_contains": [
+      "virtualbox"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "vboxsvc",
+      "vboxheadless",
+      "vboxnetdhcp",
+      "vboxnetnat"
+    ]
+  },
+  {
+    "default_ports": [
+      443,
+      8697
+    ],
+    "exe_path_contains": [
+      "vmware"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "vmware-hostd",
+      "vmnat",
+      "vmnetdhcp",
+      "vmware"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "qemu"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "qemu-system-x86_64",
+      "qemu-system-x86",
+      "qemu"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "wsl"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "wslhost",
+      "wsl"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "nvidia"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "nvcontainer",
+      "nvdisplay.container"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "nvidia"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "nvidia share",
+      "nvidia web helper",
+      "gfexperience"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "amd"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "radeonsoftware",
+      "amdrsserv",
+      "amddvr"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "razer"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "razersynapse",
+      "razer central",
+      "rzsdkservice"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "corsair"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "icue",
+      "corsair"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "logi"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "lghub",
+      "lghub_agent",
+      "logi_lamparray_service"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "steelseries"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "steelseriesgg",
+      "steelseriesengine"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "elgato\\stream deck"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "streamdeck"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "msi"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "msi_dragoncenter",
+      "msiservice"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "asus"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "armourycrate",
+      "asusoptimization"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "intel\\driver"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "dsa"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "google\\drive"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "googledrivesync",
+      "googledrivefs"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "icloud"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "icloud",
+      "icloudservices"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "box"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "box",
+      "boxsync"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "mega"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "megasync"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "pcloud"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "pcloud"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "keepassxc"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "keepassxc"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "1password"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "1password"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "lastpass"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "lastpass"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "nordpass"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "nordpass"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "dashlane"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "dashlane"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "malwarebytes"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "mbamservice",
+      "mbam"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "norton"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "norton",
+      "ns"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "mcafee"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "mcshield",
+      "mfewc",
+      "mcafee"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "kaspersky"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "avp",
+      "avpui"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "eset"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "ekrn",
+      "egui"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "bitdefender"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "bdagent",
+      "bdservicehost",
+      "vsserv"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "avast"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "avastsvc",
+      "avgsvc",
+      "avgui"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "crowdstrike"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "csagent",
+      "csfalconservice"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "sophos"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "sophoshealth",
+      "sophosupd"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "webroot"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "wrsa"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "expressvpn"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "expressvpn",
+      "expressvpnservice"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "surfshark"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "surfshark"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "protonvpn"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "protonvpn",
+      "protonvpnservice"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "cyberghost"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "cyberghostvpn"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "mullvad"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "mullvad-daemon",
+      "mullvad-vpn"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "cloudflare"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "warp-svc",
+      "cloudflare warp"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "private internet access"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "pia-service",
+      "pia-client"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "postman"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "postman"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "insomnia"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "insomnia"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "mongodb compass"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "mongodbcompass"
+    ]
+  },
+  {
+    "default_ports": [
+      5540
+    ],
+    "exe_path_contains": [
+      "redisinsight"
+    ],
+    "html_title_contains": [
+      "redisinsight"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "redisinsight"
+    ]
+  },
+  {
+    "default_ports": [
+      8866
+    ],
+    "exe_path_contains": [
+      "fiddler"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "fiddler"
+    ]
+  },
+  {
+    "default_ports": [
+      8888
+    ],
+    "exe_path_contains": [
+      "charles"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "charles"
+    ]
+  },
+  {
+    "default_ports": [
+      8080,
+      8081
+    ],
+    "exe_path_contains": [
+      "mitmproxy"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "mitmproxy",
+      "mitmdump",
+      "mitmweb"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "wireshark"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "wireshark",
+      "tshark",
+      "dumpcap"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "microsoft visual studio"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "devenv"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "android studio"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "studio64",
+      "studio"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "eclipse"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "eclipse"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "sublime text"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "sublime_text"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "notepad++"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "notepad++"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "unity"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "unity"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "unreal"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "unrealengine",
+      "ue4editor",
+      "ue5editor"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "godot"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "godot"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "blender"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "blender"
+    ]
+  },
+  {
+    "default_ports": [
+      4369
+    ],
+    "exe_path_contains": [
+      "erlang"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "epmd"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "hp"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "hpsmart",
+      "hpnetworkcommunicator"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "canon"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "cnijnetwork"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "epson"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "epson"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "glidex"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "glidexservice",
+      "glidexnearservice"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "asussoftwaremanager"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "asussoftwaremanager"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "myasus"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "myasus"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "asus"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "asussci"
+    ]
+  },
+  {
+    "cmdline_contains": [
+      "daemon"
+    ],
+    "cmdline_requires_process": [
+      "git"
+    ],
+    "default_ports": [
+      9418
+    ],
+    "exe_path_contains": [
+      "git"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "git-daemon"
+    ]
+  },
+  {
+    "cmdline_contains": [
+      "http.server"
+    ],
+    "cmdline_requires_process": [
+      "python",
+      "python3"
+    ],
+    "default_ports": [
+      8000
+    ],
+    "kind": "CustomHttp",
+    "priority": 10
+  },
+  {
+    "cmdline_contains": [
+      "-S"
+    ],
+    "cmdline_requires_process": [
+      "php"
+    ],
+    "default_ports": [
+      8000
+    ],
+    "kind": "CustomHttp",
+    "priority": 10
+  },
+  {
+    "cmdline_contains": [
+      "webrick"
+    ],
+    "cmdline_requires_process": [
+      "ruby"
+    ],
+    "default_ports": [
+      3000
+    ],
+    "http_server_contains": [
+      "webrick"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10
+  },
+  {
+    "cmdline_contains": [
+      "watch"
+    ],
+    "cmdline_requires_process": [
+      "cargo"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10
+  },
+  {
+    "exe_path_contains": [
+      "dotnet"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "dotnet"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "java"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "java",
+      "javaw"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "powershell"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "powershell",
+      "pwsh"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "chocolatey"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "choco"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "windowsterminal"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "windowsterminal"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "conemu"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "conemu",
+      "conemu64"
+    ]
+  },
+  {
+    "banner_contains": [
+      "ldap"
+    ],
+    "default_ports": [
+      389,
+      636
+    ],
+    "exe_path_contains": [
+      "openldap",
+      "slapd"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "slapd"
+    ]
+  },
+  {
+    "default_ports": [
+      88,
+      749
+    ],
+    "exe_path_contains": [
+      "kerberos",
+      "krb5"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "krb5kdc",
+      "kadmind"
+    ]
+  },
+  {
+    "default_ports": [
+      161,
+      162
+    ],
+    "exe_path_contains": [
+      "snmp"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "snmpd",
+      "snmptrapd"
+    ]
+  },
+  {
+    "default_ports": [
+      123
+    ],
+    "exe_path_contains": [
+      "ntp",
+      "chrony"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "ntpd",
+      "chronyd",
+      "w32tm"
+    ]
+  },
+  {
+    "default_ports": [
+      69
+    ],
+    "exe_path_contains": [
+      "tftp"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "tftpd",
+      "tftpd64",
+      "tftpd32",
+      "in.tftpd"
+    ]
+  },
+  {
+    "default_ports": [
+      514
+    ],
+    "exe_path_contains": [
+      "syslog",
+      "rsyslog"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "syslogd",
+      "rsyslogd",
+      "syslog-ng"
+    ]
+  },
+  {
+    "default_ports": [
+      1812,
+      1813
+    ],
+    "exe_path_contains": [
+      "radius",
+      "freeradius"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "radiusd",
+      "freeradius"
+    ]
+  },
+  {
+    "default_ports": [
+      179
+    ],
+    "exe_path_contains": [
+      "frr",
+      "bird"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "bgpd",
+      "bird",
+      "frr"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "frr",
+      "quagga"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "ospfd",
+      "ospf6d"
+    ]
+  },
+  {
+    "default_ports": [
+      137,
+      138
+    ],
+    "exe_path_contains": [
+      "samba"
+    ],
+    "kind": "SMB",
+    "priority": 10,
+    "process_names": [
+      "nmbd"
+    ]
+  },
+  {
+    "default_ports": [
+      2049,
+      111
+    ],
+    "exe_path_contains": [
+      "nfs"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "nfsd",
+      "rpc.nfsd",
+      "rpc.mountd",
+      "rpc.statd"
+    ]
+  },
+  {
+    "default_ports": [
+      3260
+    ],
+    "exe_path_contains": [
+      "iscsi",
+      "tgt"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "iscsitarget",
+      "tgtd",
+      "lio-target"
+    ]
+  },
+  {
+    "default_ports": [
+      631
+    ],
+    "exe_path_contains": [
+      "cups"
+    ],
+    "html_title_contains": [
+      "cups"
+    ],
+    "http_server_contains": [
+      "cups"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "cupsd"
+    ],
+    "version_from_header_prefix": "cups"
+  },
+  {
+    "cmdline_contains": [
+      "adminer"
+    ],
+    "cmdline_requires_process": [
+      "php"
+    ],
+    "default_ports": [
+      8080
+    ],
+    "exe_path_contains": [
+      "adminer"
+    ],
+    "html_title_contains": [
+      "adminer"
+    ],
+    "kind": "CustomHttp",
+    "priority": 20
+  },
+  {
+    "cmdline_contains": [
+      "phpmyadmin"
+    ],
+    "cmdline_requires_process": [
+      "php"
+    ],
+    "default_ports": [
+      80,
+      8080
+    ],
+    "exe_path_contains": [
+      "phpmyadmin"
+    ],
+    "html_title_contains": [
+      "phpmyadmin"
+    ],
+    "kind": "CustomHttp",
+    "priority": 20
+  },
+  {
+    "exe_path_contains": [
+      "robo 3t",
+      "studio 3t",
+      "3t"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "robo3t",
+      "studio3t"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "dbvisualizer"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "dbvisualizer",
+      "dbvis"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "sqldeveloper"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "sqldeveloper"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "navicat"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "navicat"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "heidisql"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "heidisql"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "sqlyog"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "sqlyog"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "datagrip"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "datagrip64",
+      "datagrip"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "actions-runner"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "runner.listener",
+      "runner.worker"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "azure",
+      "vsts-agent"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "agent.listener",
+      "agent.worker"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "buildkite"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "buildkite-agent"
+    ]
+  },
+  {
+    "default_ports": [
+      8080,
+      8081
+    ],
+    "exe_path_contains": [
+      "mitmproxy"
+    ],
+    "html_title_contains": [
+      "mitmproxy"
+    ],
+    "http_server_contains": [
+      "mitmproxy"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "mitmproxy",
+      "mitmdump",
+      "mitmweb"
+    ]
+  },
+  {
+    "default_ports": [
+      8118
+    ],
+    "exe_path_contains": [
+      "privoxy"
+    ],
+    "html_title_contains": [
+      "privoxy"
+    ],
+    "http_server_contains": [
+      "privoxy"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "privoxy"
+    ]
+  },
+  {
+    "default_ports": [
+      9050,
+      9150
+    ],
+    "exe_path_contains": [
+      "tor"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "tor"
+    ]
+  },
+  {
+    "default_ports": [
+      1080
+    ],
+    "exe_path_contains": [
+      "dante"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "danted",
+      "sockd"
+    ]
+  },
+  {
+    "default_ports": [
+      3128,
+      1080
+    ],
+    "exe_path_contains": [
+      "3proxy"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "3proxy"
+    ]
+  },
+  {
+    "default_ports": [
+      8888
+    ],
+    "exe_path_contains": [
+      "tinyproxy"
+    ],
+    "http_server_contains": [
+      "tinyproxy"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "tinyproxy"
+    ],
+    "version_from_header_prefix": "tinyproxy"
+  },
+  {
+    "exe_path_contains": [
+      "stunnel"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "stunnel",
+      "stunnel4"
+    ]
+  },
+  {
+    "default_ports": [
+      9392,
+      9393
+    ],
+    "exe_path_contains": [
+      "veeam"
+    ],
+    "html_title_contains": [
+      "veeam"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "veeam",
+      "veeamservice",
+      "veeam.backup.service"
+    ]
+  },
+  {
+    "default_ports": [
+      8000
+    ],
+    "exe_path_contains": [
+      "restic"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "restic"
+    ]
+  },
+  {
+    "default_ports": [
+      8200
+    ],
+    "exe_path_contains": [
+      "duplicati"
+    ],
+    "html_title_contains": [
+      "duplicati"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "duplicati",
+      "duplicati.server"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "borg"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "borg",
+      "borgmatic"
+    ]
+  },
+  {
+    "banner_contains": [
+      "bacula"
+    ],
+    "default_ports": [
+      9101,
+      9102,
+      9103
+    ],
+    "exe_path_contains": [
+      "bacula"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "bacula-dir",
+      "bacula-sd",
+      "bacula-fd"
+    ]
+  },
+  {
+    "default_ports": [
+      9876
+    ],
+    "exe_path_contains": [
+      "acronis"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "acronis",
+      "aakore",
+      "active_protection_service"
+    ]
+  },
+  {
+    "default_ports": [
+      4242,
+      4243
+    ],
+    "exe_path_contains": [
+      "crashplan"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "crashplan",
+      "crashplanservice"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "wireshark"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "wireshark",
+      "tshark",
+      "dumpcap"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "npcap"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "npcap"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "nmap"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "nmap",
+      "ncat"
+    ]
+  },
+  {
+    "default_ports": [
+      5000
+    ],
+    "exe_path_contains": [
+      "registry"
+    ],
+    "http_header_contains": [
+      [
+        "docker-distribution-api-version",
+        ""
+      ]
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "registry"
+    ]
+  },
+  {
+    "default_ports": [
+      4954
+    ],
+    "exe_path_contains": [
+      "trivy"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "trivy"
+    ]
+  },
+  {
+    "default_ports": [
+      4191,
+      4143
+    ],
+    "exe_path_contains": [
+      "linkerd"
+    ],
+    "http_header_contains": [
+      [
+        "l5d-server-id",
+        ""
+      ]
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "linkerd2-proxy",
+      "linkerd"
+    ]
+  },
+  {
+    "default_ports": [
+      8080
+    ],
+    "exe_path_contains": [
+      "hasura"
+    ],
+    "html_title_contains": [
+      "hasura"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "graphql-engine",
+      "hasura"
+    ]
+  },
+  {
+    "cmdline_contains": [
+      "apollo"
+    ],
+    "cmdline_requires_process": [
+      "node"
+    ],
+    "default_ports": [
+      4000
+    ],
+    "html_title_contains": [
+      "apollo"
+    ],
+    "kind": "CustomHttp",
+    "priority": 20
+  },
+  {
+    "banner_contains": [
+      "manticore"
+    ],
+    "default_ports": [
+      9306,
+      9308,
+      9312
+    ],
+    "exe_path_contains": [
+      "manticore"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "searchd"
+    ]
+  },
+  {
+    "cmdline_contains": [
+      "wiki"
+    ],
+    "cmdline_requires_process": [
+      "node"
+    ],
+    "default_ports": [
+      3000
+    ],
+    "exe_path_contains": [
+      "wikijs",
+      "wiki.js"
+    ],
+    "html_title_contains": [
+      "wiki.js"
+    ],
+    "kind": "CustomHttp",
+    "priority": 20
+  },
+  {
+    "cmdline_contains": [
+      "bookstack"
+    ],
+    "cmdline_requires_process": [
+      "php"
+    ],
+    "default_ports": [
+      80,
+      443
+    ],
+    "exe_path_contains": [
+      "bookstack"
+    ],
+    "html_title_contains": [
+      "bookstack"
+    ],
+    "kind": "CustomHttp",
+    "priority": 20
+  },
+  {
+    "cmdline_contains": [
+      "outline"
+    ],
+    "cmdline_requires_process": [
+      "node"
+    ],
+    "default_ports": [
+      3000
+    ],
+    "exe_path_contains": [
+      "outline"
+    ],
+    "html_title_contains": [
+      "outline"
+    ],
+    "kind": "CustomHttp",
+    "priority": 20
+  },
+  {
+    "default_ports": [
+      8065
+    ],
+    "exe_path_contains": [
+      "mattermost"
+    ],
+    "html_title_contains": [
+      "mattermost"
+    ],
+    "http_header_contains": [
+      [
+        "x-request-id",
+        ""
+      ],
+      [
+        "x-version-id",
+        ""
+      ]
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "mattermost"
+    ]
+  },
+  {
+    "cmdline_contains": [
+      "rocket.chat"
+    ],
+    "cmdline_requires_process": [
+      "node"
+    ],
+    "default_ports": [
+      3000
+    ],
+    "exe_path_contains": [
+      "rocket.chat"
+    ],
+    "html_title_contains": [
+      "rocket.chat"
+    ],
+    "kind": "CustomHttp",
+    "priority": 20
+  },
+  {
+    "cmdline_contains": [
+      "synapse"
+    ],
+    "cmdline_requires_process": [
+      "python",
+      "python3"
+    ],
+    "default_ports": [
+      8008,
+      8448
+    ],
+    "exe_path_contains": [
+      "synapse"
+    ],
+    "http_server_contains": [
+      "synapse"
+    ],
+    "kind": "CustomHttp",
+    "priority": 20,
+    "process_names": [
+      "synapse"
+    ]
+  },
+  {
+    "banner_contains": [
+      "rsyncd"
+    ],
+    "banner_starts_with": [
+      "@RSYNCD"
+    ],
+    "default_ports": [
+      873
+    ],
+    "exe_path_contains": [
+      "rsync"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "rsync",
+      "rsyncd"
+    ]
+  },
+  {
+    "cmdline_contains": [
+      "n8n"
+    ],
+    "cmdline_requires_process": [
+      "node"
+    ],
+    "default_ports": [
+      5678
+    ],
+    "exe_path_contains": [
+      "n8n"
+    ],
+    "html_title_contains": [
+      "n8n"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "n8n"
+    ]
+  },
+  {
+    "cmdline_contains": [
+      "appsmith"
+    ],
+    "cmdline_requires_process": [
+      "node"
+    ],
+    "default_ports": [
+      80,
+      443
+    ],
+    "exe_path_contains": [
+      "appsmith"
+    ],
+    "html_title_contains": [
+      "appsmith"
+    ],
+    "kind": "CustomHttp",
+    "priority": 20
+  },
+  {
+    "default_ports": [
+      9000,
+      9443
+    ],
+    "exe_path_contains": [
+      "authentik"
+    ],
+    "html_title_contains": [
+      "authentik"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "authentik"
+    ]
+  },
+  {
+    "default_ports": [
+      9091
+    ],
+    "exe_path_contains": [
+      "authelia"
+    ],
+    "html_title_contains": [
+      "authelia"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "authelia"
+    ]
+  },
+  {
+    "default_ports": [
+      5556,
+      5558
+    ],
+    "exe_path_contains": [
+      "dex"
+    ],
+    "html_title_contains": [
+      "dex"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "dex"
+    ]
+  },
+  {
+    "cmdline_contains": [
+      "mlflow"
+    ],
+    "cmdline_requires_process": [
+      "python",
+      "python3"
+    ],
+    "default_ports": [
+      5000
+    ],
+    "exe_path_contains": [
+      "mlflow"
+    ],
+    "html_title_contains": [
+      "mlflow"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "mlflow"
+    ]
+  },
+  {
+    "cmdline_contains": [
+      "tensorboard"
+    ],
+    "cmdline_requires_process": [
+      "python",
+      "python3"
+    ],
+    "default_ports": [
+      6006
+    ],
+    "exe_path_contains": [
+      "tensorboard"
+    ],
+    "html_title_contains": [
+      "tensorboard"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "tensorboard"
+    ]
+  },
+  {
+    "cmdline_contains": [
+      "label-studio"
+    ],
+    "cmdline_requires_process": [
+      "python",
+      "python3"
+    ],
+    "default_ports": [
+      8080
+    ],
+    "exe_path_contains": [
+      "label-studio",
+      "label_studio"
+    ],
+    "html_title_contains": [
+      "label studio"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "label-studio"
+    ]
+  },
+  {
+    "banner_contains": [
+      "ollama"
+    ],
+    "default_ports": [
+      11434
+    ],
+    "exe_path_contains": [
+      "ollama"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "ollama"
+    ]
+  },
+  {
+    "default_ports": [
+      1234
+    ],
+    "exe_path_contains": [
+      "lm studio",
+      "lmstudio"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "lm-studio",
+      "lm studio"
+    ]
+  },
+  {
+    "default_ports": [
+      8080
+    ],
+    "exe_path_contains": [
+      "localai",
+      "local-ai"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "local-ai",
+      "localai"
+    ]
+  },
+  {
+    "default_ports": [
+      80,
+      443
+    ],
+    "exe_path_contains": [
+      "rancher"
+    ],
+    "html_title_contains": [
+      "rancher"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "rancher"
+    ]
+  },
+  {
+    "banner_contains": [
+      "pgpool"
+    ],
+    "default_ports": [
+      9999,
+      9898
+    ],
+    "exe_path_contains": [
+      "pgpool"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "pgpool"
+    ]
+  },
+  {
+    "banner_contains": [
+      "maxscale"
+    ],
+    "default_ports": [
+      4006,
+      4008
+    ],
+    "exe_path_contains": [
+      "maxscale"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "maxscale"
+    ]
+  },
+  {
+    "default_ports": [
+      15000,
+      15001,
+      15999
+    ],
+    "exe_path_contains": [
+      "vitess"
+    ],
+    "html_title_contains": [
+      "vitess"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "vtgate",
+      "vttablet",
+      "vtctld"
+    ]
+  },
+  {
+    "cmdline_contains": [
+      "rundeck"
+    ],
+    "cmdline_requires_process": [
+      "java"
+    ],
+    "default_ports": [
+      4440
+    ],
+    "exe_path_contains": [
+      "rundeck"
+    ],
+    "html_title_contains": [
+      "rundeck"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "rundeck",
+      "rundeckd"
+    ]
+  },
+  {
+    "cmdline_contains": [
+      "awx"
+    ],
+    "cmdline_requires_process": [
+      "python",
+      "python3"
+    ],
+    "default_ports": [
+      80,
+      443
+    ],
+    "exe_path_contains": [
+      "awx"
+    ],
+    "html_title_contains": [
+      "awx",
+      "ansible tower"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "awx-manage"
+    ]
+  },
+  {
+    "default_ports": [
+      4505,
+      4506
+    ],
+    "exe_path_contains": [
+      "salt"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "salt-master",
+      "salt-minion",
+      "salt-api"
+    ]
+  },
+  {
+    "default_ports": [
+      8140
+    ],
+    "exe_path_contains": [
+      "puppet"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "puppet",
+      "puppetserver",
+      "puppet-agent"
+    ]
+  },
+  {
+    "default_ports": [
+      443
+    ],
+    "exe_path_contains": [
+      "chef"
+    ],
+    "html_title_contains": [
+      "chef"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "chef-server",
+      "chef-client",
+      "erchef"
+    ]
+  },
+  {
+    "exe_path_contains": [
+      "terraform"
+    ],
+    "kind": "GenericTcp",
+    "priority": 10,
+    "process_names": [
+      "terraform"
+    ]
+  },
+  {
+    "default_ports": [
+      9200,
+      9201,
+      9202
+    ],
+    "exe_path_contains": [
+      "boundary"
+    ],
+    "html_title_contains": [
+      "boundary"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "boundary"
+    ]
+  },
+  {
+    "default_ports": [
+      9701,
+      9702
+    ],
+    "exe_path_contains": [
+      "waypoint"
+    ],
+    "html_title_contains": [
+      "waypoint"
+    ],
+    "kind": "CustomHttp",
+    "priority": 10,
+    "process_names": [
+      "waypoint"
+    ]
+  },
+  {
+    "banner_contains": [
+      "mailhog"
+    ],
+    "banner_starts_with": [
+      "220 "
+    ],
+    "default_ports": [
+      1025,
+      8025
+    ],
+    "exe_path_contains": [
+      "mailhog"
+    ],
+    "html_title_contains": [
+      "mailhog"
+    ],
+    "kind": "SMTP",
+    "priority": 10,
+    "process_names": [
+      "mailhog"
+    ]
+  },
+  {
+    "banner_contains": [
+      "mailpit"
+    ],
+    "banner_starts_with": [
+      "220 "
+    ],
+    "default_ports": [
+      1025,
+      8025
+    ],
+    "exe_path_contains": [
+      "mailpit"
+    ],
+    "html_title_contains": [
+      "mailpit"
+    ],
+    "kind": "SMTP",
+    "priority": 10,
+    "process_names": [
+      "mailpit"
+    ]
+  },
+  {
+    "banner_contains": [
+      "haraka"
+    ],
+    "banner_starts_with": [
+      "220 "
+    ],
+    "cmdline_contains": [
+      "haraka"
+    ],
+    "cmdline_requires_process": [
+      "node"
+    ],
+    "default_ports": [
+      25,
+      587
+    ],
+    "exe_path_contains": [
+      "haraka"
+    ],
+    "kind": "SMTP",
+    "priority": 10,
+    "process_names": [
+      "haraka"
+    ]
+  },
+  {
+    "banner_contains": [
+      "zimbra"
+    ],
+    "banner_starts_with": [
+      "220 "
+    ],
+    "default_ports": [
+      25,
+      465,
+      587,
+      7071
+    ],
+    "exe_path_contains": [
+      "zimbra"
+    ],
+    "html_title_contains": [
+      "zimbra"
+    ],
+    "kind": "SMTP",
+    "priority": 10,
+    "process_names": [
+      "zmmailboxdmgr",
+      "zmmtactl"
+    ]
+  },
+  {
+    "default_ports": [
+      53
+    ],
+    "exe_path_contains": [
+      "unbound"
+    ],
+    "kind": "DNS",
+    "priority": 8,
+    "process_names": [
+      "unbound"
+    ]
+  },
+  {
+    "default_ports": [
+      53,
+      953
+    ],
+    "exe_path_contains": [
+      "bind",
+      "named"
+    ],
+    "kind": "DNS",
+    "priority": 8,
+    "process_names": [
+      "named"
+    ]
+  },
+  {
+    "default_ports": [
+      53,
+      8081
+    ],
+    "exe_path_contains": [
+      "powerdns",
+      "pdns"
+    ],
+    "kind": "DNS",
+    "priority": 8,
+    "process_names": [
+      "pdns_server",
+      "pdns_recursor"
+    ]
+  },
+  {
+    "default_ports": [
+      53
+    ],
+    "exe_path_contains": [
+      "dnsmasq"
+    ],
+    "kind": "DNS",
+    "priority": 8,
+    "process_names": [
+      "dnsmasq"
+    ]
+  },
+  {
+    "cmdline_contains": [
+      "rpcss"
+    ],
+    "cmdline_requires_process": [
+      "svchost"
+    ],
+    "default_ports": [
+      135
+    ],
+    "kind": "RpcEndpointMapper",
+    "priority": 5
+  },
+  {
+    "cmdline_contains": [
+      "localserviceandnoimpersonation"
+    ],
+    "cmdline_requires_process": [
+      "svchost"
+    ],
+    "default_ports": [
+      1900
+    ],
+    "kind": "SSDP",
+    "priority": 5
+  },
+  {
+    "cmdline_contains": [
+      "ikeext"
+    ],
+    "cmdline_requires_process": [
+      "svchost"
+    ],
+    "default_ports": [
+      500,
+      4500
+    ],
+    "kind": "IPsec",
+    "priority": 5
+  },
+  {
+    "cmdline_contains": [
+      "sharedaccess"
+    ],
+    "cmdline_requires_process": [
+      "svchost"
+    ],
+    "default_ports": [
+      53,
+      67,
+      68
+    ],
+    "kind": "InternetConnectionSharing",
+    "priority": 5
+  },
+  {
+    "cmdline_contains": [
+      "networkservice -p"
+    ],
+    "cmdline_requires_process": [
+      "svchost"
+    ],
+    "default_ports": [
+      5355
+    ],
+    "kind": "LLMNR",
+    "priority": 5
+  },
+  {
+    "cmdline_contains": [
+      "localservice -p"
+    ],
+    "cmdline_requires_process": [
+      "svchost"
+    ],
+    "default_ports": [
+      5040,
+      5050
+    ],
+    "kind": "CDPSvc",
+    "priority": 5
+  },
+  {
+    "cmdline_contains": [
+      "qwave"
+    ],
+    "cmdline_requires_process": [
+      "svchost"
+    ],
+    "default_ports": [
+      2177
+    ],
+    "kind": "QWAVE",
+    "priority": 5
+  },
+  {
+    "cmdline_contains": [
+      "fdrespub"
+    ],
+    "cmdline_requires_process": [
+      "svchost"
+    ],
+    "default_ports": [
+      3702
+    ],
+    "kind": "FDResPub",
+    "priority": 5
+  },
+  {
+    "cmdline_contains": [
+      "iphlpsvc"
+    ],
+    "cmdline_requires_process": [
+      "svchost"
+    ],
+    "kind": "IpHelper",
+    "priority": 5
+  },
+  {
+    "cmdline_contains": [
+      "localservicenetworkrestricted"
+    ],
+    "cmdline_requires_process": [
+      "svchost"
+    ],
+    "kind": "WindowsEventLog",
+    "priority": 5
+  },
+  {
+    "cmdline_contains": [
+      "netsvcs"
+    ],
+    "cmdline_requires_process": [
+      "svchost"
+    ],
+    "kind": "TaskScheduler",
+    "priority": 5
+  },
+  {
+    "cmdline_contains": [
+      "policyagent"
+    ],
+    "cmdline_requires_process": [
+      "svchost"
+    ],
+    "kind": "IPsec",
+    "priority": 6
+  },
+  {
+    "default_ports": [
+      1194
+    ],
+    "exe_path_contains": [
+      "openvpn"
+    ],
+    "kind": "OpenVPN",
+    "priority": 5,
+    "process_names": [
+      "openvpn"
+    ]
+  }
+]

@@ -1,5 +1,5 @@
 use super::fingerprint::ProbeResult;
-use super::fingerprints::FINGERPRINTS;
+use super::fingerprints;
 use super::types::ServerKind;
 
 // Re-export for convenience — callers can use `classify::ProcessInfo` if needed.
@@ -51,22 +51,24 @@ pub fn classify(
     let banner = probe.and_then(|p| p.banner.as_deref());
     let banner_lower = banner.map(|b| b.to_lowercase());
 
+    let db = fingerprints::fingerprints();
+
     let mut best_score: u32 = 0;
     let mut best_idx: Option<usize> = None;
 
-    for (i, fp) in FINGERPRINTS.iter().enumerate() {
+    for (i, fp) in db.iter().enumerate() {
         let mut score: u32 = 0;
 
         // ── Process name match ──
         if !fp.process_names.is_empty()
-            && fp.process_names.iter().any(|&pn| pn == proc_stem)
+            && fp.process_names.iter().any(|pn| pn == proc_stem)
         {
             score += SCORE_PROCESS;
         }
 
         // ── Exe path match ──
         if !fp.exe_path_contains.is_empty()
-            && fp.exe_path_contains.iter().any(|&ep| exe_lower.contains(ep))
+            && fp.exe_path_contains.iter().any(|ep| exe_lower.contains(ep.as_str()))
         {
             score += SCORE_EXE_PATH;
         }
@@ -76,10 +78,10 @@ pub fn classify(
             let cmdline_allowed = if fp.cmdline_requires_process.is_empty() {
                 true
             } else {
-                fp.cmdline_requires_process.iter().any(|&rp| rp == proc_stem)
+                fp.cmdline_requires_process.iter().any(|rp| rp == proc_stem)
             };
             if cmdline_allowed
-                && fp.cmdline_contains.iter().any(|&pat| cmd_lower.contains(pat))
+                && fp.cmdline_contains.iter().any(|pat| cmd_lower.contains(pat.as_str()))
             {
                 score += SCORE_CMDLINE;
             }
@@ -88,7 +90,7 @@ pub fn classify(
         // ── HTTP Server header match ──
         if !fp.http_server_contains.is_empty() {
             if let Some(ref srv) = http_server_lower {
-                if fp.http_server_contains.iter().any(|&pat| srv.contains(pat)) {
+                if fp.http_server_contains.iter().any(|pat| srv.contains(pat.as_str())) {
                     score += SCORE_HTTP_SERVER;
                 }
             }
@@ -97,7 +99,7 @@ pub fn classify(
         // ── HTTP Powered-By match ──
         if !fp.http_powered_by_contains.is_empty() {
             if let Some(ref pw) = http_powered_lower {
-                if fp.http_powered_by_contains.iter().any(|&pat| pw.contains(pat)) {
+                if fp.http_powered_by_contains.iter().any(|pat| pw.contains(pat.as_str())) {
                     score += SCORE_HTTP_POWERED;
                 }
             }
@@ -106,12 +108,12 @@ pub fn classify(
         // ── HTTP header match ──
         if !fp.http_header_contains.is_empty() {
             if let Some(pr) = probe {
-                let matched = fp.http_header_contains.iter().any(|&(hname, hval)| {
+                let matched = fp.http_header_contains.iter().any(|(hname, hval)| {
                     pr.http_headers.iter().any(|(k, v)| {
                         let kl = k.to_lowercase();
                         let vl = v.to_lowercase();
-                        kl.contains(hname)
-                            && (hval.is_empty() || vl.contains(hval))
+                        kl.contains(hname.as_str())
+                            && (hval.is_empty() || vl.contains(hval.as_str()))
                     })
                 });
                 if matched {
@@ -123,7 +125,7 @@ pub fn classify(
         // ── HTML title match ──
         if !fp.html_title_contains.is_empty() {
             if let Some(ref title) = http_title_lower {
-                if fp.html_title_contains.iter().any(|&pat| title.contains(pat)) {
+                if fp.html_title_contains.iter().any(|pat| title.contains(pat.as_str())) {
                     score += SCORE_HTML_TITLE;
                 }
             }
@@ -132,7 +134,7 @@ pub fn classify(
         // ── Banner starts_with match ──
         if !fp.banner_starts_with.is_empty() {
             if let Some(b) = banner {
-                if fp.banner_starts_with.iter().any(|&pat| b.starts_with(pat)) {
+                if fp.banner_starts_with.iter().any(|pat| b.starts_with(pat.as_str())) {
                     score += SCORE_BANNER_STARTS;
                 }
             }
@@ -141,7 +143,7 @@ pub fn classify(
         // ── Banner contains match ──
         if !fp.banner_contains.is_empty() {
             if let Some(ref bl) = banner_lower {
-                if fp.banner_contains.iter().any(|&pat| bl.contains(pat)) {
+                if fp.banner_contains.iter().any(|pat| bl.contains(pat.as_str())) {
                     score += SCORE_BANNER_CONTAINS;
                 }
             }
@@ -160,7 +162,7 @@ pub fn classify(
         if score > best_score
             || (score == best_score
                 && best_idx
-                    .map(|bi| fp.priority < FINGERPRINTS[bi].priority)
+                    .map(|bi| fp.priority < db[bi].priority)
                     .unwrap_or(true))
         {
             best_score = score;
@@ -173,7 +175,7 @@ pub fn classify(
     // one strong signal (process, banner, HTTP header) or two weaker signals.
     // Minimum: SCORE_PORT + one real signal, i.e. > SCORE_PORT.
     let fp = match best_idx {
-        Some(i) if best_score > SCORE_PORT => &FINGERPRINTS[i],
+        Some(i) if best_score > SCORE_PORT => &db[i],
         _ => return (ServerKind::Unknown, None),
     };
 
@@ -193,7 +195,7 @@ fn extract_version_for_match(
     banner: Option<&str>,
 ) -> Option<String> {
     // Try version_from_header_prefix against the Server header.
-    if let Some(prefix) = fp.version_from_header_prefix {
+    if let Some(ref prefix) = fp.version_from_header_prefix {
         if let Some(pr) = probe {
             if let Some(ref server) = pr.http_server {
                 if let Some(v) = extract_version(server, prefix) {
