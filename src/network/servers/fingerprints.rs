@@ -3792,25 +3792,162 @@ pub static FINGERPRINTS: &[TechFingerprint] = &[
         version_from_header_prefix: None,
     },
 
-    // ── Windows system processes commonly listening on ports ──
+    // ── LSASS (Local Security Authority) ──
+    TechFingerprint {
+        kind: ServerKind::LocalSecurityAuthority, priority: 5,
+        process_names: &["lsass"],
+        exe_path_contains: &["\\lsass.exe"],
+        cmdline_contains: &[], cmdline_requires_process: &[],
+        http_server_contains: &[], http_powered_by_contains: &[],
+        http_header_contains: &[], html_title_contains: &[],
+        banner_starts_with: &[], banner_contains: &[],
+        default_ports: &[], version_from_header_prefix: None,
+    },
+
+    // ── services.exe (Service Control Manager) ──
+    TechFingerprint {
+        kind: ServerKind::ServiceControlManager, priority: 5,
+        process_names: &["services"],
+        exe_path_contains: &["\\services.exe"],
+        cmdline_contains: &[], cmdline_requires_process: &[],
+        http_server_contains: &[], http_powered_by_contains: &[],
+        http_header_contains: &[], html_title_contains: &[],
+        banner_starts_with: &[], banner_contains: &[],
+        default_ports: &[], version_from_header_prefix: None,
+    },
+
+    // ── wininit.exe (Windows Init Process) ──
+    TechFingerprint {
+        kind: ServerKind::WindowsInitProcess, priority: 5,
+        process_names: &["wininit"],
+        exe_path_contains: &["\\wininit.exe"],
+        cmdline_contains: &[], cmdline_requires_process: &[],
+        http_server_contains: &[], http_powered_by_contains: &[],
+        http_header_contains: &[], html_title_contains: &[],
+        banner_starts_with: &[], banner_contains: &[],
+        default_ports: &[], version_from_header_prefix: None,
+    },
+
+    // ── dasHost.exe (Device Association Service) ──
+    TechFingerprint {
+        kind: ServerKind::DeviceAssociationService, priority: 5,
+        process_names: &["dashost"],
+        exe_path_contains: &["dashost.exe"],
+        cmdline_contains: &[], cmdline_requires_process: &[],
+        http_server_contains: &[], http_powered_by_contains: &[],
+        http_header_contains: &[], html_title_contains: &[],
+        banner_starts_with: &[], banner_contains: &[],
+        default_ports: &[3702], version_from_header_prefix: None,
+    },
+
+    // ── explorer.exe (Windows Explorer) ──
+    TechFingerprint {
+        kind: ServerKind::WindowsExplorer, priority: 5,
+        process_names: &["explorer"],
+        exe_path_contains: &["\\explorer.exe"],
+        cmdline_contains: &[], cmdline_requires_process: &[],
+        http_server_contains: &[], http_powered_by_contains: &[],
+        http_header_contains: &[], html_title_contains: &[],
+        banner_starts_with: &[], banner_contains: &[],
+        default_ports: &[], version_from_header_prefix: None,
+    },
+
+    // ── TCPSVCS.EXE (Simple TCP/IP Services) ──
+    TechFingerprint {
+        kind: ServerKind::SimpleTcpServices, priority: 5,
+        process_names: &["tcpsvcs"],
+        exe_path_contains: &["tcpsvcs.exe"],
+        cmdline_contains: &[], cmdline_requires_process: &[],
+        http_server_contains: &[], http_powered_by_contains: &[],
+        http_header_contains: &[], html_title_contains: &[],
+        banner_starts_with: &[], banner_contains: &[],
+        default_ports: &[7, 9, 13, 17, 19], version_from_header_prefix: None,
+    },
+
+    // ── WmsSvc.exe (Windows MultiPoint Server) ──
+    TechFingerprint {
+        kind: ServerKind::WindowsMultiPointServer, priority: 5,
+        process_names: &["wmssvc"],
+        exe_path_contains: &["multipoint server", "wmssvc"],
+        cmdline_contains: &[], cmdline_requires_process: &[],
+        http_server_contains: &[], http_powered_by_contains: &[],
+        http_header_contains: &[], html_title_contains: &[],
+        banner_starts_with: &[], banner_contains: &[],
+        default_ports: &[3702], version_from_header_prefix: None,
+    },
+
+    // ── ASUS GlideX (GlideXService / GlideXNearService) ──
+    TechFingerprint {
+        kind: ServerKind::AsusGlideX, priority: 5,
+        process_names: &["glidexservice", "glidexnearservice"],
+        exe_path_contains: &["glidex"],
+        cmdline_contains: &[], cmdline_requires_process: &[],
+        http_server_contains: &[], http_powered_by_contains: &[],
+        http_header_contains: &[], html_title_contains: &[],
+        banner_starts_with: &[], banner_contains: &[],
+        default_ports: &[], version_from_header_prefix: None,
+    },
+
+    // ── ASUS Software Manager ──
+    TechFingerprint {
+        kind: ServerKind::AsusSoftwareManager, priority: 5,
+        process_names: &["asussoftwaremanager"],
+        exe_path_contains: &["asussoftwaremanager", "asus\\software"],
+        cmdline_contains: &[], cmdline_requires_process: &[],
+        http_server_contains: &[], http_powered_by_contains: &[],
+        http_header_contains: &[], html_title_contains: &[],
+        banner_starts_with: &[], banner_contains: &[],
+        default_ports: &[], version_from_header_prefix: None,
+    },
+
+    // ── AdGuard Service ──
+    TechFingerprint {
+        kind: ServerKind::AdGuardService, priority: 5,
+        process_names: &["adguardsvc"],
+        exe_path_contains: &["adguard"],
+        cmdline_contains: &[], cmdline_requires_process: &[],
+        http_server_contains: &[], http_powered_by_contains: &[],
+        http_header_contains: &[], html_title_contains: &[],
+        banner_starts_with: &[], banner_contains: &[],
+        default_ports: &[], version_from_header_prefix: None,
+    },
+
+    // ── ChatGPT Desktop ──
+    TechFingerprint {
+        kind: ServerKind::ChatGPTDesktop, priority: 5,
+        process_names: &["chatgpt"],
+        exe_path_contains: &["chatgpt"],
+        cmdline_contains: &[], cmdline_requires_process: &[],
+        http_server_contains: &[], http_powered_by_contains: &[],
+        http_header_contains: &[], html_title_contains: &[],
+        banner_starts_with: &[], banner_contains: &[],
+        default_ports: &[], version_from_header_prefix: None,
+    },
+
+    // ── Claude Desktop ──
+    TechFingerprint {
+        kind: ServerKind::ClaudeDesktop, priority: 5,
+        process_names: &["claude"],
+        exe_path_contains: &["claude"],
+        cmdline_contains: &[], cmdline_requires_process: &[],
+        http_server_contains: &[], http_powered_by_contains: &[],
+        http_header_contains: &[], html_title_contains: &[],
+        banner_starts_with: &[], banner_contains: &[],
+        default_ports: &[], version_from_header_prefix: None,
+    },
+
+    // ── Other Windows system processes (catch-all for known system binaries) ──
     TechFingerprint {
         kind: ServerKind::GenericTcp,
         priority: 15,
-        process_names: &["lsass", "services", "wininit", "csrss", "smss",
-                         "dashost", "searchindexer", "searchprotocolhost",
-                         "msdtc", "vmms", "vmcompute", "vmwp",
-                         "spoolsv", "taskhostw", "sihost"],
+        process_names: &["csrss", "smss", "searchindexer", "searchprotocolhost",
+                         "msdtc", "vmcompute", "vmwp", "taskhostw", "sihost"],
         exe_path_contains: &[],
-        cmdline_contains: &[],
-        cmdline_requires_process: &[],
-        http_server_contains: &[],
-        http_powered_by_contains: &[],
-        http_header_contains: &[],
-        html_title_contains: &[],
-        banner_starts_with: &[],
-        banner_contains: &[],
-        default_ports: &[],
-        version_from_header_prefix: None,
+        cmdline_contains: &[], cmdline_requires_process: &[],
+        http_server_contains: &[], http_powered_by_contains: &[],
+        http_header_contains: &[], html_title_contains: &[],
+        banner_starts_with: &[], banner_contains: &[],
+        default_ports: &[], version_from_header_prefix: None,
     },
 
     // ── JetBrains IDEs (IntelliJ, WebStorm, PyCharm, etc.) ──
@@ -9330,78 +9467,6 @@ pub static FINGERPRINTS: &[TechFingerprint] = &[
         default_ports: &[], version_from_header_prefix: None,
     },
 
-    // ── Windows Explorer (shell, RPC listener) ──
-    TechFingerprint {
-        kind: ServerKind::GenericTcp, priority: 10,
-        process_names: &["explorer"],
-        exe_path_contains: &["\\explorer.exe"],
-        cmdline_contains: &[], cmdline_requires_process: &[],
-        http_server_contains: &[], http_powered_by_contains: &[],
-        http_header_contains: &[], html_title_contains: &[],
-        banner_starts_with: &[], banner_contains: &[],
-        default_ports: &[], version_from_header_prefix: None,
-    },
-
-    // ── Claude Desktop App ──
-    TechFingerprint {
-        kind: ServerKind::GenericUdp, priority: 10,
-        process_names: &["claude"],
-        exe_path_contains: &["claude"],
-        cmdline_contains: &[], cmdline_requires_process: &[],
-        http_server_contains: &[], http_powered_by_contains: &[],
-        http_header_contains: &[], html_title_contains: &[],
-        banner_starts_with: &[], banner_contains: &[],
-        default_ports: &[], version_from_header_prefix: None,
-    },
-
-    // ── Windows services.exe (SCM) ──
-    TechFingerprint {
-        kind: ServerKind::GenericTcp, priority: 10,
-        process_names: &["services"],
-        exe_path_contains: &["\\services.exe"],
-        cmdline_contains: &[], cmdline_requires_process: &[],
-        http_server_contains: &[], http_powered_by_contains: &[],
-        http_header_contains: &[], html_title_contains: &[],
-        banner_starts_with: &[], banner_contains: &[],
-        default_ports: &[], version_from_header_prefix: None,
-    },
-
-    // ── Windows lsass.exe (Local Security Authority) ──
-    TechFingerprint {
-        kind: ServerKind::GenericTcp, priority: 10,
-        process_names: &["lsass"],
-        exe_path_contains: &["\\lsass.exe"],
-        cmdline_contains: &[], cmdline_requires_process: &[],
-        http_server_contains: &[], http_powered_by_contains: &[],
-        http_header_contains: &[], html_title_contains: &[],
-        banner_starts_with: &[], banner_contains: &[],
-        default_ports: &[], version_from_header_prefix: None,
-    },
-
-    // ── Windows wininit.exe (Windows Initialization) ──
-    TechFingerprint {
-        kind: ServerKind::GenericTcp, priority: 10,
-        process_names: &["wininit"],
-        exe_path_contains: &["\\wininit.exe"],
-        cmdline_contains: &[], cmdline_requires_process: &[],
-        http_server_contains: &[], http_powered_by_contains: &[],
-        http_header_contains: &[], html_title_contains: &[],
-        banner_starts_with: &[], banner_contains: &[],
-        default_ports: &[], version_from_header_prefix: None,
-    },
-
-    // ── DAS Host (Device Association Service) ──
-    TechFingerprint {
-        kind: ServerKind::GenericTcp, priority: 10,
-        process_names: &["dashost"],
-        exe_path_contains: &["dashost.exe"],
-        cmdline_contains: &[], cmdline_requires_process: &[],
-        http_server_contains: &[], http_powered_by_contains: &[],
-        http_header_contains: &[], html_title_contains: &[],
-        banner_starts_with: &[], banner_contains: &[],
-        default_ports: &[3702], version_from_header_prefix: None,
-    },
-
     // ── OpenVPN ──
     TechFingerprint {
         kind: ServerKind::OpenVPN, priority: 5,
@@ -9412,42 +9477,6 @@ pub static FINGERPRINTS: &[TechFingerprint] = &[
         http_header_contains: &[], html_title_contains: &[],
         banner_starts_with: &[], banner_contains: &[],
         default_ports: &[1194], version_from_header_prefix: None,
-    },
-
-    // ── Windows MultiPoint Server (WmsSvc.exe) ──
-    TechFingerprint {
-        kind: ServerKind::GenericTcp, priority: 10,
-        process_names: &["wmssvc"],
-        exe_path_contains: &["multipoint server", "wmssvc"],
-        cmdline_contains: &[], cmdline_requires_process: &[],
-        http_server_contains: &[], http_powered_by_contains: &[],
-        http_header_contains: &[], html_title_contains: &[],
-        banner_starts_with: &[], banner_contains: &[],
-        default_ports: &[3702], version_from_header_prefix: None,
-    },
-
-    // ── ChatGPT Desktop App ──
-    TechFingerprint {
-        kind: ServerKind::GenericUdp, priority: 10,
-        process_names: &["chatgpt"],
-        exe_path_contains: &["chatgpt"],
-        cmdline_contains: &[], cmdline_requires_process: &[],
-        http_server_contains: &[], http_powered_by_contains: &[],
-        http_header_contains: &[], html_title_contains: &[],
-        banner_starts_with: &[], banner_contains: &[],
-        default_ports: &[], version_from_header_prefix: None,
-    },
-
-    // ── Comet (background process) ──
-    TechFingerprint {
-        kind: ServerKind::GenericTcp, priority: 10,
-        process_names: &["comet"],
-        exe_path_contains: &["comet"],
-        cmdline_contains: &[], cmdline_requires_process: &[],
-        http_server_contains: &[], http_powered_by_contains: &[],
-        http_header_contains: &[], html_title_contains: &[],
-        banner_starts_with: &[], banner_contains: &[],
-        default_ports: &[], version_from_header_prefix: None,
     },
 ];
 

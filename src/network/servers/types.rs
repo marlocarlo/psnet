@@ -337,6 +337,22 @@ pub enum ServerKind {
     TaskScheduler,
     InternetConnectionSharing,
 
+    // -- Windows system processes --
+    SimpleTcpServices,
+    LocalSecurityAuthority,
+    ServiceControlManager,
+    WindowsInitProcess,
+    DeviceAssociationService,
+    WindowsMultiPointServer,
+    WindowsExplorer,
+
+    // -- Desktop / vendor apps --
+    AsusGlideX,
+    AsusSoftwareManager,
+    AdGuardService,
+    ChatGPTDesktop,
+    ClaudeDesktop,
+
     // -- Other / Unknown --
     CustomHttp,
     GenericTcp,
@@ -656,7 +672,21 @@ impl ServerKind {
             Self::TaskScheduler => "Task Scheduler",
             Self::InternetConnectionSharing => "Internet Connection Sharing",
 
-            Self::CustomHttp => "HTTP Server (unknown)",
+            Self::SimpleTcpServices => "Simple TCP/IP Services",
+            Self::LocalSecurityAuthority => "Local Security Authority",
+            Self::ServiceControlManager => "Service Control Manager",
+            Self::WindowsInitProcess => "Windows Init Process",
+            Self::DeviceAssociationService => "Device Association Service",
+            Self::WindowsMultiPointServer => "Windows MultiPoint Server",
+            Self::WindowsExplorer => "Windows Explorer",
+
+            Self::AsusGlideX => "ASUS GlideX",
+            Self::AsusSoftwareManager => "ASUS Software Manager",
+            Self::AdGuardService => "AdGuard",
+            Self::ChatGPTDesktop => "ChatGPT Desktop",
+            Self::ClaudeDesktop => "Claude Desktop",
+
+            Self::CustomHttp => "HTTP Server",
             Self::GenericTcp => "TCP Listener",
             Self::GenericUdp => "UDP Listener",
             Self::Unknown => "Unknown",
@@ -944,7 +974,19 @@ impl ServerKind {
             | Self::IpHelper
             | Self::WindowsEventLog
             | Self::TaskScheduler
-            | Self::InternetConnectionSharing => ServerCategory::SystemService,
+            | Self::InternetConnectionSharing
+            | Self::SimpleTcpServices
+            | Self::LocalSecurityAuthority
+            | Self::ServiceControlManager
+            | Self::WindowsInitProcess
+            | Self::DeviceAssociationService
+            | Self::WindowsMultiPointServer
+            | Self::WindowsExplorer
+            | Self::AsusGlideX
+            | Self::AsusSoftwareManager
+            | Self::AdGuardService
+            | Self::ChatGPTDesktop
+            | Self::ClaudeDesktop => ServerCategory::SystemService,
 
             Self::CustomHttp
             | Self::GenericTcp
@@ -1197,6 +1239,20 @@ impl ServerKind {
             Self::WindowsEventLog => "EVT",
             Self::TaskScheduler => "TS",
             Self::InternetConnectionSharing => "ICS",
+
+            Self::SimpleTcpServices => "STCP",
+            Self::LocalSecurityAuthority => "LSA",
+            Self::ServiceControlManager => "SCM",
+            Self::WindowsInitProcess => "INIT",
+            Self::DeviceAssociationService => "DAS",
+            Self::WindowsMultiPointServer => "WMS",
+            Self::WindowsExplorer => "EXP",
+
+            Self::AsusGlideX => "GLX",
+            Self::AsusSoftwareManager => "ASUS",
+            Self::AdGuardService => "AG",
+            Self::ChatGPTDesktop => "GPT",
+            Self::ClaudeDesktop => "CLD",
 
             // Other
             Self::CustomHttp => "h?",
@@ -1532,9 +1588,23 @@ impl ServerKind {
             Self::TaskScheduler => "Windows Task Scheduler RPC service endpoint",
             Self::InternetConnectionSharing => "Windows Internet Connection Sharing (DNS/DHCP relay)",
 
-            Self::CustomHttp => "Unidentified HTTP server responding on this port",
-            Self::GenericTcp => "Unknown TCP service listening for connections",
-            Self::GenericUdp => "Unknown UDP service accepting datagrams",
+            Self::SimpleTcpServices => "Windows Simple TCP/IP Services (echo, daytime, chargen, discard, quote)",
+            Self::LocalSecurityAuthority => "Windows Local Security Authority Subsystem Service (LSASS)",
+            Self::ServiceControlManager => "Windows Service Control Manager (services.exe)",
+            Self::WindowsInitProcess => "Windows session 0 initialization process (wininit.exe)",
+            Self::DeviceAssociationService => "Windows Device Association Service for device pairing (dasHost)",
+            Self::WindowsMultiPointServer => "Windows MultiPoint Server for shared computing (WmsSvc)",
+            Self::WindowsExplorer => "Windows Explorer shell process with RPC endpoint",
+
+            Self::AsusGlideX => "ASUS GlideX cross-device sharing and screen extension",
+            Self::AsusSoftwareManager => "ASUS Software Manager for driver and firmware updates",
+            Self::AdGuardService => "AdGuard ad-blocking and privacy protection service",
+            Self::ChatGPTDesktop => "OpenAI ChatGPT desktop application",
+            Self::ClaudeDesktop => "Anthropic Claude desktop application",
+
+            Self::CustomHttp => "HTTP server responding on this port",
+            Self::GenericTcp => "TCP service listening for connections",
+            Self::GenericUdp => "UDP service accepting datagrams",
             Self::Unknown => "Unidentified service detected on this port",
         }
     }
@@ -1781,6 +1851,15 @@ impl ServerKind {
             Self::WindowsEventLog => "\u{1F4CB}",
             Self::TaskScheduler => "\u{23F0}",
             Self::InternetConnectionSharing => "\u{1F4E1}",
+
+            Self::SimpleTcpServices | Self::LocalSecurityAuthority
+            | Self::ServiceControlManager | Self::WindowsInitProcess
+            | Self::DeviceAssociationService | Self::WindowsMultiPointServer
+            | Self::WindowsExplorer => "\u{1F5A5}",
+
+            Self::AsusGlideX | Self::AsusSoftwareManager => "\u{1F4F1}",
+            Self::AdGuardService => "\u{1F6E1}",
+            Self::ChatGPTDesktop | Self::ClaudeDesktop => "\u{1F4AC}",
 
             // Other
             Self::CustomHttp => "\u{1F310}",
