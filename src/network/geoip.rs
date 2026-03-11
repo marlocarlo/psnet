@@ -1,4 +1,5 @@
 use std::net::IpAddr;
+use std::sync::OnceLock;
 
 /// Two-letter ISO country code, full name, and emoji flag.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -12,13 +13,25 @@ pub struct CountryInfo {
 /// Supports both IPv4 and IPv6 lookups.
 ///
 /// Uses the DB-IP Lite database (CC BY 4.0, https://db-ip.com).
-pub struct GeoIpResolver {
-    reader: Option<maxminddb::Reader<&'static [u8]>>,
-}
+pub struct GeoIpResolver;
 
 /// The embedded DB-IP Lite country MMDB database (~7 MB).
 /// License: Creative Commons Attribution 4.0 — https://db-ip.com
 static GEOIP_DB: &[u8] = include_bytes!("../../data/dbip-country-lite.mmdb");
+
+/// Lazy-initialized MMDB reader (parsed once, shared globally).
+static GEOIP_READER: OnceLock<Option<maxminddb::Reader<&'static [u8]>>> = OnceLock::new();
+
+fn get_reader() -> &'static Option<maxminddb::Reader<&'static [u8]>> {
+    GEOIP_READER.get_or_init(|| {
+        maxminddb::Reader::from_source(GEOIP_DB).ok()
+    })
+}
+
+/// Pre-warm the GeoIP database (call from a background thread on startup).
+pub fn warm() {
+    let _ = get_reader();
+}
 
 // Deserialization struct matching the MMDB country record schema.
 #[derive(Debug, serde::Deserialize)]
@@ -140,28 +153,21 @@ fn country_from_code(code: &str) -> CountryInfo {
 // ---------------------------------------------------------------------------
 
 impl GeoIpResolver {
-    /// Build the resolver from the embedded MMDB database.
+    /// Build the resolver. The MMDB is parsed lazily on first lookup
+    /// (or earlier if `warm()` was called from a background thread).
     pub fn new() -> Self {
-        let reader = match maxminddb::Reader::from_source(GEOIP_DB) {
-            Ok(r) => Some(r),
-            Err(_e) => {
-                // MMDB failed to load; lookups will return None
-                None
-            }
-        };
-        Self { reader }
+        Self
     }
 
     /// Look up the country for an IP address (IPv4 or IPv6).
     ///
     /// * Private / reserved ranges return `None`.
     pub fn lookup(&self, addr: IpAddr) -> Option<CountryInfo> {
-        // Skip private / reserved ranges.
         if is_private_or_reserved(addr) {
             return None;
         }
 
-        let reader = self.reader.as_ref()?;
+        let reader = get_reader().as_ref()?;
 
         let record: MmdbCountry = reader.lookup(addr).ok()?;
         let info = record.country?;
@@ -170,7 +176,6 @@ impl GeoIpResolver {
             return None;
         }
 
-        // Get English name from the names map, falling back to the ISO code
         let _name = info.names
             .as_ref()
             .and_then(|m| m.get("en"))
@@ -260,8 +265,7 @@ mod tests {
 
     #[test]
     fn mmdb_loaded() {
-        let r = resolver();
-        assert!(r.reader.is_some(), "MMDB database should load successfully");
+        assert!(get_reader().is_some(), "MMDB database should load successfully");
     }
 
     #[test]

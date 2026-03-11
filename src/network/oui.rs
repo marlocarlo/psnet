@@ -29,6 +29,11 @@ fn get_db() -> &'static HashMap<[u8; 3], &'static str> {
     })
 }
 
+/// Pre-warm the OUI database (call from a background thread on startup).
+pub fn warm() {
+    let _ = get_db();
+}
+
 /// Look up the manufacturer for a MAC address like "AA:BB:CC:DD:EE:FF".
 pub fn lookup(mac: &str) -> Option<&'static str> {
     let clean: String = mac.chars().filter(|c| c.is_ascii_hexdigit()).collect();

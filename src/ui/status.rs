@@ -92,6 +92,9 @@ pub fn draw_key_hints(f: &mut Frame, area: Rect, app: &App) {
             key_span("Esc", "Clear"),
         ],
         BottomTab::Alerts => vec![
+            key_span("\u{2190}\u{2192}", "Pane"),
+            key_span("\u{2191}\u{2193}", "Scroll"),
+            key_span("Enter", "Detail"),
             key_span("r", "Mark Read"),
             key_span("c", "Clear All"),
             key_span("z", &format!("{}", if app.alert_engine.is_snoozed() { "Unsnooze" } else { "Snooze 5m" })),

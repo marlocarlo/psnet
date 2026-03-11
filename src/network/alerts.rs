@@ -7,6 +7,7 @@
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::net::IpAddr;
 use std::path::PathBuf;
+use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
 use chrono::Local;
@@ -189,8 +190,6 @@ pub struct AlertEngine {
     known_device_macs: HashMap<IpAddr, String>,
     /// Config
     pub config: AlertConfig,
-    /// Scroll state for UI
-    pub scroll_offset: usize,
     /// Unread count
     pub unread_count: usize,
     /// Alert snooze: if set, no new alerts until this instant.
@@ -199,13 +198,33 @@ pub struct AlertEngine {
     pub anomaly_detector: AnomalyDetector,
     /// Idle tracker (While You Were Away)
     pub idle_tracker: IdleTracker,
+    /// "Since your last visit" summary (shown once on startup)
+    pub last_visit_summary: Option<LastVisitSummary>,
     /// Path for alert persistence
     alerts_path: PathBuf,
+    /// Path for known-state persistence
+    known_state_path: PathBuf,
+    /// Deferred load result from background thread
+    deferred_state: Option<Arc<Mutex<Option<(HashSet<String>, HashMap<IpAddr, String>, Vec<IpAddr>, Option<LastVisitSummary>)>>>>,
 }
 
 impl AlertEngine {
     pub fn new(max_alerts: usize) -> Self {
-        let alerts_path = Self::default_alerts_path();
+        let (alerts_path, known_state_path) = Self::default_paths();
+
+        // Start loading known state in background thread
+        let deferred = Arc::new(Mutex::new(None));
+        {
+            let deferred_clone = Arc::clone(&deferred);
+            let path = known_state_path.clone();
+            std::thread::spawn(move || {
+                let result = Self::load_known_state(&path);
+                if let Ok(mut d) = deferred_clone.lock() {
+                    *d = Some(result);
+                }
+            });
+        }
+
         Self {
             alerts: Vec::with_capacity(max_alerts),
             max_alerts,
@@ -213,23 +232,84 @@ impl AlertEngine {
             prev_dns_servers: Vec::new(),
             known_device_macs: HashMap::new(),
             config: AlertConfig::default(),
-            scroll_offset: 0,
             unread_count: 0,
             snoozed_until: None,
             anomaly_detector: AnomalyDetector::new(),
             idle_tracker: IdleTracker::new(),
+            last_visit_summary: None,
             alerts_path,
+            known_state_path,
+            deferred_state: Some(deferred),
         }
     }
 
-    fn default_alerts_path() -> PathBuf {
+    /// Poll for deferred init completion. Returns true if state was loaded.
+    pub fn poll_deferred_init(&mut self) -> bool {
+        let deferred = match self.deferred_state.take() {
+            Some(d) => d,
+            None => return false,
+        };
+        if let Ok(mut d) = deferred.lock() {
+            if let Some((apps, macs, dns, summary)) = d.take() {
+                self.known_apps = apps;
+                self.known_device_macs = macs;
+                self.prev_dns_servers = dns;
+                self.last_visit_summary = summary;
+                return true;
+            }
+        }
+        // Not ready yet — put it back
+        self.deferred_state = Some(deferred);
+        false
+    }
+
+    fn default_paths() -> (PathBuf, PathBuf) {
         if let Some(data_dir) = dirs::data_dir() {
             let dir = data_dir.join("psnet");
             let _ = std::fs::create_dir_all(&dir);
-            dir.join("alerts.json")
+            (dir.join("alerts.json"), dir.join("known_state.json"))
         } else {
-            PathBuf::from("psnet_alerts.json")
+            (PathBuf::from("psnet_alerts.json"), PathBuf::from("psnet_state.json"))
         }
+    }
+
+    fn load_known_state(path: &PathBuf) -> (
+        HashSet<String>,
+        HashMap<IpAddr, String>,
+        Vec<IpAddr>,
+        Option<LastVisitSummary>,
+    ) {
+        let data = match std::fs::read_to_string(path) {
+            Ok(d) => d,
+            Err(_) => return (HashSet::new(), HashMap::new(), Vec::new(), None),
+        };
+        let state: KnownState = match serde_json::from_str(&data) {
+            Ok(s) => s,
+            Err(_) => return (HashSet::new(), HashMap::new(), Vec::new(), None),
+        };
+
+        let known_apps: HashSet<String> = state.known_apps.into_iter().collect();
+
+        let known_macs: HashMap<IpAddr, String> = state.known_macs.into_iter()
+            .filter_map(|(ip_str, mac)| {
+                ip_str.parse::<IpAddr>().ok().map(|ip| (ip, mac))
+            })
+            .collect();
+
+        let dns_servers: Vec<IpAddr> = state.dns_servers.iter()
+            .filter_map(|s| s.parse::<IpAddr>().ok())
+            .collect();
+
+        let summary = state.last_session_end.map(|end| LastVisitSummary {
+            last_session_end: end,
+            alert_count: state.last_session_alert_count,
+            bytes_down: state.last_session_bytes_down,
+            bytes_up: state.last_session_bytes_up,
+            connections: state.last_session_connections,
+            device_count: state.last_session_device_count,
+        });
+
+        (known_apps, known_macs, dns_servers, summary)
     }
 
     /// Check connections for new app first-connection alerts.
@@ -363,15 +443,21 @@ impl AlertEngine {
             return;
         }
         for device in devices {
+            // Skip devices with empty MAC (discovered by ICMP/TCP/LLMNR — no MAC yet)
+            if device.mac.is_empty() {
+                continue;
+            }
             if let Some(expected_mac) = self.known_device_macs.get(&device.ip) {
-                if *expected_mac != device.mac {
+                // Only alert if BOTH old and new MACs are non-empty (real MAC change)
+                if !expected_mac.is_empty() && *expected_mac != device.mac {
                     self.push_alert(AlertKind::ArpAnomaly {
                         ip: device.ip,
                         expected_mac: expected_mac.clone(),
                         actual_mac: device.mac.clone(),
                     });
-                    self.known_device_macs.insert(device.ip, device.mac.clone());
                 }
+                // Always update to the latest known MAC
+                self.known_device_macs.insert(device.ip, device.mac.clone());
             } else {
                 self.known_device_macs.insert(device.ip, device.mac.clone());
             }
@@ -387,11 +473,20 @@ impl AlertEngine {
         if !self.config.enable_device {
             return;
         }
-        let prev_macs: HashSet<&str> = prev_devices.iter().map(|d| d.mac.as_str()).collect();
-        let curr_macs: HashSet<&str> = current_devices.iter().map(|d| d.mac.as_str()).collect();
+        // Skip devices with empty MACs — streaming discovery finds IPs first,
+        // MACs arrive later. Comparing empty MACs causes false churn alerts.
+        let prev_macs: HashSet<&str> = prev_devices.iter()
+            .filter(|d| !d.mac.is_empty())
+            .map(|d| d.mac.as_str())
+            .collect();
+        let curr_macs: HashSet<&str> = current_devices.iter()
+            .filter(|d| !d.mac.is_empty())
+            .map(|d| d.mac.as_str())
+            .collect();
 
-        // New devices
+        // New devices (only if they have a real MAC)
         for device in current_devices {
+            if device.mac.is_empty() { continue; }
             if !prev_macs.contains(device.mac.as_str()) {
                 self.push_alert(AlertKind::NewDevice {
                     ip: device.ip,
@@ -401,8 +496,9 @@ impl AlertEngine {
             }
         }
 
-        // Departed devices
+        // Departed devices (only if they had a real MAC)
         for device in prev_devices {
+            if device.mac.is_empty() { continue; }
             if !curr_macs.contains(device.mac.as_str()) {
                 self.push_alert(AlertKind::DeviceLeft {
                     ip: device.ip,
@@ -564,6 +660,31 @@ impl AlertEngine {
             let _ = std::fs::write(&self.alerts_path, json);
         }
     }
+
+    /// Save known state (apps, MACs, DNS, session stats) to disk for next startup.
+    pub fn save_known_state(&self, total_down: u64, total_up: u64, conn_count: usize, device_count: usize) {
+        // Cap persisted data to prevent unbounded growth
+        let known_apps: Vec<String> = self.known_apps.iter().take(500).cloned().collect();
+        let known_macs: Vec<(String, String)> = self.known_device_macs.iter()
+            .take(500)
+            .map(|(ip, mac)| (ip.to_string(), mac.clone()))
+            .collect();
+        let state = KnownState {
+            known_apps,
+            known_macs,
+            dns_servers: self.prev_dns_servers.iter().map(|ip| ip.to_string()).collect(),
+            last_session_end: Some(Local::now().format("%Y-%m-%d %H:%M:%S").to_string()),
+            last_session_alert_count: self.alerts.len(),
+            last_session_bytes_down: total_down,
+            last_session_bytes_up: total_up,
+            last_session_connections: conn_count,
+            last_session_device_count: device_count,
+        };
+
+        if let Ok(json) = serde_json::to_string_pretty(&state) {
+            let _ = std::fs::write(&self.known_state_path, json);
+        }
+    }
 }
 
 // ─── DNS server detection ────────────────────────────────────────────────────
@@ -604,6 +725,40 @@ pub struct SavedAlert {
     pub description: String,
     pub severity: String,
     pub read: bool,
+}
+
+/// Persistent known-state saved between sessions.
+#[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
+pub struct KnownState {
+    /// Apps that have been seen connecting before.
+    pub known_apps: Vec<String>,
+    /// Known MAC addresses per IP (for ARP anomaly detection).
+    pub known_macs: Vec<(String, String)>, // (ip_str, mac)
+    /// Previous DNS server addresses.
+    pub dns_servers: Vec<String>,
+    /// Last session end time (ISO 8601).
+    pub last_session_end: Option<String>,
+    /// Total alerts in last session.
+    pub last_session_alert_count: usize,
+    /// Total bytes down in last session.
+    pub last_session_bytes_down: u64,
+    /// Total bytes up in last session.
+    pub last_session_bytes_up: u64,
+    /// Total connections seen in last session.
+    pub last_session_connections: usize,
+    /// Total unique devices seen in last session.
+    pub last_session_device_count: usize,
+}
+
+/// Summary of what happened since the user's last visit.
+#[derive(Clone, Debug)]
+pub struct LastVisitSummary {
+    pub last_session_end: String,
+    pub alert_count: usize,
+    pub bytes_down: u64,
+    pub bytes_up: u64,
+    pub connections: usize,
+    pub device_count: usize,
 }
 
 fn extract_ip_from_line(line: &str) -> Option<&str> {

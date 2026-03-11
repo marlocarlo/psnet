@@ -117,6 +117,12 @@ pub struct App {
     // Sort state for Alerts tab
     pub alert_sort_column: Option<usize>,
     pub alert_sort_ascending: bool,
+    /// Alerts: which pane (by AlertCategory index among active cats) is focused
+    pub alert_focused_pane: usize,
+    /// Alerts: per-category scroll offset (keyed by category ordinal)
+    pub alert_pane_scrolls: [usize; 6],
+    /// Alerts: cached pane rects from last draw (for mouse hit-testing)
+    pub alert_pane_rects: Vec<(AlertCategory, ratatui::layout::Rect)>,
 
     /// Whether incognito mode is active (no disk writes).
     pub incognito: bool,
@@ -220,6 +226,9 @@ impl App {
             traffic_sort_ascending: false,
             alert_sort_column: None,
             alert_sort_ascending: false,
+            alert_focused_pane: 0,
+            alert_pane_scrolls: [0; 6],
+            alert_pane_rects: Vec::new(),
 
             incognito: false,
             renaming_device: None,
@@ -262,6 +271,12 @@ impl App {
         }
 
         changed
+    }
+
+    /// Poll deferred initialization results (background file loads).
+    /// Returns true if any state was loaded.
+    pub fn poll_deferred_init(&mut self) -> bool {
+        self.alert_engine.poll_deferred_init()
     }
 
     /// Refresh network speed and connections. Called each tick.
@@ -800,6 +815,12 @@ impl App {
             KeyCode::Char('q') | KeyCode::Char('Q') => {
                 if !self.incognito {
                     self.alert_engine.save_alerts();
+                    self.alert_engine.save_known_state(
+                        self.total_down,
+                        self.total_up,
+                        self.connections.len(),
+                        self.network_scanner.devices.len(),
+                    );
                     self.usage_tracker.save();
                 }
                 return true;
@@ -871,13 +892,19 @@ impl App {
                 filtered.get(idx).map(|e| DetailKind::TrafficEvent((*e).clone()))
             }
             BottomTab::Alerts => {
-                let alerts = &self.alert_engine.alerts;
-                let total = alerts.len();
-                if total == 0 { return; }
-                let selected = self.alert_engine.scroll_offset.min(total - 1);
-                // alerts displayed newest-first (reversed), so idx = total - 1 - selected
-                let idx = (total - 1).saturating_sub(selected);
-                alerts.get(idx).map(|a| DetailKind::Alert(a.clone()))
+                // Open detail for selected alert in focused pane
+                if let Some((cat, count)) = self.focused_alert_cat() {
+                    if count == 0 { return; }
+                    let ord = Self::alert_cat_ordinal(cat);
+                    let selected = self.alert_pane_scrolls[ord].min(count - 1);
+                    let mut cat_alerts: Vec<&crate::types::Alert> = self.alert_engine.alerts.iter()
+                        .filter(|a| a.kind.category() == cat)
+                        .collect();
+                    cat_alerts.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
+                    cat_alerts.get(selected).map(|a| DetailKind::Alert((*a).clone()))
+                } else {
+                    None
+                }
             }
             BottomTab::Devices => {
                 let devices = &self.network_scanner.devices;
@@ -1028,11 +1055,19 @@ impl App {
     }
 
     fn handle_alerts_key(&mut self, code: KeyCode) {
-        // Dismiss idle summary on any key press
+        // Dismiss banners on any key press
+        if self.alert_engine.last_visit_summary.is_some() {
+            self.alert_engine.last_visit_summary = None;
+            return;
+        }
         if self.alert_engine.idle_tracker.pending_summary.is_some() {
             self.alert_engine.idle_tracker.pending_summary = None;
             return;
         }
+
+        let active_cats = crate::ui::alerts::active_categories(&self.alert_engine.alerts);
+        let num_panes = active_cats.len();
+
         match code {
             KeyCode::Char('r') | KeyCode::Char('R') => {
                 self.alert_engine.mark_all_read();
@@ -1040,17 +1075,82 @@ impl App {
             KeyCode::Char('c') | KeyCode::Char('C') => {
                 self.alert_engine.alerts.clear();
                 self.alert_engine.unread_count = 0;
+                self.alert_pane_scrolls = [0; 6];
             }
-            // Snooze alerts for 5 minutes
             KeyCode::Char('z') | KeyCode::Char('Z') => {
                 if self.alert_engine.is_snoozed() {
                     self.alert_engine.unsnooze();
                 } else {
-                    self.alert_engine.snooze(300); // 5 minutes
+                    self.alert_engine.snooze(300);
+                }
+            }
+            // Navigate between panes
+            KeyCode::Left => {
+                if num_panes > 0 {
+                    if self.alert_focused_pane == 0 {
+                        self.alert_focused_pane = num_panes - 1;
+                    } else {
+                        self.alert_focused_pane -= 1;
+                    }
+                }
+            }
+            KeyCode::Right => {
+                if num_panes > 0 {
+                    self.alert_focused_pane = (self.alert_focused_pane + 1) % num_panes;
                 }
             }
             _ => {}
         }
+    }
+
+    /// Get the AlertCategory ordinal for scroll array indexing.
+    fn alert_cat_ordinal(cat: AlertCategory) -> usize {
+        match cat {
+            AlertCategory::Security => 0,
+            AlertCategory::NetworkAccess => 1,
+            AlertCategory::SystemChanges => 2,
+            AlertCategory::DeviceActivity => 3,
+            AlertCategory::Bandwidth => 4,
+            AlertCategory::Connectivity => 5,
+        }
+    }
+
+    /// Scroll the alert pane under the mouse cursor.
+    fn alert_scroll_pane_at(&mut self, col: u16, row: u16, up: bool, n: usize) {
+        let mut found = false;
+        for (i, (cat, rect)) in self.alert_pane_rects.iter().enumerate() {
+            if col >= rect.x && col < rect.x + rect.width
+                && row >= rect.y && row < rect.y + rect.height
+            {
+                self.alert_focused_pane = i;
+                let ord = Self::alert_cat_ordinal(*cat);
+                let count = self.alert_engine.alerts.iter()
+                    .filter(|a| a.kind.category() == *cat)
+                    .count();
+                if up {
+                    self.alert_pane_scrolls[ord] = self.alert_pane_scrolls[ord].saturating_sub(n);
+                } else {
+                    self.alert_pane_scrolls[ord] = (self.alert_pane_scrolls[ord] + n).min(count.saturating_sub(1));
+                }
+                found = true;
+                break;
+            }
+        }
+        if !found {
+            if up { self.scroll_up(n); } else { self.scroll_down(n); }
+        }
+    }
+
+    /// Get the focused alert category and its alert count.
+    fn focused_alert_cat(&self) -> Option<(AlertCategory, usize)> {
+        let active_cats = crate::ui::alerts::active_categories(&self.alert_engine.alerts);
+        let focused = self.alert_focused_pane.min(active_cats.len().saturating_sub(1));
+        active_cats.get(focused).map(|&cat| {
+            let count = self.alert_engine.alerts.iter()
+                .filter(|a| a.kind.category() == cat)
+                .count();
+            (cat, count)
+        })
     }
 
     fn handle_firewall_key(&mut self, code: KeyCode) {
@@ -1223,7 +1323,10 @@ impl App {
                 self.traffic_tracker.scroll_offset += n;
             }
             BottomTab::Alerts => {
-                self.alert_engine.scroll_offset += n;
+                if let Some((cat, _count)) = self.focused_alert_cat() {
+                    let ord = Self::alert_cat_ordinal(cat);
+                    self.alert_pane_scrolls[ord] = self.alert_pane_scrolls[ord].saturating_sub(n);
+                }
             }
             BottomTab::Firewall => {
                 self.firewall_manager.scroll_offset = self.firewall_manager.scroll_offset.saturating_sub(n);
@@ -1257,7 +1360,10 @@ impl App {
                 }
             }
             BottomTab::Alerts => {
-                self.alert_engine.scroll_offset = self.alert_engine.scroll_offset.saturating_sub(n);
+                if let Some((cat, count)) = self.focused_alert_cat() {
+                    let ord = Self::alert_cat_ordinal(cat);
+                    self.alert_pane_scrolls[ord] = (self.alert_pane_scrolls[ord] + n).min(count.saturating_sub(1));
+                }
             }
             BottomTab::Firewall => {
                 self.firewall_manager.scroll_offset += n;
@@ -1286,8 +1392,9 @@ impl App {
                 self.traffic_tracker.scroll_offset = self.traffic_tracker.log.len();
             }
             BottomTab::Alerts => {
-                // Go to oldest alert
-                self.alert_engine.scroll_offset = self.alert_engine.alerts.len();
+                if let Some((cat, _)) = self.focused_alert_cat() {
+                    self.alert_pane_scrolls[Self::alert_cat_ordinal(cat)] = 0;
+                }
             }
             BottomTab::Firewall => {
                 self.firewall_manager.scroll_offset = 0;
@@ -1316,8 +1423,9 @@ impl App {
                 self.traffic_tracker.scroll_offset = 0;
             }
             BottomTab::Alerts => {
-                // Go to newest alert
-                self.alert_engine.scroll_offset = 0;
+                if let Some((cat, count)) = self.focused_alert_cat() {
+                    self.alert_pane_scrolls[Self::alert_cat_ordinal(cat)] = count.saturating_sub(1);
+                }
             }
             BottomTab::Firewall => {
                 self.firewall_manager.scroll_offset = self.firewall_app_list_filtered().len();
@@ -1345,10 +1453,19 @@ impl App {
         match kind {
             // ── Mouse wheel: scroll 3 lines at a time ──────────────────
             MouseEventKind::ScrollUp => {
-                self.scroll_up(3);
+                // For Alerts tab, focus the pane under the cursor
+                if self.bottom_tab == BottomTab::Alerts {
+                    self.alert_scroll_pane_at(col, row, true, 3);
+                } else {
+                    self.scroll_up(3);
+                }
             }
             MouseEventKind::ScrollDown => {
-                self.scroll_down(3);
+                if self.bottom_tab == BottomTab::Alerts {
+                    self.alert_scroll_pane_at(col, row, false, 3);
+                } else {
+                    self.scroll_down(3);
+                }
             }
 
             // ── Left click ─────────────────────────────────────────────
@@ -1430,7 +1547,33 @@ impl App {
                                     self.packets_scroll = clicked_row;
                                 }
                                 BottomTab::Alerts => {
-                                    self.alert_engine.scroll_offset = clicked_row;
+                                    // Mouse click: find which pane was clicked
+                                    for (i, (cat, rect)) in self.alert_pane_rects.iter().enumerate() {
+                                        if col >= rect.x && col < rect.x + rect.width
+                                            && row >= rect.y && row < rect.y + rect.height
+                                        {
+                                            self.alert_focused_pane = i;
+                                            // Clicked row within pane (adjust for border)
+                                            let pane_row = (row - rect.y).saturating_sub(1) as usize;
+                                            let ord = Self::alert_cat_ordinal(*cat);
+                                            let count = self.alert_engine.alerts.iter()
+                                                .filter(|a| a.kind.category() == *cat)
+                                                .count();
+                                            // Adjust for viewport scroll
+                                            let scroll = self.alert_pane_scrolls[ord];
+                                            let visible = (rect.height.saturating_sub(2)) as usize;
+                                            let viewport_start = if count <= visible { 0 }
+                                                else {
+                                                    let half = visible / 2;
+                                                    if scroll <= half { 0 }
+                                                    else if scroll >= count.saturating_sub(half) { count.saturating_sub(visible) }
+                                                    else { scroll.saturating_sub(half) }
+                                                };
+                                            let clicked_idx = viewport_start + pane_row;
+                                            self.alert_pane_scrolls[ord] = clicked_idx.min(count.saturating_sub(1));
+                                            break;
+                                        }
+                                    }
                                 }
                                 BottomTab::Traffic => {
                                     self.traffic_tracker.auto_scroll = false;

@@ -21,7 +21,7 @@ use crate::app::App;
 use crate::types::BottomTab;
 
 /// Master draw function — lays out all panes.
-pub fn draw(f: &mut Frame, app: &App) {
+pub fn draw(f: &mut Frame, app: &mut App) {
     let main_layout = Layout::default()
         .direction(Direction::Vertical)
         .constraints([

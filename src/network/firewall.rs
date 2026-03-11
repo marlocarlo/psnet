@@ -46,12 +46,10 @@ pub struct FirewallManager {
 
 impl FirewallManager {
     pub fn new() -> Self {
-        let enabled = is_firewall_enabled();
-        let profiles_path = Self::default_profiles_path();
-        let profiles = Self::load_profiles_from_disk(&profiles_path);
+        // Defer is_firewall_enabled() — it runs `netsh` which blocks 100-500ms.
+        // Start with enabled=true (safe default), fix on first background tick.
         let state_path = Self::default_state_path();
         let app_actions = Self::load_state_from_disk(&state_path);
-        // Rebuild blocked_apps from persisted state
         let blocked_apps: HashSet<String> = app_actions.iter()
             .filter(|(_, a)| matches!(a, FirewallAppAction::Deny | FirewallAppAction::Drop))
             .map(|(name, _)| name.clone())
@@ -66,14 +64,14 @@ impl FirewallManager {
             approved_apps,
             blocked_apps,
             pending_apps: Vec::new(),
-            enabled,
+            enabled: true, // assume enabled; background check will correct
             scroll_offset: 0,
             refresh_tick: 0,
             filter_text: String::new(),
             refresh_result: Arc::new(Mutex::new(None)),
-            profiles,
+            profiles: Vec::new(), // loaded lazily on first access
             active_profile: None,
-            profiles_path,
+            profiles_path: Self::default_profiles_path(),
             app_actions,
             state_path,
         }

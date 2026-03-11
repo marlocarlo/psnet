@@ -613,6 +613,90 @@ impl AlertKind {
             }
         }
     }
+
+    /// Alert category for grouped display in the UI.
+    pub fn category(&self) -> AlertCategory {
+        match self {
+            // Security & Threats
+            Self::SuspiciousHost { .. }
+            | Self::ArpAnomaly { .. }
+            | Self::EvilTwinDetected { .. }
+            | Self::RdpConnection { .. } => AlertCategory::Security,
+
+            // Network Access (apps connecting)
+            Self::NewAppFirstConnection { .. }
+            | Self::AppChanged { .. }
+            | Self::ConnectionBlocked { .. } => AlertCategory::NetworkAccess,
+
+            // System Changes
+            Self::DnsServerChanged { .. }
+            | Self::HostsFileChanged { .. }
+            | Self::ProxyChanged { .. } => AlertCategory::SystemChanges,
+
+            // Device Activity
+            Self::NewDevice { .. }
+            | Self::DeviceLeft { .. } => AlertCategory::DeviceActivity,
+
+            // Bandwidth & Usage
+            Self::BandwidthSpike { .. }
+            | Self::BandwidthOverage { .. }
+            | Self::TrafficAnomaly { .. } => AlertCategory::Bandwidth,
+
+            // Connectivity
+            Self::InternetLost { .. }
+            | Self::InternetRestored => AlertCategory::Connectivity,
+        }
+    }
+}
+
+/// Categories for grouping alerts in the UI.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum AlertCategory {
+    Security,
+    NetworkAccess,
+    SystemChanges,
+    DeviceActivity,
+    Bandwidth,
+    Connectivity,
+}
+
+impl AlertCategory {
+    /// Display label for section headers.
+    pub fn label(&self) -> &'static str {
+        match self {
+            Self::Security => "\u{1f6e1} Security & Threats",
+            Self::NetworkAccess => "\u{1f310} Network Access",
+            Self::SystemChanges => "\u{2699} System Changes",
+            Self::DeviceActivity => "\u{1f4f1} Device Activity",
+            Self::Bandwidth => "\u{1f4ca} Bandwidth & Usage",
+            Self::Connectivity => "\u{1f50c} Connectivity",
+        }
+    }
+
+    /// Color for section headers.
+    pub fn color(&self) -> ratatui::style::Color {
+        use ratatui::style::Color;
+        match self {
+            Self::Security => Color::Rgb(255, 80, 80),
+            Self::NetworkAccess => Color::Rgb(100, 200, 255),
+            Self::SystemChanges => Color::Rgb(255, 200, 60),
+            Self::DeviceActivity => Color::Rgb(80, 220, 160),
+            Self::Bandwidth => Color::Rgb(180, 140, 255),
+            Self::Connectivity => Color::Rgb(255, 160, 60),
+        }
+    }
+
+    /// All categories in display order.
+    pub fn all() -> &'static [AlertCategory] {
+        &[
+            AlertCategory::Security,
+            AlertCategory::NetworkAccess,
+            AlertCategory::SystemChanges,
+            AlertCategory::DeviceActivity,
+            AlertCategory::Bandwidth,
+            AlertCategory::Connectivity,
+        ]
+    }
 }
 
 #[derive(Clone, Debug)]

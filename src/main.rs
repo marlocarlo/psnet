@@ -7,7 +7,7 @@ mod utils;
 use std::io;
 use std::time::{Duration, Instant};
 
-use crossterm::event::{self, Event, KeyEventKind, KeyCode, KeyModifiers, EnableMouseCapture, DisableMouseCapture, MouseEventKind, MouseButton};
+use crossterm::event::{self, Event, KeyEventKind, KeyCode, KeyModifiers, EnableMouseCapture, DisableMouseCapture, MouseEventKind};
 use crossterm::terminal::{
     disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
 };
@@ -24,20 +24,27 @@ fn main() -> io::Result<()> {
     let backend = ratatui::backend::CrosstermBackend::new(io::stdout());
     let mut terminal = Terminal::new(backend)?;
 
-    // Init
+    // Pre-warm OUI + GeoIP databases in background threads immediately
+    // so they're ready before first device/connection display.
+    std::thread::spawn(|| { crate::network::oui::warm(); });
+    std::thread::spawn(|| { crate::network::geoip::warm(); });
+
+    // Init sysinfo Networks (fast — just enumerates adapters)
     let mut networks = sysinfo::Networks::new_with_refreshed_list();
     let mut app = App::new(&networks);
 
+    // Draw FIRST frame immediately — before any heavy update()
+    terminal.draw(|f| {
+        app.last_frame_size = f.area();
+        ui::draw(f, &mut app);
+    })?;
+
     let tick_rate = Duration::from_millis(1000);
     let fast_poll_interval = Duration::from_millis(200);
-    let mut last_tick = Instant::now();
+    // Set last_tick to zero so first loop iteration triggers update() immediately
+    let mut last_tick = Instant::now() - tick_rate;
 
-    // Initial data
-    app.update(&mut networks);
-
-    // Track active tab to detect switches — a tab change triggers a full clear so that
-    // psmux's vt100 parser cursor state (accumulated from dashboard braille/block widgets)
-    // is reset before the new tab is drawn.
+    // Track active tab to detect switches
     let mut last_tab = app.bottom_tab;
 
     // Event loop
@@ -51,7 +58,7 @@ fn main() -> io::Result<()> {
             }
             terminal.draw(|f| {
                 app.last_frame_size = f.area();
-                ui::draw(f, &app);
+                ui::draw(f, &mut app);
             })?;
             needs_redraw = false;
         }
@@ -59,13 +66,12 @@ fn main() -> io::Result<()> {
         let timeout = tick_rate
             .checked_sub(last_tick.elapsed())
             .unwrap_or(Duration::ZERO)
-            .min(fast_poll_interval); // Cap at 200ms for responsive streaming
+            .min(fast_poll_interval);
 
         if event::poll(timeout)? {
             match event::read()? {
                 Event::Key(key) => {
                     if key.kind == KeyEventKind::Press {
-                        // Ctrl+C quits
                         if key.modifiers.contains(KeyModifiers::CONTROL)
                             && (key.code == KeyCode::Char('c') || key.code == KeyCode::Char('C'))
                         {
@@ -78,9 +84,6 @@ fn main() -> io::Result<()> {
                     }
                 }
                 Event::Mouse(mouse) => {
-                    // Skip mouse move events — they don't change state but
-                    // would cause unnecessary redraws (making live data appear
-                    // to scroll on mouse movement)
                     match mouse.kind {
                         MouseEventKind::Moved | MouseEventKind::Drag(_) => {}
                         _ => {
@@ -100,6 +103,11 @@ fn main() -> io::Result<()> {
 
         // Fast poll: drain streaming scanner buffers every 200ms
         if app.fast_poll() {
+            needs_redraw = true;
+        }
+
+        // Drain deferred init results
+        if app.poll_deferred_init() {
             needs_redraw = true;
         }
 
