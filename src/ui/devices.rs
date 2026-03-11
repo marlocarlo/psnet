@@ -21,7 +21,9 @@ fn format_speed(bps: f64) -> String {
 
 pub fn draw_devices(f: &mut Frame, area: Rect, app: &App) {
     let scanner = &app.network_scanner;
-    let mut devices: Vec<&crate::types::LanDevice> = scanner.devices.iter().collect();
+    let mut devices: Vec<&crate::types::LanDevice> = scanner.devices.iter()
+        .filter(|d| !app.hide_offline_devices || d.is_online)
+        .collect();
     // Sort by selected column
     let sort_col = app.device_sort_column;
     let sort_asc = app.device_sort_ascending;
@@ -251,16 +253,24 @@ pub fn draw_devices(f: &mut Frame, area: Rect, app: &App) {
         .map(|ip| format!("  Local: {}", ip))
         .unwrap_or_default();
 
+    let all_total = scanner.devices.len();
+    let hidden = all_total - total;
     let mut title_spans = vec![
         Span::styled(
             " Devices ",
             Style::default().fg(Color::Rgb(160, 180, 220)).add_modifier(Modifier::BOLD),
         ),
         Span::styled(
-            format!(" {}/{} online ", online, total),
+            format!(" {}/{} online ", online, all_total),
             Style::default().fg(Color::Rgb(100, 120, 150)),
         ),
     ];
+    if hidden > 0 {
+        title_spans.push(Span::styled(
+            format!("({} hidden) ", hidden),
+            Style::default().fg(Color::Rgb(80, 80, 100)),
+        ));
+    }
     if !scanning_str.is_empty() {
         title_spans.push(Span::styled(
             scanning_str,

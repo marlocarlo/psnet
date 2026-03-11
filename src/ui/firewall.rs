@@ -86,13 +86,21 @@ fn draw_firewall_status(f: &mut Frame, area: Rect, app: &App) {
         String::new()
     };
 
+    let (policy_label, policy_color) = if fw.default_deny {
+        ("DENY-ALL", Color::Rgb(255, 100, 80))
+    } else {
+        ("ALLOW-ALL", Color::Rgb(80, 200, 120))
+    };
+
     let line = Line::from(vec![
         Span::styled("  Shield: ", Style::default().fg(Color::Rgb(120, 140, 170))),
         Span::styled(status_str, Style::default().fg(status_color).add_modifier(Modifier::BOLD)),
+        Span::styled("  |  Policy: ", Style::default().fg(Color::Rgb(80, 100, 130))),
+        Span::styled(policy_label, Style::default().fg(policy_color).add_modifier(Modifier::BOLD)),
         Span::styled("  |  Mode: ", Style::default().fg(Color::Rgb(80, 100, 130))),
         Span::styled(fw.mode.label(), Style::default().fg(mode_color).add_modifier(Modifier::BOLD)),
         Span::styled(
-            format!("  |  {} blocked by psnet", fw.blocked_apps.len()),
+            format!("  |  {} blocked", fw.blocked_apps.len()),
             Style::default().fg(Color::Rgb(90, 110, 140)),
         ),
         Span::styled(pending_str, Style::default().fg(Color::Rgb(255, 200, 60))),
@@ -285,16 +293,16 @@ fn draw_firewall_apps(
                 ])
                 .style(Style::default().bg(Color::Rgb(8, 10, 20))),
 
-                DisplayItem::App(idx, (name, is_blocked, conn_count)) => {
+                DisplayItem::App(idx, (name, _is_blocked, conn_count)) => {
                     let is_selected = *idx == selected;
 
-                    let action = app.firewall_manager.get_app_action(name);
-                    let (status_str, status_color) = match action {
-                        Some(FirewallAppAction::Deny) => ("DENY", Color::Rgb(255, 80, 80)),
-                        Some(FirewallAppAction::Drop) => ("DROP", Color::Rgb(255, 140, 40)),
-                        Some(FirewallAppAction::Allow) => ("ALLOW", Color::Rgb(80, 200, 255)),
-                        None if *is_blocked => ("BLOCKED", Color::Rgb(255, 80, 80)),
-                        None => ("ALLOWED", Color::Rgb(80, 200, 120)),
+                    let (status_str, eff_blocked) = app.firewall_manager.effective_status(name);
+                    let status_color = match status_str {
+                        "DENY" => Color::Rgb(255, 80, 80),
+                        "DROP" => Color::Rgb(255, 140, 40),
+                        "ALLOW" => Color::Rgb(80, 200, 255),
+                        "BLOCKED" => Color::Rgb(255, 80, 80),
+                        _ => Color::Rgb(80, 200, 120), // ALLOWED
                     };
 
                     let prefix = if is_selected { "\u{25b6} " } else { "  " };
@@ -341,7 +349,7 @@ fn draw_firewall_apps(
 
                     let row_bg = if is_selected {
                         Color::Rgb(25, 45, 85)
-                    } else if *is_blocked {
+                    } else if eff_blocked {
                         Color::Rgb(22, 10, 10)
                     } else {
                         Color::Rgb(12, 16, 28)
@@ -356,7 +364,7 @@ fn draw_firewall_apps(
                         )),
                         Cell::from(Span::styled(
                             display_name,
-                            Style::default().fg(if *is_blocked {
+                            Style::default().fg(if eff_blocked {
                                 Color::Rgb(200, 130, 130)
                             } else {
                                 Color::Rgb(160, 200, 160)

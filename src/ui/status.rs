@@ -101,6 +101,7 @@ pub fn draw_key_hints(f: &mut Frame, area: Rect, app: &App) {
         ],
         BottomTab::Firewall => vec![
             key_span("Enter", "Detail"),
+            key_span("d", &format!("Policy:{}", if app.firewall_manager.default_deny { "Deny-All" } else { "Allow-All" })),
             key_span("1-4", "Sort"),
             key_span("r", "Refresh"),
             key_span("e", "Export"),
@@ -111,6 +112,7 @@ pub fn draw_key_hints(f: &mut Frame, area: Rect, app: &App) {
         BottomTab::Devices => vec![
             key_span("s", "Scan Now"),
             key_span("r", "Rename"),
+            key_span("o", &format!("Offline:{}", if app.hide_offline_devices { "Hidden" } else { "Shown" })),
         ],
         BottomTab::Networks => vec![
             key_span("s", "Scan Now"),

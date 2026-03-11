@@ -87,37 +87,27 @@ pub fn draw_dashboard(f: &mut Frame, area: Rect, app: &App) {
         ])
         .split(main_split[1]);
 
-    let bottom_area = main_split[2];
-
     let bottom_split = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([
             Constraint::Percentage(55), // World map
-            Constraint::Percentage(45), // Stats + bar chart
+            Constraint::Percentage(45), // Health + top apps
         ])
-        .split(bottom_area);
+        .split(main_split[2]);
 
     let right_split = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(6), // Health gauge / summary
+            Constraint::Length(6), // Health gauge
             Constraint::Min(5),   // Top apps bar chart
         ])
         .split(bottom_split[1]);
 
-    // ── 1. Traffic Graph ──
+    // ── Draw all widgets ──
     draw_traffic_graph(f, mid_split[0], app);
-
-    // ── 2. Top 10 Countries ──
     draw_top_countries(f, mid_split[1], app);
-
-    // ── 3. World Map ──
     draw_country_map(f, bottom_split[0], app);
-
-    // ── 4. Health Gauge ──
     draw_health(f, right_split[0], app);
-
-    // ── 5. Top Apps Bar Chart ──
     draw_top_apps(f, right_split[1], app);
 }
 

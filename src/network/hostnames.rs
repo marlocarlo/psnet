@@ -1,6 +1,6 @@
 //! Multi-method LAN hostname resolver.
 //!
-//! Runs 10 methods in parallel to discover device hostnames:
+//! Runs 13 methods in parallel to discover device hostnames:
 //! 1. NBNS (NetBIOS Name Service) — Windows/Samba devices
 //! 2. mDNS service browsing on port 5353 — Apple/IoT/Linux
 //! 3. mDNS per-IP unicast reverse PTR — any mDNS responder (Apple, Avahi, IoT)
@@ -11,6 +11,9 @@
 //! 8. mDNS multicast reverse PTR on port 5353
 //! 9. SNMP sysName query — routers, switches, managed APs, printers
 //! 10. Telnet banner grabbing (port 23) — old routers, switches
+//! 11. Direct DNS PTR to gateway — router DHCP hostname table
+//! 12. LLMNR unicast query (port 5355) — Windows/Android LLMNR responders
+//! 13. DHCP hostname cache — hostnames extracted from captured DHCP packets
 
 use std::collections::HashMap;
 use std::io::{Read as _, Write as _};
@@ -33,9 +36,14 @@ pub struct ResolvedDevice {
 
 /// Resolve hostnames for a list of IPs using all available methods in parallel.
 /// `gateway` is used to query the router's DNS directly for PTR records.
+/// `dhcp_hostnames` contains hostnames extracted from captured DHCP packets.
 /// Returns a map of IP -> ResolvedDevice (best hostname + aggregated details).
 /// Total wall-clock time: ~4 seconds (all methods run concurrently).
-pub fn resolve_all(ips: &[Ipv4Addr], gateway: Option<Ipv4Addr>) -> HashMap<Ipv4Addr, ResolvedDevice> {
+pub fn resolve_all(
+    ips: &[Ipv4Addr],
+    gateway: Option<Ipv4Addr>,
+    dhcp_hostnames: &HashMap<Ipv4Addr, String>,
+) -> HashMap<Ipv4Addr, ResolvedDevice> {
     // Collect ALL tagged results from every method: (ip, source_tag, name)
     let tagged: Mutex<Vec<(Ipv4Addr, &str, String)>> = Mutex::new(Vec::new());
     // Port scan results: ip -> sorted open ports
@@ -130,6 +138,24 @@ pub fn resolve_all(ips: &[Ipv4Addr], gateway: Option<Ipv4Addr>) -> HashMap<Ipv4A
                 }
             });
         }
+
+        // Method 12: LLMNR unicast queries (port 5355)
+        let tagged_ref = &tagged;
+        s.spawn(move || {
+            for (ip, name) in resolve_llmnr_batch(ips, 1500) {
+                tagged_ref.lock().unwrap().push((ip, "LLMNR", name));
+            }
+        });
+
+        // Method 13: DHCP hostname cache (from captured packets)
+        {
+            let tagged_ref = &tagged;
+            for &ip in ips {
+                if let Some(name) = dhcp_hostnames.get(&ip) {
+                    tagged_ref.lock().unwrap().push((ip, "DHCP", name.clone()));
+                }
+            }
+        }
     });
 
     // Now aggregate: pick best hostname + build details string per IP
@@ -141,26 +167,42 @@ pub fn resolve_all(ips: &[Ipv4Addr], gateway: Option<Ipv4Addr>) -> HashMap<Ipv4A
     }
 
     // Priority order: mDNS/mDNS-PTR (Apple/Linux names are best), NBNS (Windows),
-    // GW-DNS (router DHCP names), DNS (system resolver), UPnP (friendly names),
+    // DHCP (Android/all devices via DHCP option 12), GW-DNS (router DHCP names),
+    // LLMNR (Windows/Android), DNS (system resolver), UPnP (friendly names),
     // SNMP (device names), HTTP (titles), DNS$ (cached), Telnet, mDNS-MC
     const PRIORITY: &[&str] = &[
-        "mDNS-PTR", "mDNS", "NBNS", "GW-DNS", "DNS", "UPnP", "SNMP",
-        "HTTP", "DNS$", "Telnet", "mDNS-MC",
+        "mDNS-PTR", "mDNS", "NBNS", "DHCP", "GW-DNS", "LLMNR", "DNS", "UPnP",
+        "SNMP", "HTTP", "DNS$", "Telnet", "mDNS-MC",
     ];
 
     let mut result = HashMap::new();
 
     // Build results for IPs that have hostname info
     for (ip, entries) in per_ip {
-        // Pick best hostname by priority
-        let mut best: Option<String> = None;
+        // Collect all unique hostnames in priority order (best first)
+        let mut hostname_parts: Vec<String> = Vec::new();
+        let mut seen_lower: std::collections::HashSet<String> = std::collections::HashSet::new();
+        // First pass: add names in priority order
         for &prio in PRIORITY {
-            if let Some((_, name)) = entries.iter().find(|(tag, _)| *tag == prio) {
-                best = Some(name.clone());
-                break;
+            for (tag, name) in &entries {
+                if *tag == prio {
+                    let lower = name.to_lowercase();
+                    if !seen_lower.contains(&lower) {
+                        seen_lower.insert(lower);
+                        hostname_parts.push(name.clone());
+                    }
+                }
             }
         }
-        let hostname = best.unwrap_or_else(|| entries[0].1.clone());
+        // Fallback: any names from methods not in PRIORITY list
+        for (_tag, name) in &entries {
+            let lower = name.to_lowercase();
+            if !seen_lower.contains(&lower) {
+                seen_lower.insert(lower);
+                hostname_parts.push(name.clone());
+            }
+        }
+        let hostname = hostname_parts.join(", ");
 
         // Build details: deduplicated, compact
         let mut details_parts: Vec<String> = Vec::new();
@@ -1419,6 +1461,132 @@ fn clean_ssdp_server(server: &str) -> String {
     String::new()
 }
 
+// ─── Method 12: LLMNR unicast query (port 5355) ──────────────────────────────
+
+/// Send LLMNR name queries directly to each device on port 5355.
+/// Android and Windows devices respond to LLMNR with their hostname.
+fn resolve_llmnr_batch(ips: &[Ipv4Addr], timeout_ms: u64) -> Vec<(Ipv4Addr, String)> {
+    let found: Mutex<Vec<(Ipv4Addr, String)>> = Mutex::new(Vec::new());
+    thread::scope(|s| {
+        for &ip in ips {
+            let found = &found;
+            s.spawn(move || {
+                if let Some(name) = llmnr_query(ip, timeout_ms) {
+                    found.lock().unwrap().push((ip, name));
+                }
+            });
+        }
+    });
+    found.into_inner().unwrap()
+}
+
+fn llmnr_query(ip: Ipv4Addr, timeout_ms: u64) -> Option<String> {
+    // Build LLMNR query for reverse lookup: send PTR query for the IP
+    // LLMNR uses the same DNS packet format but on port 5355
+    let octets = ip.octets();
+    let arpa_name = format!("{}.{}.{}.{}.in-addr.arpa",
+        octets[3], octets[2], octets[1], octets[0]);
+
+    let pkt = build_dns_query(&arpa_name, 12); // PTR query
+
+    let sock = UdpSocket::bind("0.0.0.0:0").ok()?;
+    sock.set_read_timeout(Some(Duration::from_millis(timeout_ms))).ok()?;
+    // Send to the device's LLMNR port (5355) directly via unicast
+    sock.send_to(&pkt, SocketAddr::from((ip, 5355u16))).ok()?;
+
+    let mut buf = [0u8; 1024];
+    let (len, _) = sock.recv_from(&mut buf).ok()?;
+
+    // Parse PTR response
+    if let Some(name) = parse_ptr_response(&buf[..len]) {
+        let clean = clean_mdns_name(&name);
+        if !clean.is_empty() {
+            return Some(clean);
+        }
+    }
+
+    // Also try: send A query for common Android patterns
+    // Android devices may respond to their own hostname.local queries
+    None
+}
+
+// ─── Method 13: DHCP hostname extraction from captured packets ───────────────
+
+/// Parse DHCP option 12 (hostname) from a raw UDP payload (ports 67/68).
+/// DHCP packet layout:
+///   - Bytes 0-235: fixed fields (op, htype, hlen, hops, xid, secs, flags, ciaddr, yiaddr, siaddr, giaddr, chaddr, sname, file)
+///   - Bytes 236-239: magic cookie (99.130.83.99 / 0x63825363)
+///   - Bytes 240+: options (tag, length, value)
+///
+/// Returns (client_mac, hostname) if option 12 is found.
+pub fn parse_dhcp_hostname(payload: &[u8]) -> Option<([u8; 6], String)> {
+    // Minimum DHCP packet: 240 bytes (fixed) + 4 (magic cookie) + some options
+    if payload.len() < 244 { return None; }
+
+    // Verify DHCP magic cookie at offset 236
+    if payload[236] != 99 || payload[237] != 130 || payload[238] != 83 || payload[239] != 99 {
+        return None;
+    }
+
+    // Extract client MAC (chaddr) at offset 28, 6 bytes
+    let mut mac = [0u8; 6];
+    mac.copy_from_slice(&payload[28..34]);
+
+    // Extract client IP (ciaddr at offset 12) or yiaddr (offset 16)
+    // ciaddr is the client's current IP, yiaddr is the IP being offered
+
+    // Parse options starting at offset 240
+    let mut pos = 240;
+    let mut hostname: Option<String> = None;
+
+    while pos < payload.len() {
+        let tag = payload[pos];
+        if tag == 255 { break; } // End option
+        if tag == 0 { pos += 1; continue; } // Padding
+
+        if pos + 1 >= payload.len() { break; }
+        let opt_len = payload[pos + 1] as usize;
+        pos += 2;
+        if pos + opt_len > payload.len() { break; }
+
+        if tag == 12 { // Option 12: Hostname
+            if let Ok(name) = std::str::from_utf8(&payload[pos..pos + opt_len]) {
+                let name = name.trim().to_string();
+                if !name.is_empty()
+                    && name.len() <= 63
+                    && name.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_' || c == '.')
+                {
+                    hostname = Some(name);
+                }
+            }
+        }
+
+        pos += opt_len;
+    }
+
+    hostname.map(|h| (mac, h))
+}
+
+/// Extract the source IP from a DHCP packet.
+/// Tries ciaddr first, falls back to source IP header.
+pub fn dhcp_client_ip(payload: &[u8]) -> Option<Ipv4Addr> {
+    if payload.len() < 240 { return None; }
+
+    // ciaddr (client IP) at offset 12
+    let ciaddr = Ipv4Addr::new(payload[12], payload[13], payload[14], payload[15]);
+    if !ciaddr.is_unspecified() {
+        return Some(ciaddr);
+    }
+
+    // yiaddr (your IP, offered by server) at offset 16
+    let yiaddr = Ipv4Addr::new(payload[16], payload[17], payload[18], payload[19]);
+    if !yiaddr.is_unspecified() {
+        return Some(yiaddr);
+    }
+
+    None
+}
+
 // ─── Port scanning ───────────────────────────────────────────────────────────
 
 /// Common ports to scan on LAN devices.
@@ -1438,6 +1606,7 @@ const SCAN_PORTS: &[u16] = &[
     3306, // MySQL
     3389, // RDP
     5000, // UPnP
+    5555, // ADB (Android Debug Bridge)
     5900, // VNC
     8080, // HTTP alt
     8443, // HTTPS alt
@@ -1501,6 +1670,7 @@ pub fn format_ports(ports: &[u16]) -> String {
                 3306 => "mysql",
                 3389 => "rdp",
                 5000 => "upnp",
+                5555 => "adb",
                 5900 => "vnc",
                 8080 => "http-alt",
                 8443 => "https-alt",

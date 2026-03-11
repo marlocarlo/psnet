@@ -15,6 +15,7 @@ use crate::network::dns;
 use crate::network::firewall::FirewallManager;
 use crate::network::geoip::GeoIpResolver;
 use crate::network::networks::NetworksScanner;
+use crate::network::protocols::ProtocolTracker;
 use crate::network::scanner::NetworkScanner;
 use crate::network::sniffer::PacketSniffer;
 use crate::network::speed::get_network_bytes;
@@ -93,6 +94,8 @@ pub struct App {
     /// Tick counter — incremented each update, used for live pulse indicator.
     pub tick_count: u64,
 
+    /// Protocol activity tracker for tag cloud widget.
+    pub protocol_tracker: ProtocolTracker,
 
     // Packets tab state
     pub packets_scroll: usize,
@@ -126,6 +129,8 @@ pub struct App {
 
     /// Whether incognito mode is active (no disk writes).
     pub incognito: bool,
+    /// Hide offline devices in the Devices tab.
+    pub hide_offline_devices: bool,
     /// Device rename state — Some(device_index) when renaming.
     pub renaming_device: Option<usize>,
     /// Text buffer for device rename.
@@ -209,6 +214,8 @@ impl App {
             detail_popup: None,
             tick_count: 0,
 
+            protocol_tracker: ProtocolTracker::new(),
+
             packets_scroll: 0,
             packets_filter: String::new(),
             packets_paused: false,
@@ -231,6 +238,7 @@ impl App {
             alert_pane_rects: Vec::new(),
 
             incognito: false,
+            hide_offline_devices: true,
             renaming_device: None,
             device_rename_text: String::new(),
 
@@ -255,19 +263,21 @@ impl App {
     pub fn fast_poll(&mut self) -> bool {
         let mut changed = false;
 
-        // Poll devices scanner streaming buffer
+        // Poll devices scanner streaming buffer (always — results arrive from bg thread)
         if let Some(prev_devices) = self.network_scanner.poll_results() {
             self.alert_engine.check_arp_anomalies(&self.network_scanner.devices);
             self.alert_engine.check_device_changes(&self.network_scanner.devices, &prev_devices);
             changed = true;
         }
 
-        // Poll networks scanner streaming buffer
-        if self.networks_scanner.primary_ip.is_none() {
-            self.networks_scanner.primary_ip = self.network_scanner.local_ip;
-        }
-        if self.networks_scanner.poll_results() {
-            changed = true;
+        // Poll networks scanner streaming buffer — only when on Networks tab
+        if self.bottom_tab == BottomTab::Networks {
+            if self.networks_scanner.primary_ip.is_none() {
+                self.networks_scanner.primary_ip = self.network_scanner.local_ip;
+            }
+            if self.networks_scanner.poll_results() {
+                changed = true;
+            }
         }
 
         changed
@@ -364,6 +374,35 @@ impl App {
             self.traffic_tracker.ingest_packets(&new_packets, &self.connections, &self.dns_cache);
             // Per-app bandwidth tracking from sniffer data
             self.bandwidth_tracker.ingest_packets(&new_packets, &self.connections);
+
+            // Feed protocol tracker from new packets
+            for pkt in &new_packets {
+                let is_udp = pkt.protocol == ConnProto::Udp;
+                self.protocol_tracker.record(pkt.src_port, pkt.dst_port, is_udp, self.tick_count);
+            }
+
+            // Extract DHCP hostnames from captured packets (option 12)
+            for pkt in &new_packets {
+                if pkt.protocol == ConnProto::Udp
+                    && (pkt.src_port == 67 || pkt.src_port == 68
+                        || pkt.dst_port == 67 || pkt.dst_port == 68)
+                    && !pkt.raw_payload.is_empty()
+                {
+                    if let Some((_mac, hostname)) = crate::network::hostnames::parse_dhcp_hostname(&pkt.raw_payload) {
+                        // Try to get client IP from DHCP packet fields, fall back to source IP
+                        let client_ip = crate::network::hostnames::dhcp_client_ip(&pkt.raw_payload)
+                            .or_else(|| match pkt.src_ip {
+                                IpAddr::V4(v4) if !v4.is_unspecified() && !v4.is_broadcast() => Some(v4),
+                                _ => None,
+                            });
+                        if let Some(ip) = client_ip {
+                            if let Ok(mut cache) = self.network_scanner.dhcp_hostnames.lock() {
+                                cache.insert(ip, hostname);
+                            }
+                        }
+                    }
+                }
+            }
 
             // Per-device bandwidth: correlate packets with LAN device IPs
             // Build IP→index HashMap for O(1) lookups instead of O(n) per packet
@@ -464,15 +503,20 @@ impl App {
             });
         }
 
-        // Network scanner tick (auto-scans periodically)
-        // Polling is handled by fast_poll() at 200ms intervals
-        self.network_scanner.tick();
-
-        // Networks scanner tick (VPN, Docker, WSL, secondary adapters)
-        if self.networks_scanner.primary_ip.is_none() {
-            self.networks_scanner.primary_ip = self.network_scanner.local_ip;
+        // Network scanner tick — full-speed when on Devices tab, slow otherwise
+        // (still needed for alert engine: new device, device left, ARP anomaly)
+        let on_devices_tab = self.bottom_tab == BottomTab::Devices;
+        if on_devices_tab || self.tick_count % 30 == 0 {
+            self.network_scanner.tick();
         }
-        self.networks_scanner.tick();
+
+        // Networks scanner tick — only when on Networks tab
+        if self.bottom_tab == BottomTab::Networks {
+            if self.networks_scanner.primary_ip.is_none() {
+                self.networks_scanner.primary_ip = self.network_scanner.local_ip;
+            }
+            self.networks_scanner.tick();
+        }
 
         // System monitor tick (hosts file, proxy, WiFi, app hash changes)
         let sys_events = self.system_monitor.tick();
@@ -907,11 +951,13 @@ impl App {
                 }
             }
             BottomTab::Devices => {
-                let devices = &self.network_scanner.devices;
+                let devices: Vec<&crate::types::LanDevice> = self.network_scanner.devices.iter()
+                    .filter(|d| !self.hide_offline_devices || d.is_online)
+                    .collect();
                 let total = devices.len();
                 if total == 0 { return; }
                 let selected = self.device_scroll.min(total - 1);
-                devices.get(selected).map(|d| DetailKind::Device(d.clone()))
+                devices.get(selected).map(|d| DetailKind::Device((*d).clone()))
             }
             BottomTab::Networks => {
                 let display_rows = crate::ui::networks::build_display_rows(self);
@@ -1161,6 +1207,9 @@ impl App {
             KeyCode::Char('a') | KeyCode::Char('A') => {
                 self.firewall_manager.toggle_ask_to_connect();
             }
+            KeyCode::Char('d') | KeyCode::Char('D') => {
+                self.firewall_manager.toggle_default_policy();
+            }
             KeyCode::Char('x') | KeyCode::Char('X') => {
                 self.firewall_manager.reset_all_psnet_rules();
             }
@@ -1224,11 +1273,22 @@ impl App {
             KeyCode::Char('s') | KeyCode::Char('S') => {
                 self.network_scanner.start_scan();
             }
+            KeyCode::Char('o') | KeyCode::Char('O') => {
+                self.hide_offline_devices = !self.hide_offline_devices;
+                self.device_scroll = 0;
+            }
             KeyCode::Char('r') | KeyCode::Char('R') => {
-                let total = self.network_scanner.devices.len();
+                // Map filtered index back to real device index
+                let filtered: Vec<usize> = self.network_scanner.devices.iter()
+                    .enumerate()
+                    .filter(|(_, d)| !self.hide_offline_devices || d.is_online)
+                    .map(|(i, _)| i)
+                    .collect();
+                let total = filtered.len();
                 if total > 0 {
-                    let idx = self.device_scroll.min(total - 1);
-                    let current = self.network_scanner.devices.get(idx)
+                    let sel = self.device_scroll.min(total - 1);
+                    let real_idx = filtered[sel];
+                    let current = self.network_scanner.devices.get(real_idx)
                         .map(|d| {
                             d.custom_name.as_deref()
                                 .or(d.hostname.as_deref())
@@ -1237,7 +1297,7 @@ impl App {
                         })
                         .unwrap_or_default();
                     self.device_rename_text = current;
-                    self.renaming_device = Some(idx);
+                    self.renaming_device = Some(real_idx);
                 }
             }
             _ => {}

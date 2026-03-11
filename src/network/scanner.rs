@@ -250,6 +250,8 @@ pub struct NetworkScanner {
     pub custom_labels: HashMap<String, String>,
     /// Persistence path for labels.
     labels_path: PathBuf,
+    /// DHCP hostname cache: IP → hostname (fed from sniffer DHCP packets).
+    pub dhcp_hostnames: Arc<Mutex<HashMap<Ipv4Addr, String>>>,
 }
 
 impl NetworkScanner {
@@ -303,6 +305,7 @@ impl NetworkScanner {
             scan_tick: 0,
             custom_labels,
             labels_path,
+            dhcp_hostnames: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 
@@ -339,6 +342,7 @@ impl NetworkScanner {
         let progress = Arc::clone(&self.scan_progress);
         let phase = Arc::clone(&self.scan_phase);
         let gateway = self.gateway;
+        let dhcp_hostnames = Arc::clone(&self.dhcp_hostnames);
 
         // Snapshot known hostnames to skip redundant resolution
         let known_hostnames: HashMap<Ipv4Addr, String> = self.devices.iter()
@@ -457,10 +461,8 @@ impl NetworkScanner {
             // Resolve hostnames for ALL discovered IPs (from any method)
             let disc_map = discovered.into_inner().unwrap();
             let all_discovered_ips: Vec<Ipv4Addr> = disc_map.keys().copied().collect();
-            let need_resolve: Vec<Ipv4Addr> = all_discovered_ips.iter()
-                .filter(|ip| !known_hostnames.contains_key(ip))
-                .copied()
-                .collect();
+            // Always re-resolve all IPs so new methods can discover additional names
+            let need_resolve = all_discovered_ips;
 
             if need_resolve.is_empty() {
                 phase.store(SCAN_PHASE_IDLE, Ordering::Relaxed);
@@ -472,8 +474,9 @@ impl NetworkScanner {
             progress.0.store(0, Ordering::Relaxed);
             progress.1.store(need_resolve.len(), Ordering::Relaxed);
 
-            // Multi-method parallel hostname resolution (12+ methods)
-            let resolved_map = super::hostnames::resolve_all(&need_resolve, gateway);
+            // Multi-method parallel hostname resolution (13+ methods)
+            let dhcp_snap = dhcp_hostnames.lock().map(|h| h.clone()).unwrap_or_default();
+            let resolved_map = super::hostnames::resolve_all(&need_resolve, gateway, &dhcp_snap);
             progress.0.store(need_resolve.len(), Ordering::Relaxed);
 
             // Stream resolved hostnames to pending buffer
@@ -554,16 +557,65 @@ impl NetworkScanner {
                 existing.last_seen = now;
                 existing.is_online = true;
                 existing.custom_name = self.custom_labels.get(&existing.mac).cloned();
-                if update.hostname.is_some() {
-                    existing.hostname = update.hostname;
+                if let Some(ref new_name) = update.hostname {
+                    if let Some(ref mut old_name) = existing.hostname {
+                        // Merge: add any new comma-separated parts not already present
+                        let existing_lower: std::collections::HashSet<String> = old_name
+                            .split(", ")
+                            .map(|s| s.trim().to_lowercase())
+                            .collect();
+                        for part in new_name.split(", ") {
+                            let part = part.trim();
+                            if !part.is_empty() && !existing_lower.contains(&part.to_lowercase()) {
+                                old_name.push_str(", ");
+                                old_name.push_str(part);
+                            }
+                        }
+                    } else {
+                        existing.hostname = update.hostname;
+                    }
                 }
                 if !update.discovery_info.is_empty() {
-                    existing.discovery_info = update.discovery_info;
+                    if existing.discovery_info.is_empty() {
+                        existing.discovery_info = update.discovery_info;
+                    } else {
+                        // Merge discovery info: add new tag:value entries not already present
+                        let existing_tags: std::collections::HashSet<String> = existing.discovery_info
+                            .split("  ")
+                            .map(|s| s.trim().to_lowercase())
+                            .collect();
+                        for entry in update.discovery_info.split("  ") {
+                            let entry = entry.trim();
+                            if !entry.is_empty() && !existing_tags.contains(&entry.to_lowercase()) {
+                                existing.discovery_info.push_str("  ");
+                                existing.discovery_info.push_str(entry);
+                            }
+                        }
+                    }
                 }
                 if !update.open_ports.is_empty() {
-                    existing.open_ports = update.open_ports;
+                    if existing.open_ports.is_empty() {
+                        existing.open_ports = update.open_ports;
+                    } else {
+                        // Merge open ports
+                        let existing_ports: std::collections::HashSet<String> = existing.open_ports
+                            .split(' ')
+                            .map(|s| s.trim().to_lowercase())
+                            .collect();
+                        for port in update.open_ports.split(' ') {
+                            let port = port.trim();
+                            if !port.is_empty() && !existing_ports.contains(&port.to_lowercase()) {
+                                existing.open_ports.push(' ');
+                                existing.open_ports.push_str(port);
+                            }
+                        }
+                    }
                 }
             } else {
+                // Skip ghost entries: no MAC and no hostname = unresponsive IP
+                if update.mac.is_empty() && update.hostname.is_none() {
+                    continue;
+                }
                 self.devices.push(LanDevice {
                     ip: ip_addr,
                     mac: update.mac.clone(),

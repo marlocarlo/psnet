@@ -209,7 +209,29 @@ fn draw_device_detail(f: &mut Frame, area: Rect, device: &crate::types::LanDevic
     lines.push(row("Role",       if is_gateway { "Gateway / Router" } else { "Host" }.to_string(),
         if is_gateway { Color::Rgb(255, 200, 80) } else { Color::Rgb(150, 160, 190) }));
     lines.push(row("IP Address", device.ip.to_string(), Color::Rgb(100, 180, 255)));
-    lines.push(row("Hostname",   device.hostname.clone().unwrap_or_else(|| "\u{2014}".to_string()), Color::Rgb(130, 200, 140)));
+    // Show each hostname on its own line for readability
+    if let Some(ref names) = device.hostname {
+        let parts: Vec<&str> = names.split(", ").collect();
+        if parts.len() == 1 {
+            lines.push(row("Hostname", parts[0].to_string(), Color::Rgb(130, 200, 140)));
+        } else {
+            lines.push(row("Hostnames", format!("({} names found)", parts.len()), Color::Rgb(130, 200, 140)));
+            for name in &parts {
+                lines.push(Line::from(vec![
+                    Span::styled(
+                        "               ",
+                        Style::default(),
+                    ),
+                    Span::styled(
+                        format!("\u{2022} {}", name.trim()),
+                        Style::default().fg(Color::Rgb(130, 200, 140)),
+                    ),
+                ]));
+            }
+        }
+    } else {
+        lines.push(row("Hostname", "\u{2014}".to_string(), Color::Rgb(90, 100, 120)));
+    }
     if let Some(ref custom) = device.custom_name {
         lines.push(row("Custom Name", custom.clone(), Color::Rgb(255, 220, 100)));
     }
@@ -288,16 +310,32 @@ fn draw_device_detail(f: &mut Frame, area: Rect, device: &crate::types::LanDevic
     lines.push(row("Last Seen",  device.last_seen.format("%H:%M:%S").to_string(),  Color::Rgb(120, 130, 160)));
 
     // ─── Discovery Details ───
+    lines.push(section_divider("Discovery Methods"));
     if !device.discovery_info.is_empty() {
-        lines.push(section_divider("Discovery Methods"));
         // Each method result is separated by double-space in the details string
         for entry in device.discovery_info.split("  ") {
             let entry = entry.trim();
             if entry.is_empty() { continue; }
             if let Some((tag, value)) = entry.split_once(':') {
+                let method_desc = match tag {
+                    "mDNS-PTR" => "mDNS Reverse PTR",
+                    "mDNS"     => "mDNS Service Browse",
+                    "mDNS-MC"  => "mDNS Multicast PTR",
+                    "NBNS"     => "NetBIOS Name Service",
+                    "DHCP"     => "DHCP Option 12",
+                    "GW-DNS"   => "Gateway DNS PTR",
+                    "LLMNR"    => "LLMNR Query",
+                    "DNS"      => "DNS Reverse Lookup",
+                    "DNS$"     => "Windows DNS Cache",
+                    "UPnP"     => "SSDP/UPnP",
+                    "SNMP"     => "SNMP sysName",
+                    "HTTP"     => "HTTP Banner",
+                    "Telnet"   => "Telnet Banner",
+                    _          => tag,
+                };
                 lines.push(Line::from(vec![
                     Span::styled(
-                        format!("  {:<12}", tag),
+                        format!("  {:<22}", method_desc),
                         Style::default().fg(Color::Rgb(100, 140, 180)).add_modifier(Modifier::BOLD),
                     ),
                     Span::styled(
@@ -310,6 +348,21 @@ fn draw_device_detail(f: &mut Frame, area: Rect, device: &crate::types::LanDevic
                     format!("  {}", entry),
                     Style::default().fg(Color::Rgb(140, 160, 130)),
                 )));
+            }
+        }
+    } else {
+        lines.push(Line::from(Span::styled(
+            "  No discovery data yet (scan in progress or pending)",
+            Style::default().fg(Color::Rgb(70, 80, 100)),
+        )));
+    }
+
+    // ─── DHCP Info ───
+    if let std::net::IpAddr::V4(v4) = device.ip {
+        if let Ok(cache) = app.network_scanner.dhcp_hostnames.lock() {
+            if let Some(dhcp_name) = cache.get(&v4) {
+                lines.push(section_divider("DHCP"));
+                lines.push(row("DHCP Hostname", dhcp_name.clone(), Color::Rgb(180, 140, 255)));
             }
         }
     }

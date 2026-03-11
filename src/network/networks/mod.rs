@@ -265,7 +265,7 @@ fn spawn_adapter_probes(
                     let now = Local::now().time();
                     let ips: Vec<Ipv4Addr> = hosts.iter().map(|h| h.ip).collect();
                     let resolved =
-                        crate::network::hostnames::resolve_all(&ips, net.gateway);
+                        crate::network::hostnames::resolve_all(&ips, net.gateway, &std::collections::HashMap::new());
                     let devices = hosts_to_lan_devices(&hosts, &resolved, now);
 
                     if let Ok(mut lock) = p2.lock() {

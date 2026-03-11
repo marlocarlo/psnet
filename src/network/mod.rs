@@ -14,3 +14,4 @@ pub mod geoip;
 pub mod oui;
 pub mod hostnames;
 pub mod networks;
+pub mod protocols;

@@ -42,6 +42,9 @@ pub struct FirewallManager {
     pub app_actions: HashMap<String, FirewallAppAction>,
     /// Path to the app action state file.
     state_path: PathBuf,
+    /// Default policy: false = allow-all (block what you block),
+    ///                  true  = deny-all  (only allow what you allow).
+    pub default_deny: bool,
 }
 
 impl FirewallManager {
@@ -74,6 +77,7 @@ impl FirewallManager {
             profiles_path: Self::default_profiles_path(),
             app_actions,
             state_path,
+            default_deny: false,
         }
     }
 
@@ -428,6 +432,31 @@ impl FirewallManager {
     /// Get the current PSNET action for an app, if any.
     pub fn get_app_action(&self, app_name: &str) -> Option<&FirewallAppAction> {
         self.app_actions.get(&app_name.to_lowercase())
+    }
+
+    /// Toggle default policy between allow-all and deny-all.
+    pub fn toggle_default_policy(&mut self) {
+        self.default_deny = !self.default_deny;
+    }
+
+    /// Effective status of an app considering default policy.
+    /// Returns (status_label, is_blocked).
+    pub fn effective_status(&self, app_name: &str) -> (&'static str, bool) {
+        let action = self.get_app_action(app_name);
+        match action {
+            Some(FirewallAppAction::Deny) => ("DENY", true),
+            Some(FirewallAppAction::Drop) => ("DROP", true),
+            Some(FirewallAppAction::Allow) => ("ALLOW", false),
+            None => {
+                if self.default_deny {
+                    ("BLOCKED", true) // default-deny: no explicit allow = blocked
+                } else if self.blocked_apps.contains(&app_name.to_lowercase()) {
+                    ("BLOCKED", true)
+                } else {
+                    ("ALLOWED", false) // default-allow: no explicit block = allowed
+                }
+            }
+        }
     }
 
     /// Filter rules for display.
