@@ -153,10 +153,14 @@ impl PacketSniffer {
         self.consumed_count = total;
 
         if let Ok(lock) = self.snippets.lock() {
-            // Take the last `new_count` items (they're the newest)
+            // Pre-allocate and clone only the new tail — minimizes lock hold time
             let len = lock.len();
             let skip = len.saturating_sub(new_count);
-            lock.iter().skip(skip).cloned().collect()
+            let mut result = Vec::with_capacity(new_count);
+            for pkt in lock.iter().skip(skip) {
+                result.push(pkt.clone());
+            }
+            result
         } else {
             Vec::new()
         }

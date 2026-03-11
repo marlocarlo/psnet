@@ -11,7 +11,7 @@ pub mod topology;
 pub mod alerts;
 pub mod devices;
 pub mod firewall;
-pub mod usage;
+pub mod networks;
 pub mod widgets;
 
 use ratatui::layout::{Constraint, Direction, Layout};
@@ -45,9 +45,9 @@ pub fn draw(f: &mut Frame, app: &App) {
         BottomTab::Packets => packets_tab::draw_packets_tab(f, main_layout[3], app),
         BottomTab::Topology => topology::draw_topology(f, main_layout[3], app),
         BottomTab::Alerts => alerts::draw_alerts(f, main_layout[3], app),
-        BottomTab::Usage => usage::draw_usage(f, main_layout[3], app),
         BottomTab::Firewall => firewall::draw_firewall(f, main_layout[3], app),
         BottomTab::Devices => devices::draw_devices(f, main_layout[3], app),
+        BottomTab::Networks => networks::draw_networks(f, main_layout[3], app),
     }
 
     packets::draw_packet_preview(f, main_layout[4], &app.sniffer);

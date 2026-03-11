@@ -29,6 +29,7 @@ fn main() -> io::Result<()> {
     let mut app = App::new(&networks);
 
     let tick_rate = Duration::from_millis(1000);
+    let fast_poll_interval = Duration::from_millis(200);
     let mut last_tick = Instant::now();
 
     // Initial data
@@ -40,19 +41,25 @@ fn main() -> io::Result<()> {
     let mut last_tab = app.bottom_tab;
 
     // Event loop
+    let mut needs_redraw = true;
+
     loop {
-        if app.bottom_tab != last_tab {
-            terminal.clear()?;
-            last_tab = app.bottom_tab;
+        if needs_redraw {
+            if app.bottom_tab != last_tab {
+                terminal.clear()?;
+                last_tab = app.bottom_tab;
+            }
+            terminal.draw(|f| {
+                app.last_frame_size = f.area();
+                ui::draw(f, &app);
+            })?;
+            needs_redraw = false;
         }
-        terminal.draw(|f| {
-            app.last_frame_size = f.area();
-            ui::draw(f, &app);
-        })?;
 
         let timeout = tick_rate
             .checked_sub(last_tick.elapsed())
-            .unwrap_or(Duration::ZERO);
+            .unwrap_or(Duration::ZERO)
+            .min(fast_poll_interval); // Cap at 200ms for responsive streaming
 
         if event::poll(timeout)? {
             match event::read()? {
@@ -67,20 +74,39 @@ fn main() -> io::Result<()> {
                         if app.handle_key(key.code) {
                             break;
                         }
+                        needs_redraw = true;
                     }
                 }
                 Event::Mouse(mouse) => {
-                    if app.handle_mouse(mouse.kind, mouse.column, mouse.row) {
-                        break;
+                    // Skip mouse move events — they don't change state but
+                    // would cause unnecessary redraws (making live data appear
+                    // to scroll on mouse movement)
+                    match mouse.kind {
+                        MouseEventKind::Moved | MouseEventKind::Drag(_) => {}
+                        _ => {
+                            if app.handle_mouse(mouse.kind, mouse.column, mouse.row) {
+                                break;
+                            }
+                            needs_redraw = true;
+                        }
                     }
+                }
+                Event::Resize(_, _) => {
+                    needs_redraw = true;
                 }
                 _ => {}
             }
         }
 
+        // Fast poll: drain streaming scanner buffers every 200ms
+        if app.fast_poll() {
+            needs_redraw = true;
+        }
+
         if last_tick.elapsed() >= tick_rate {
             app.update(&mut networks);
             last_tick = Instant::now();
+            needs_redraw = true;
         }
     }
 

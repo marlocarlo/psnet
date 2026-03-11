@@ -8,23 +8,39 @@ use ratatui::Frame;
 
 use crate::app::App;
 use crate::network::dns::port_service_name;
-use crate::types::{AlertKind, DetailKind, FirewallAction};
+use crate::types::{DetailKind, FirewallAppAction};
 use crate::utils::{format_bytes, format_speed};
 
 /// Render the detail popup overlay if one is active.
 pub fn draw_detail_popup(f: &mut Frame, app: &App) {
     let Some(ref detail) = app.detail_popup else { return };
 
-    let area = centered_rect(70, 60, f.area());
-    f.render_widget(Clear, area);
-
     match detail {
-        DetailKind::Connection(conn) => draw_connection_detail(f, area, conn, app),
-        DetailKind::TrafficEvent(entry) => draw_traffic_detail(f, area, entry, app),
-        DetailKind::Alert(alert) => draw_alert_detail(f, area, alert),
-        DetailKind::AppBandwidth(bw) => draw_bandwidth_detail(f, area, bw),
-        DetailKind::Device(device) => draw_device_detail(f, area, device, app),
-        DetailKind::FirewallRule(rule) => draw_firewall_detail(f, area, rule),
+        DetailKind::Connection(conn) => {
+            let area = centered_rect(70, 60, f.area());
+            f.render_widget(Clear, area);
+            draw_connection_detail(f, area, conn, app);
+        }
+        DetailKind::TrafficEvent(entry) => {
+            let area = centered_rect(70, 60, f.area());
+            f.render_widget(Clear, area);
+            draw_traffic_detail(f, area, entry, app);
+        }
+        DetailKind::Alert(alert) => {
+            let area = centered_rect(70, 60, f.area());
+            f.render_widget(Clear, area);
+            draw_alert_detail(f, area, alert);
+        }
+        DetailKind::Device(device) => {
+            let area = centered_rect(75, 85, f.area());
+            f.render_widget(Clear, area);
+            draw_device_detail(f, area, device, app);
+        }
+        DetailKind::FirewallApp(detail) => {
+            let area = centered_rect(75, 70, f.area());
+            f.render_widget(Clear, area);
+            draw_firewall_app_detail(f, area, detail, app);
+        }
     }
 }
 
@@ -44,18 +60,18 @@ fn draw_connection_detail(f: &mut Frame, area: Rect, conn: &crate::types::Connec
         .or_else(|| conn.remote_addr.map(|ip| ip.to_string()))
         .unwrap_or_else(|| "*".to_string());
 
-    let state_str = conn.state.as_ref().map(|s| s.label().to_string()).unwrap_or_else(|| "—".to_string());
+    let state_str = conn.state.as_ref().map(|s| s.label().to_string()).unwrap_or_else(|| "\u{2014}".to_string());
     let state_color = conn.state.as_ref().map(|s| s.color()).unwrap_or(Color::Gray);
     let country_str = geo.map(|g| format!("{} {} ({})", g.flag, g.name, g.code)).unwrap_or_else(|| "Local / Private".to_string());
     let remote_addr_str = conn.remote_addr
         .map(|ip| format!("{}:{}", ip, conn.remote_port.unwrap_or(0)))
-        .unwrap_or_else(|| "—".to_string());
+        .unwrap_or_else(|| "\u{2014}".to_string());
 
     let mut lines = header_lines(" Connection Detail ");
     lines.push(row("Protocol",    conn.proto.label().to_string(),                   Color::Rgb(100, 220, 255)));
     lines.push(row("Process",     conn.process_name.clone(),                        Color::Rgb(130, 200, 140)));
     lines.push(row("PID",         conn.pid.to_string(),                             Color::Rgb(120, 130, 160)));
-    lines.push(row("Direction",   if conn.is_outbound() { "Outbound →" } else { "Inbound ←" }.to_string(), Color::Rgb(200, 180, 100)));
+    lines.push(row("Direction",   if conn.is_outbound() { "Outbound \u{2192}" } else { "Inbound \u{2190}" }.to_string(), Color::Rgb(200, 180, 100)));
     lines.push(row("Local",       format!("{}:{}", conn.local_addr, conn.local_port), Color::Rgb(150, 160, 190)));
     lines.push(row("Remote",      remote_addr_str,                                  Color::Rgb(170, 185, 210)));
     lines.push(row("DNS Name",    remote_host,                                      Color::Rgb(100, 220, 255)));
@@ -78,11 +94,11 @@ fn draw_traffic_detail(f: &mut Frame, area: Rect, entry: &crate::types::TrafficE
     let country_str = geo.map(|g| format!("{} {} ({})", g.flag, g.name, g.code)).unwrap_or_else(|| "Local / Private".to_string());
 
     let event_str = match &entry.event {
-        crate::types::TrafficEventKind::NewConnection => "● New Connection".to_string(),
-        crate::types::TrafficEventKind::ConnectionClosed => "✕ Connection Closed".to_string(),
-        crate::types::TrafficEventKind::StateChange { from, to } => format!("↔ {} → {}", from.label(), to.label()),
+        crate::types::TrafficEventKind::NewConnection => "\u{25cf} New Connection".to_string(),
+        crate::types::TrafficEventKind::ConnectionClosed => "\u{2715} Connection Closed".to_string(),
+        crate::types::TrafficEventKind::StateChange { from, to } => format!("\u{2194} {} \u{2192} {}", from.label(), to.label()),
         crate::types::TrafficEventKind::DataActivity { bytes, inbound } => {
-            format!("{} Data: {}", if *inbound { "◀ Inbound" } else { "▶ Outbound" }, format_bytes(*bytes as u64))
+            format!("{} Data: {}", if *inbound { "\u{25c0} Inbound" } else { "\u{25b6} Outbound" }, format_bytes(*bytes as u64))
         }
     };
     let event_color = entry.event.color();
@@ -90,23 +106,23 @@ fn draw_traffic_detail(f: &mut Frame, area: Rect, entry: &crate::types::TrafficE
     let remote_str = match (entry.remote_addr, entry.remote_port) {
         (Some(a), Some(p)) => format!("{}:{}", a, p),
         (Some(a), None) => a.to_string(),
-        _ => "—".to_string(),
+        _ => "\u{2014}".to_string(),
     };
     let port = entry.remote_port.unwrap_or(entry.local_port);
     let service = port_service_name(port)
         .map(|s| format!("{}/{}", s, entry.proto.label()))
         .unwrap_or_else(|| format!("{}/{}", port, entry.proto.label()));
-    let data_str = entry.data_size.map(|b| format_bytes(b)).unwrap_or_else(|| "—".to_string());
+    let data_str = entry.data_size.map(|b| format_bytes(b)).unwrap_or_else(|| "\u{2014}".to_string());
 
     let mut lines = header_lines(" Traffic Event Detail ");
     lines.push(row("Time",       entry.timestamp.format("%H:%M:%S").to_string(), Color::Rgb(120, 130, 160)));
     lines.push(row("Event",      event_str,                                      event_color));
     lines.push(row("Process",    entry.process_name.clone(),                     Color::Rgb(130, 200, 140)));
     lines.push(row("Protocol",   entry.proto.label().to_string(),                Color::Rgb(100, 220, 255)));
-    lines.push(row("Direction",  if entry.outbound { "Outbound →" } else { "Inbound ←" }.to_string(), Color::Rgb(200, 180, 100)));
+    lines.push(row("Direction",  if entry.outbound { "Outbound \u{2192}" } else { "Inbound \u{2190}" }.to_string(), Color::Rgb(200, 180, 100)));
     lines.push(row("Local",      format!("{}:{}", entry.local_addr, entry.local_port), Color::Rgb(150, 160, 190)));
     lines.push(row("Remote",     remote_str,                                     Color::Rgb(170, 185, 210)));
-    lines.push(row("DNS Name",   entry.dns_name.clone().unwrap_or_else(|| "—".to_string()), Color::Rgb(100, 220, 255)));
+    lines.push(row("DNS Name",   entry.dns_name.clone().unwrap_or_else(|| "\u{2014}".to_string()), Color::Rgb(100, 220, 255)));
     lines.push(row("Service",    service,                                        Color::Rgb(200, 180, 80)));
     lines.push(row("State",      entry.state_label.clone(),                      Color::Rgb(160, 180, 140)));
     lines.push(row("Country",    country_str,                                    Color::Rgb(170, 200, 230)));
@@ -135,35 +151,35 @@ fn draw_alert_detail(f: &mut Frame, area: Rect, alert: &crate::types::Alert) {
     lines.push(Line::from(""));
 
     match &alert.kind {
-        AlertKind::SuspiciousHost { process_name, ip, reason } => {
+        crate::types::AlertKind::SuspiciousHost { process_name, ip, reason } => {
             lines.push(row("Process", process_name.clone(), Color::Rgb(130, 200, 140)));
             lines.push(row("IP",      ip.to_string(),       Color::Rgb(255, 120, 80)));
             lines.push(row("Reason",  reason.clone(),       Color::Rgb(255, 180, 80)));
         }
-        AlertKind::NewAppFirstConnection { process_name, remote } => {
+        crate::types::AlertKind::NewAppFirstConnection { process_name, remote } => {
             lines.push(row("Process", process_name.clone(), Color::Rgb(130, 200, 140)));
             lines.push(row("Remote",  remote.clone(),       Color::Rgb(100, 220, 255)));
         }
-        AlertKind::BandwidthSpike { direction, speed_bps, threshold_bps } => {
+        crate::types::AlertKind::BandwidthSpike { direction, speed_bps, threshold_bps } => {
             lines.push(row("Direction", direction.clone(),           Color::Rgb(200, 180, 100)));
             lines.push(row("Speed",     format_speed(*speed_bps),    Color::Rgb(255, 120, 80)));
             lines.push(row("Threshold", format_speed(*threshold_bps), Color::Rgb(150, 160, 180)));
         }
-        AlertKind::NewDevice { ip, mac, hostname } => {
+        crate::types::AlertKind::NewDevice { ip, mac, hostname } => {
             lines.push(row("IP",       ip.to_string(),                                   Color::Rgb(100, 220, 255)));
             lines.push(row("MAC",      mac.clone(),                                      Color::Rgb(150, 160, 180)));
             lines.push(row("Hostname", hostname.clone().unwrap_or_else(|| "unknown".to_string()), Color::Rgb(180, 190, 140)));
         }
-        AlertKind::ArpAnomaly { ip, expected_mac, actual_mac } => {
+        crate::types::AlertKind::ArpAnomaly { ip, expected_mac, actual_mac } => {
             lines.push(row("IP",           ip.to_string(),        Color::Rgb(100, 220, 255)));
             lines.push(row("Expected MAC", expected_mac.clone(),  Color::Rgb(150, 160, 180)));
             lines.push(row("Actual MAC",   actual_mac.clone(),    Color::Rgb(255, 120, 80)));
         }
-        AlertKind::BandwidthOverage { used_bytes, limit_bytes } => {
+        crate::types::AlertKind::BandwidthOverage { used_bytes, limit_bytes } => {
             lines.push(row("Used",  format_bytes(*used_bytes),  Color::Rgb(255, 120, 80)));
             lines.push(row("Limit", format_bytes(*limit_bytes), Color::Rgb(150, 160, 180)));
         }
-        AlertKind::TrafficAnomaly { process_name, current_bytes, baseline_bytes } => {
+        crate::types::AlertKind::TrafficAnomaly { process_name, current_bytes, baseline_bytes } => {
             lines.push(row("Process",  process_name.clone(),        Color::Rgb(130, 200, 140)));
             lines.push(row("Current",  format_bytes(*current_bytes), Color::Rgb(255, 180, 80)));
             lines.push(row("Baseline", format_bytes(*baseline_bytes), Color::Rgb(150, 160, 180)));
@@ -171,39 +187,6 @@ fn draw_alert_detail(f: &mut Frame, area: Rect, alert: &crate::types::Alert) {
         _ => {}
     }
 
-    lines.push(Line::from(""));
-    lines.push(dismiss_line());
-    render_popup(f, area, lines);
-}
-
-// ─── App bandwidth detail ────────────────────────────────────────────────────
-
-fn draw_bandwidth_detail(f: &mut Frame, area: Rect, bw: &crate::types::AppBandwidth) {
-    let current_down = bw.recent_down.back().copied().unwrap_or(0.0);
-    let current_up = bw.recent_up.back().copied().unwrap_or(0.0);
-    let peak_down = bw.recent_down.iter().copied().fold(0.0_f64, f64::max);
-    let peak_up = bw.recent_up.iter().copied().fold(0.0_f64, f64::max);
-
-    let active_str = if bw.active_connections > 0 {
-        format!("{} active connections", bw.active_connections)
-    } else {
-        "idle".to_string()
-    };
-    let active_color = if bw.active_connections > 0 { Color::Rgb(80, 200, 120) } else { Color::Rgb(100, 110, 130) };
-
-    let mut lines = header_lines(" App Bandwidth Detail ");
-    lines.push(row("Application",  bw.process_name.clone(),           Color::Rgb(130, 200, 140)));
-    lines.push(row("Status",       active_str,                        active_color));
-    lines.push(Line::from(""));
-    lines.push(row("Downloaded",   format_bytes(bw.download_bytes),  Color::Rgb(80, 180, 255)));
-    lines.push(row("Uploaded",     format_bytes(bw.upload_bytes),    Color::Rgb(180, 120, 255)));
-    lines.push(row("Total",        format_bytes(bw.total_bytes()),   Color::Rgb(170, 185, 210)));
-    lines.push(Line::from(""));
-    lines.push(row("Speed ↓",      format_speed(current_down),       Color::Rgb(80, 200, 160)));
-    lines.push(row("Speed ↑",      format_speed(current_up),         Color::Rgb(200, 140, 255)));
-    lines.push(row("Peak ↓",       format_speed(peak_down),          Color::Rgb(80, 180, 255)));
-    lines.push(row("Peak ↑",       format_speed(peak_up),            Color::Rgb(180, 120, 255)));
-    lines.push(row("Last Seen",    bw.last_seen.format("%H:%M:%S").to_string(), Color::Rgb(120, 130, 160)));
     lines.push(Line::from(""));
     lines.push(dismiss_line());
     render_popup(f, area, lines);
@@ -217,39 +200,217 @@ fn draw_device_detail(f: &mut Frame, area: Rect, device: &crate::types::LanDevic
         .unwrap_or(false);
 
     let status_color = if device.is_online { Color::Rgb(80, 200, 120) } else { Color::Rgb(100, 100, 120) };
+    let status_str = if device.is_online { "\u{25cf} Online" } else { "\u{25cb} Offline" };
 
     let mut lines = header_lines(" Device Detail ");
-    lines.push(row("Status",     if device.is_online { "● Online" } else { "○ Offline" }.to_string(), status_color));
-    lines.push(row("Role",       if is_gateway { "Gateway" } else { "Host" }.to_string(), if is_gateway { Color::Rgb(255, 200, 80) } else { Color::Rgb(150, 160, 190) }));
-    lines.push(row("IP Address", device.ip.to_string(),                                   Color::Rgb(100, 180, 255)));
-    lines.push(row("MAC",        device.mac.clone(),                                      Color::Rgb(150, 160, 180)));
+
+    // ─── Identity ───
+    lines.push(row("Status",     status_str.to_string(), status_color));
+    lines.push(row("Role",       if is_gateway { "Gateway / Router" } else { "Host" }.to_string(),
+        if is_gateway { Color::Rgb(255, 200, 80) } else { Color::Rgb(150, 160, 190) }));
+    lines.push(row("IP Address", device.ip.to_string(), Color::Rgb(100, 180, 255)));
+    lines.push(row("Hostname",   device.hostname.clone().unwrap_or_else(|| "\u{2014}".to_string()), Color::Rgb(130, 200, 140)));
+    if let Some(ref custom) = device.custom_name {
+        lines.push(row("Custom Name", custom.clone(), Color::Rgb(255, 220, 100)));
+    }
+
+    // ─── Hardware ───
+    lines.push(section_divider("Hardware"));
+    lines.push(row("MAC Address", device.mac.clone(), Color::Rgb(150, 160, 180)));
     lines.push(row("Vendor",     device.vendor.clone().unwrap_or_else(|| "Unknown".to_string()), Color::Rgb(180, 170, 140)));
-    lines.push(row("Hostname",   device.hostname.clone().unwrap_or_else(|| "—".to_string()),     Color::Rgb(130, 200, 140)));
-    lines.push(row("First Seen", device.first_seen.format("%H:%M:%S").to_string(),        Color::Rgb(120, 130, 160)));
-    lines.push(row("Last Seen",  device.last_seen.format("%H:%M:%S").to_string(),         Color::Rgb(120, 130, 160)));
+
+    // Detect locally administered / random MAC
+    let first_octet = device.mac.split(':').next()
+        .and_then(|s| u8::from_str_radix(s, 16).ok())
+        .unwrap_or(0);
+    if first_octet & 0x02 != 0 {
+        lines.push(row("MAC Type", "Locally Administered (Randomized)".to_string(), Color::Rgb(200, 160, 100)));
+    } else {
+        lines.push(row("MAC Type", "Globally Unique (Manufacturer)".to_string(), Color::Rgb(120, 160, 140)));
+    }
+
+    // ─── Open Ports ───
+    if !device.open_ports.is_empty() {
+        lines.push(section_divider("Open Ports"));
+        // Parse the port string and show each on its own line for clarity
+        for port_entry in device.open_ports.split(' ') {
+            let port_entry = port_entry.trim();
+            if port_entry.is_empty() { continue; }
+            if let Some((port_num, svc_name)) = port_entry.split_once(':') {
+                lines.push(Line::from(vec![
+                    Span::styled(
+                        format!("  {:<8}", port_num),
+                        Style::default().fg(Color::Rgb(180, 200, 120)).add_modifier(Modifier::BOLD),
+                    ),
+                    Span::styled(
+                        svc_name.to_string(),
+                        Style::default().fg(Color::Rgb(120, 160, 180)),
+                    ),
+                ]));
+            } else {
+                lines.push(Line::from(Span::styled(
+                    format!("  {}", port_entry),
+                    Style::default().fg(Color::Rgb(180, 200, 120)).add_modifier(Modifier::BOLD),
+                )));
+            }
+        }
+    } else {
+        lines.push(section_divider("Open Ports"));
+        lines.push(Line::from(Span::styled(
+            "  No open ports detected",
+            Style::default().fg(Color::Rgb(70, 80, 100)),
+        )));
+    }
+
+    // ─── Bandwidth ───
+    lines.push(section_divider("Bandwidth"));
+    lines.push(row("Received", if device.bytes_received > 0 {
+        format!("{} ({}/s)", format_bytes(device.bytes_received), format_speed(device.speed_received))
+    } else {
+        "\u{2014}".to_string()
+    }, if device.speed_received > 0.0 { Color::Rgb(80, 200, 255) } else { Color::Rgb(90, 100, 120) }));
+
+    lines.push(row("Sent", if device.bytes_sent > 0 {
+        format!("{} ({}/s)", format_bytes(device.bytes_sent), format_speed(device.speed_sent))
+    } else {
+        "\u{2014}".to_string()
+    }, if device.speed_sent > 0.0 { Color::Rgb(255, 180, 100) } else { Color::Rgb(90, 100, 120) }));
+
+    lines.push(row("Total", if device.bytes_received + device.bytes_sent > 0 {
+        format_bytes(device.bytes_received + device.bytes_sent)
+    } else {
+        "\u{2014}".to_string()
+    }, Color::Rgb(170, 185, 210)));
+
+    // ─── Timing ───
+    lines.push(section_divider("Timing"));
+    lines.push(row("First Seen", device.first_seen.format("%H:%M:%S").to_string(), Color::Rgb(120, 130, 160)));
+    lines.push(row("Last Seen",  device.last_seen.format("%H:%M:%S").to_string(),  Color::Rgb(120, 130, 160)));
+
+    // ─── Discovery Details ───
+    if !device.discovery_info.is_empty() {
+        lines.push(section_divider("Discovery Methods"));
+        // Each method result is separated by double-space in the details string
+        for entry in device.discovery_info.split("  ") {
+            let entry = entry.trim();
+            if entry.is_empty() { continue; }
+            if let Some((tag, value)) = entry.split_once(':') {
+                lines.push(Line::from(vec![
+                    Span::styled(
+                        format!("  {:<12}", tag),
+                        Style::default().fg(Color::Rgb(100, 140, 180)).add_modifier(Modifier::BOLD),
+                    ),
+                    Span::styled(
+                        value.to_string(),
+                        Style::default().fg(Color::Rgb(180, 190, 200)),
+                    ),
+                ]));
+            } else {
+                lines.push(Line::from(Span::styled(
+                    format!("  {}", entry),
+                    Style::default().fg(Color::Rgb(140, 160, 130)),
+                )));
+            }
+        }
+    }
+
     lines.push(Line::from(""));
     lines.push(dismiss_line());
     render_popup(f, area, lines);
 }
 
-// ─── Firewall rule detail ────────────────────────────────────────────────────
+// ─── Firewall + Bandwidth detail (combined) ─────────────────────────────────
 
-fn draw_firewall_detail(f: &mut Frame, area: Rect, rule: &crate::types::FirewallRule) {
-    let action_color = match rule.action {
-        FirewallAction::Allow => Color::Rgb(80, 200, 120),
-        FirewallAction::Block => Color::Rgb(255, 80, 80),
+fn draw_firewall_app_detail(f: &mut Frame, area: Rect, detail: &crate::types::FirewallAppDetail, app: &App) {
+    let _ = app; // available for future use (geoip etc.)
+
+    let action_str = match &detail.current_action {
+        Some(FirewallAppAction::Allow) => "ALLOW",
+        Some(FirewallAppAction::Deny) => "DENY",
+        Some(FirewallAppAction::Drop) => "DROP",
+        None if detail.is_blocked => "BLOCKED",
+        None => "ALLOWED",
     };
-    let enabled_color = if rule.enabled { Color::Rgb(80, 200, 120) } else { Color::Rgb(100, 100, 120) };
+    let action_color = match &detail.current_action {
+        Some(FirewallAppAction::Allow) => Color::Rgb(80, 200, 255),
+        Some(FirewallAppAction::Deny) => Color::Rgb(255, 80, 80),
+        Some(FirewallAppAction::Drop) => Color::Rgb(255, 140, 40),
+        None if detail.is_blocked => Color::Rgb(255, 80, 80),
+        None => Color::Rgb(80, 200, 120),
+    };
 
-    let mut lines = header_lines(" Firewall Rule Detail ");
-    lines.push(row("Rule Name",  rule.name.clone(),                                            Color::Rgb(155, 170, 200)));
-    lines.push(row("Program",    rule.process_name.clone().unwrap_or_else(|| "Any".to_string()), Color::Rgb(130, 200, 140)));
-    lines.push(row("Action",     rule.action.label().to_string(),                              action_color));
-    lines.push(row("Direction",  rule.direction.label().to_string(),                           Color::Rgb(130, 150, 190)));
-    lines.push(row("Enabled",    if rule.enabled { "Yes" } else { "No" }.to_string(),          enabled_color));
-    lines.push(row("Profile",    rule.profile.clone(),                                         Color::Rgb(100, 110, 130)));
+    let conn_str = if detail.conn_count > 0 {
+        format!("{} active", detail.conn_count)
+    } else {
+        "idle".to_string()
+    };
+    let conn_color = if detail.conn_count > 0 { Color::Rgb(80, 200, 120) } else { Color::Rgb(100, 110, 130) };
+
+    let mut lines = header_lines(" App Detail & Actions ");
+    lines.push(row("Application",  detail.app_name.clone(),           Color::Rgb(130, 200, 140)));
+    lines.push(row("Status",       action_str.to_string(),            action_color));
+    lines.push(row("Connections",  conn_str,                          conn_color));
     lines.push(Line::from(""));
-    lines.push(dismiss_line());
+
+    // Bandwidth section
+    lines.push(Line::from(Span::styled(
+        "  \u{2500}\u{2500}\u{2500} Bandwidth \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}",
+        Style::default().fg(Color::Rgb(40, 55, 80)),
+    )));
+    lines.push(row("Downloaded",   format_bytes(detail.download_bytes),  Color::Rgb(80, 180, 255)));
+    lines.push(row("Uploaded",     format_bytes(detail.upload_bytes),    Color::Rgb(180, 120, 255)));
+    lines.push(row("Total",        format_bytes(detail.download_bytes + detail.upload_bytes), Color::Rgb(170, 185, 210)));
+    lines.push(row("Speed \u{2193}",      format_speed(detail.current_down_speed),  Color::Rgb(80, 200, 160)));
+    lines.push(row("Speed \u{2191}",      format_speed(detail.current_up_speed),    Color::Rgb(200, 140, 255)));
+    lines.push(row("Peak \u{2193}",       format_speed(detail.peak_down_speed),     Color::Rgb(80, 180, 255)));
+    lines.push(row("Peak \u{2191}",       format_speed(detail.peak_up_speed),       Color::Rgb(180, 120, 255)));
+    lines.push(row("Last Seen",    detail.last_seen.clone(),             Color::Rgb(120, 130, 160)));
+    lines.push(Line::from(""));
+
+    // Action section
+    lines.push(Line::from(Span::styled(
+        "  \u{2500}\u{2500}\u{2500} Actions \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}",
+        Style::default().fg(Color::Rgb(40, 55, 80)),
+    )));
+
+    let options: [(usize, &str, Color); 4] = [
+        (0, "Allow  - permit all traffic", Color::Rgb(80, 200, 120)),
+        (1, "Deny   - block and refuse connections", Color::Rgb(255, 80, 80)),
+        (2, "Drop   - silently drop all traffic", Color::Rgb(255, 140, 40)),
+        (3, "Back   - close without changes", Color::Rgb(140, 150, 170)),
+    ];
+
+    for (idx, label, color) in &options {
+        let is_sel = detail.selected_action == *idx;
+        let is_current = match (&detail.current_action, idx) {
+            (Some(FirewallAppAction::Allow), 0) => true,
+            (Some(FirewallAppAction::Deny), 1) => true,
+            (Some(FirewallAppAction::Drop), 2) => true,
+            _ => false,
+        };
+
+        let prefix = if is_sel { "  \u{25b6} " } else { "    " };
+        let suffix = if is_current { " \u{25cf}" } else { "" };
+
+        let mut spans = vec![
+            Span::styled(prefix, Style::default().fg(Color::Rgb(255, 200, 80))),
+            Span::styled(
+                label.to_string(),
+                Style::default().fg(*color).add_modifier(if is_sel { Modifier::BOLD } else { Modifier::empty() }),
+            ),
+        ];
+        if !suffix.is_empty() {
+            spans.push(Span::styled(suffix, Style::default().fg(Color::Rgb(80, 200, 120))));
+        }
+        lines.push(Line::from(spans));
+    }
+
+    lines.push(Line::from(""));
+    lines.push(Line::from(Span::styled(
+        "  [ \u{2191}\u{2193} select | Enter apply | Esc close ]",
+        Style::default().fg(Color::Rgb(65, 80, 110)).add_modifier(Modifier::ITALIC),
+    )));
+
     render_popup(f, area, lines);
 }
 
@@ -264,7 +425,7 @@ fn header_lines(title: &str) -> Vec<Line<'static>> {
                 .add_modifier(Modifier::BOLD),
         )),
         Line::from(Span::styled(
-            "  ─────────────────────────────────────────────────────────",
+            "  \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}",
             Style::default().fg(Color::Rgb(35, 50, 80)),
         )),
         Line::from(""),
@@ -280,6 +441,14 @@ fn row(label: &'static str, value: String, value_color: Color) -> Line<'static> 
         ),
         Span::styled(value, Style::default().fg(value_color).add_modifier(Modifier::BOLD)),
     ])
+}
+
+fn section_divider(title: &str) -> Line<'static> {
+    let bar = "\u{2500}".repeat(40usize.saturating_sub(title.len() + 6));
+    Line::from(Span::styled(
+        format!("  \u{2500}\u{2500}\u{2500} {} {}", title, bar),
+        Style::default().fg(Color::Rgb(40, 55, 80)),
+    ))
 }
 
 fn dismiss_line() -> Line<'static> {

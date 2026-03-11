@@ -37,19 +37,46 @@ pub fn draw_traffic(f: &mut Frame, area: Rect, app: &App) {
         .fg(Color::Rgb(160, 180, 220))
         .add_modifier(Modifier::BOLD);
 
-    // Columns: Time | Process | Host/Domain | Service | Event | State
+    let si = |col: usize| -> &str {
+        if app.traffic_sort_column == Some(col) {
+            if app.traffic_sort_ascending { " \u{25b2}" } else { " \u{25bc}" }
+        } else { "" }
+    };
+
     let header = Row::new(vec![
-        Cell::from(Span::styled("Time", hdr_style)),
-        Cell::from(Span::styled("Process", hdr_style)),
-        Cell::from(Span::styled("Host / Domain", hdr_style)),
-        Cell::from(Span::styled("Service", hdr_style)),
-        Cell::from(Span::styled("Event", hdr_style)),
-        Cell::from(Span::styled("State", hdr_style)),
+        Cell::from(Span::styled(format!("Time{}", si(0)), hdr_style)),
+        Cell::from(Span::styled(format!("Process{}", si(1)), hdr_style)),
+        Cell::from(Span::styled(format!("Host{}", si(2)), hdr_style)),
+        Cell::from(Span::styled(format!("Service{}", si(3)), hdr_style)),
+        Cell::from(Span::styled(format!("Event{}", si(4)), hdr_style)),
+        Cell::from(Span::styled(format!("State{}", si(5)), hdr_style)),
     ])
     .height(1)
     .style(Style::default().bg(Color::Rgb(18, 25, 42)));
 
-    let rows: Vec<Row> = filtered
+    // Sort by column if set
+    let mut sorted_filtered: Vec<_> = filtered.into_iter().collect();
+    if let Some(sort_col) = app.traffic_sort_column {
+        let asc = app.traffic_sort_ascending;
+        sorted_filtered.sort_by(|a, b| {
+            let ord = match sort_col {
+                0 => a.timestamp.cmp(&b.timestamp),
+                1 => a.process_name.to_lowercase().cmp(&b.process_name.to_lowercase()),
+                2 => {
+                    let ha = a.dns_name.as_deref().unwrap_or("");
+                    let hb = b.dns_name.as_deref().unwrap_or("");
+                    ha.cmp(hb)
+                }
+                3 => a.remote_port.unwrap_or(0).cmp(&b.remote_port.unwrap_or(0)),
+                4 => a.event.label().cmp(b.event.label()),
+                5 => a.state_label.cmp(&b.state_label),
+                _ => std::cmp::Ordering::Equal,
+            };
+            if asc { ord } else { ord.reverse() }
+        });
+    }
+
+    let rows: Vec<Row> = sorted_filtered
         .iter()
         .rev()
         .skip(scroll)

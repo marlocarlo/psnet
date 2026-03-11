@@ -2,36 +2,39 @@
 //!
 //! Scans the local subnet to discover devices, their MAC addresses,
 //! and tracks online/offline status over time. Runs scans on a background
-//! thread to avoid blocking the UI tick.
+//! thread to avoid blocking the UI tick. Uses a streaming pending buffer
+//! so results appear in the UI as soon as each device is discovered.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::net::{IpAddr, Ipv4Addr};
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU8, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Instant;
 
 use chrono::Local;
 
-use dns_lookup::lookup_addr;
-
 use crate::types::LanDevice;
+
+/// Scan phases for UI display.
+pub const SCAN_PHASE_IDLE: u8 = 0;
+pub const SCAN_PHASE_ARP: u8 = 1;
+pub const SCAN_PHASE_DNS: u8 = 2;
 
 // ─── Win32 FFI ───────────────────────────────────────────────────────────────
 
 #[link(name = "iphlpapi")]
 extern "system" {
-    fn SendARP(
-        DestIP: u32,
-        SrcIP: u32,
-        pMacAddr: *mut u8,
-        PhyAddrLen: *mut u32,
-    ) -> u32;
-
     fn GetAdaptersInfo(
         pAdapterInfo: *mut u8,
         pOutBufLen: *mut u32,
+    ) -> u32;
+
+    fn GetIpNetTable(
+        pIpNetTable: *mut u8,
+        pdwSize: *mut u32,
+        bOrder: i32,
     ) -> u32;
 }
 
@@ -140,41 +143,101 @@ fn subnet_ips(ip: Ipv4Addr, mask: Ipv4Addr) -> Vec<Ipv4Addr> {
         .collect()
 }
 
-/// ARP-resolve a single IP. Returns MAC string if reachable.
-fn arp_resolve(target_ip: Ipv4Addr) -> Option<String> {
-    let dest = u32::from(target_ip).to_be();
-    let mut mac_buf = [0u8; 6];
-    let mut mac_len: u32 = 6;
+// ─── ARP cache instant read (GetIpNetTable — zero network traffic) ──────────
 
-    let ret = unsafe {
-        SendARP(
-            dest,
-            0, // source IP = default
-            mac_buf.as_mut_ptr(),
-            &mut mac_len,
-        )
-    };
+#[repr(C)]
+#[allow(non_snake_case)]
+struct MIB_IPNETROW {
+    dwIndex: u32,
+    dwPhysAddrLen: u32,
+    bPhysAddr: [u8; 8],
+    dwAddr: u32,
+    dwType: u32,
+}
 
-    if ret == ERROR_SUCCESS && mac_len >= 6 {
-        Some(format!(
-            "{:02X}:{:02X}:{:02X}:{:02X}:{:02X}:{:02X}",
-            mac_buf[0], mac_buf[1], mac_buf[2],
-            mac_buf[3], mac_buf[4], mac_buf[5]
-        ))
-    } else {
-        None
+/// Read the OS ARP cache instantly (no network traffic).
+/// Returns Vec of (ip, mac) for all reachable entries in the local subnet.
+fn arp_cache_read(local_ip: Ipv4Addr, mask: Ipv4Addr) -> Vec<(Ipv4Addr, String)> {
+    let mut results = Vec::new();
+    let ip_u32 = u32::from(local_ip);
+    let mask_u32 = u32::from(mask);
+    let network = ip_u32 & mask_u32;
+    let broadcast = network | !mask_u32;
+
+    unsafe {
+        let mut size: u32 = 0;
+        let ret = GetIpNetTable(std::ptr::null_mut(), &mut size, 0);
+        if ret != ERROR_BUFFER_OVERFLOW || size == 0 {
+            return results;
+        }
+
+        let mut buf = vec![0u8; size as usize];
+        let ret = GetIpNetTable(buf.as_mut_ptr(), &mut size, 0);
+        if ret != ERROR_SUCCESS {
+            return results;
+        }
+
+        let num_entries = *(buf.as_ptr() as *const u32);
+        let rows_ptr = buf.as_ptr().add(4) as *const MIB_IPNETROW;
+
+        for i in 0..num_entries as usize {
+            let row = &*rows_ptr.add(i);
+            // 3=dynamic, 4=static; skip invalid(2) and other(1)
+            if row.dwType < 3 {
+                continue;
+            }
+            let raw = u32::from_be(row.dwAddr);
+            let ip = Ipv4Addr::from(raw);
+            // Only include IPs in our subnet (not loopback, not self)
+            let ip_val = u32::from(ip);
+            if ip_val <= network || ip_val >= broadcast || ip == local_ip {
+                continue;
+            }
+            if row.dwPhysAddrLen >= 6 {
+                let mac = format!(
+                    "{:02X}:{:02X}:{:02X}:{:02X}:{:02X}:{:02X}",
+                    row.bPhysAddr[0], row.bPhysAddr[1], row.bPhysAddr[2],
+                    row.bPhysAddr[3], row.bPhysAddr[4], row.bPhysAddr[5]
+                );
+                // Skip broadcast MAC (FF:FF:FF:FF:FF:FF)
+                if mac != "FF:FF:FF:FF:FF:FF" {
+                    results.push((ip, mac));
+                }
+            }
+        }
     }
+
+    results
+}
+
+// ─── Streaming device update ────────────────────────────────────────────────
+
+/// A single device update pushed from the background scan thread.
+struct DeviceUpdate {
+    ip: Ipv4Addr,
+    mac: String,
+    hostname: Option<String>,
+    discovery_info: String,
+    open_ports: String,
 }
 
 // ─── Scanner state ───────────────────────────────────────────────────────────
 
 pub struct NetworkScanner {
-    /// Known devices by MAC address (authoritative map).
+    /// Known devices keyed by IP (authoritative list).
     pub devices: Vec<LanDevice>,
-    /// Shared result buffer from background scan thread.
-    scan_result: Arc<Mutex<Option<Vec<(Ipv4Addr, String, Option<String>)>>>>,
+    /// Streaming pending buffer — background threads push updates here.
+    pending: Arc<Mutex<Vec<DeviceUpdate>>>,
     /// Whether a scan is in progress.
     scanning: Arc<AtomicBool>,
+    /// Track previous scanning state to detect scan completion.
+    was_scanning: bool,
+    /// IPs seen during the current scan (for offline marking).
+    scan_seen_ips: HashSet<IpAddr>,
+    /// Scan progress: (probed, total) shared with background thread.
+    scan_progress: Arc<(AtomicUsize, AtomicUsize)>,
+    /// Current scan phase (0=idle, 1=ARP, 2=DNS).
+    scan_phase: Arc<AtomicU8>,
     /// Last scan timestamp.
     pub last_scan: Option<Instant>,
     /// Local subnet info.
@@ -195,29 +258,72 @@ impl NetworkScanner {
             .map(|(ip, mask, gw)| (Some(ip), Some(mask), Some(gw)))
             .unwrap_or((None, None, None));
 
+        let labels_path = Self::labels_path();
+        let custom_labels = Self::load_labels(&labels_path);
+
+        // Instant seed: read OS ARP cache (zero network traffic, sub-millisecond)
+        let now = Local::now().time();
+        let mut devices = Vec::new();
+        if let (Some(ip), Some(mask)) = (local_ip, subnet_mask) {
+            let cached = arp_cache_read(ip, mask);
+            for (cached_ip, mac) in cached {
+                devices.push(LanDevice {
+                    ip: IpAddr::V4(cached_ip),
+                    mac: mac.clone(),
+                    hostname: None,
+                    vendor: mac_vendor(&mac),
+                    first_seen: now,
+                    last_seen: now,
+                    is_online: true,
+                    custom_name: custom_labels.get(&mac).cloned(),
+                    discovery_info: String::new(),
+                    open_ports: String::new(),
+                    bytes_sent: 0,
+                    bytes_received: 0,
+                    tick_sent: 0,
+                    tick_received: 0,
+                    speed_sent: 0.0,
+                    speed_received: 0.0,
+                });
+            }
+        }
+
         Self {
-            devices: Vec::new(),
-            scan_result: Arc::new(Mutex::new(None)),
+            devices,
+            pending: Arc::new(Mutex::new(Vec::new())),
             scanning: Arc::new(AtomicBool::new(false)),
+            was_scanning: false,
+            scan_seen_ips: HashSet::new(),
+            scan_progress: Arc::new((AtomicUsize::new(0), AtomicUsize::new(0))),
+            scan_phase: Arc::new(AtomicU8::new(SCAN_PHASE_IDLE)),
             last_scan: None,
             local_ip,
             gateway,
             subnet_mask,
             scan_tick: 0,
-            custom_labels: {
-                let path = Self::labels_path();
-                Self::load_labels(&path)
-            },
-            labels_path: Self::labels_path(),
+            custom_labels,
+            labels_path,
         }
     }
 
-    /// Trigger a background ARP scan. Non-blocking.
-    /// Uses parallel probes (batches of 64 threads) for ~50x speedup over sequential.
+    /// Trigger a full multi-method network scan. Non-blocking.
+    ///
+    /// **Phase 1 — 10 parallel discovery methods** (all stream results live):
+    ///   1. ARP Scan (SendARP)              — Layer 2, gets MACs
+    ///   2. ARP Cache (GetIpNetTable)        — Instant, zero traffic
+    ///   3. ICMP Ping (IcmpSendEcho)         — Layer 3, crosses VPN tunnels
+    ///   4. TCP Connect Probe               — Layer 4, finds services
+    ///   5. NetBIOS NBSTAT (UDP 137)         — Windows/Samba hostnames
+    ///   6. mDNS (UDP 5353)                 — Apple, IoT, Linux
+    ///   7. SSDP/UPnP (UDP 1900)            — Routers, TVs, smart home
+    ///   8. DNS PTR Reverse Lookup           — Standard reverse DNS
+    ///   9. LLMNR (UDP 5355)                — Link-local names
+    ///  10. NetBIOS Broadcast (UDP 137)      — Subnet-wide name query
+    ///
+    /// **Phase 2 — Hostname enrichment** via 12+ parallel resolution methods.
     pub fn start_scan(&self) {
-        // Lock-free check via AtomicBool — no mutex contention
         if self.scanning.swap(true, Ordering::SeqCst) {
-            return; // Already scanning
+            return;
         }
 
         let (ip, mask) = match (self.local_ip, self.subnet_mask) {
@@ -228,117 +334,281 @@ impl NetworkScanner {
             }
         };
 
-        let result = Arc::clone(&self.scan_result);
+        let pending = Arc::clone(&self.pending);
         let scanning = Arc::clone(&self.scanning);
+        let progress = Arc::clone(&self.scan_progress);
+        let phase = Arc::clone(&self.scan_phase);
+        let gateway = self.gateway;
+
+        // Snapshot known hostnames to skip redundant resolution
+        let known_hostnames: HashMap<Ipv4Addr, String> = self.devices.iter()
+            .filter_map(|d| {
+                if let (IpAddr::V4(v4), Some(ref h)) = (d.ip, &d.hostname) {
+                    Some((v4, h.clone()))
+                } else {
+                    None
+                }
+            })
+            .collect();
 
         thread::spawn(move || {
+            use super::networks::probes;
+
             let targets = subnet_ips(ip, mask);
-            let found: Mutex<Vec<(Ipv4Addr, String)>> = Mutex::new(Vec::new());
+            let total_targets = targets.len();
+            progress.0.store(0, Ordering::Relaxed);
+            progress.1.store(total_targets, Ordering::Relaxed);
+            phase.store(SCAN_PHASE_ARP, Ordering::Relaxed);
 
-            // Parallel ARP probes — 64 concurrent threads per batch.
-            // A /24 subnet (254 IPs) completes in ~4 batches instead of 254 serial calls.
-            // Total scan time: ~3-6s vs ~4+ minutes sequential.
-            for chunk in targets.chunks(64) {
-                thread::scope(|s| {
-                    for &target in chunk {
-                        let found = &found;
-                        s.spawn(move || {
-                            if let Some(mac) = arp_resolve(target) {
-                                found.lock().unwrap().push((target, mac));
-                            }
-                        });
+            // Track all discovered IPs for Phase 2 hostname resolution
+            let discovered: Mutex<HashMap<Ipv4Addr, Option<String>>> = Mutex::new(HashMap::new());
+
+            // ═══ Phase 1: 10 parallel discovery methods ═══════════════════
+            // Each method runs independently and streams results to pending.
+            // All references are borrowed (not moved) via thread::scope.
+            let targets_ref = &targets;
+            let pending_ref = &pending;
+            let discovered_ref = &discovered;
+            let known_ref = &known_hostnames;
+            let progress_ref = &progress;
+
+            // Helper: convert probe hits to device updates and push to pending
+            let push_hits = |hits: &[probes::ProbeHit]| {
+                if hits.is_empty() { return; }
+                let mut disc = discovered_ref.lock().unwrap();
+                let mut updates = Vec::with_capacity(hits.len());
+                for hit in hits {
+                    let entry = disc.entry(hit.ip).or_insert(None);
+                    if entry.is_none() && hit.mac.is_some() {
+                        *entry = hit.mac.clone();
                     }
+                    updates.push(DeviceUpdate {
+                        ip: hit.ip,
+                        mac: hit.mac.clone().unwrap_or_default(),
+                        hostname: hit.hostname.clone().or_else(|| known_ref.get(&hit.ip).cloned()),
+                        discovery_info: hit.method.to_string(),
+                        open_ports: String::new(),
+                    });
+                }
+                drop(disc);
+                if let Ok(mut p) = pending_ref.lock() {
+                    p.extend(updates);
+                }
+            };
+
+            thread::scope(|s| {
+                // 1. ARP Scan — Layer 2, returns MACs
+                s.spawn(|| {
+                    let hits = probes::arp_scan(targets_ref, ip);
+                    progress_ref.0.fetch_add(total_targets / 2, Ordering::Relaxed);
+                    push_hits(&hits);
                 });
-            }
-
-            let arp_results = found.into_inner().unwrap();
-
-            // Resolve hostnames in parallel for discovered devices
-            let hostnames: Mutex<Vec<(Ipv4Addr, String, Option<String>)>> = Mutex::new(Vec::new());
-            for chunk in arp_results.chunks(64) {
-                thread::scope(|s| {
-                    for (target_ip, mac) in chunk {
-                        let hostnames = &hostnames;
-                        s.spawn(move || {
-                            let addr = IpAddr::V4(*target_ip);
-                            let hostname = lookup_addr(&addr).ok().filter(|name| {
-                                // Filter out results that are just the IP repeated back
-                                name != &addr.to_string()
-                            });
-                            hostnames.lock().unwrap().push((*target_ip, mac.clone(), hostname));
-                        });
-                    }
+                // 2. ARP Cache — instant, zero traffic
+                s.spawn(|| {
+                    let hits = probes::arp_cache_read(targets_ref);
+                    push_hits(&hits);
                 });
+                // 3. ICMP Ping Sweep — Layer 3, crosses VPN tunnels
+                s.spawn(|| {
+                    let hits = probes::icmp_ping_sweep(targets_ref);
+                    progress_ref.0.fetch_add(total_targets / 4, Ordering::Relaxed);
+                    push_hits(&hits);
+                });
+                // 4. TCP Connect Probe — finds hosts with open services
+                s.spawn(|| {
+                    let hits = probes::tcp_connect_probe(targets_ref);
+                    push_hits(&hits);
+                });
+                // 5. NetBIOS NBSTAT — Windows/Samba hostname resolution
+                s.spawn(|| {
+                    let hits = probes::netbios_scan(targets_ref);
+                    push_hits(&hits);
+                });
+                // 6. mDNS — Apple, IoT, Linux discovery
+                s.spawn(|| {
+                    let hits = probes::mdns_discover(ip);
+                    push_hits(&hits);
+                });
+                // 7. SSDP/UPnP — routers, TVs, smart home
+                s.spawn(|| {
+                    let hits = probes::ssdp_discover(ip);
+                    push_hits(&hits);
+                });
+                // 8. DNS PTR Reverse Lookup
+                s.spawn(|| {
+                    let hits = probes::dns_reverse_scan(targets_ref);
+                    push_hits(&hits);
+                });
+                // 9. LLMNR — Link-Local Multicast Name Resolution
+                s.spawn(|| {
+                    let hits = probes::llmnr_discover(ip);
+                    push_hits(&hits);
+                });
+                // 10. NetBIOS Broadcast — subnet-wide name query
+                s.spawn(|| {
+                    let hits = probes::nbt_broadcast(ip, mask);
+                    push_hits(&hits);
+                });
+            });
+
+            progress.0.store(total_targets, Ordering::Relaxed);
+
+            // ═══ Phase 2: Hostname enrichment ═════════════════════════════
+            // Resolve hostnames for ALL discovered IPs (from any method)
+            let disc_map = discovered.into_inner().unwrap();
+            let all_discovered_ips: Vec<Ipv4Addr> = disc_map.keys().copied().collect();
+            let need_resolve: Vec<Ipv4Addr> = all_discovered_ips.iter()
+                .filter(|ip| !known_hostnames.contains_key(ip))
+                .copied()
+                .collect();
+
+            if need_resolve.is_empty() {
+                phase.store(SCAN_PHASE_IDLE, Ordering::Relaxed);
+                scanning.store(false, Ordering::SeqCst);
+                return;
             }
 
-            let found = hostnames.into_inner().unwrap();
-            if let Ok(mut r) = result.lock() {
-                *r = Some(found);
+            phase.store(SCAN_PHASE_DNS, Ordering::Relaxed);
+            progress.0.store(0, Ordering::Relaxed);
+            progress.1.store(need_resolve.len(), Ordering::Relaxed);
+
+            // Multi-method parallel hostname resolution (12+ methods)
+            let resolved_map = super::hostnames::resolve_all(&need_resolve, gateway);
+            progress.0.store(need_resolve.len(), Ordering::Relaxed);
+
+            // Stream resolved hostnames to pending buffer
+            if !resolved_map.is_empty() {
+                let updates: Vec<DeviceUpdate> = need_resolve.iter().filter_map(|ip| {
+                    resolved_map.get(ip).map(|resolved| {
+                        let hostname = if resolved.hostname.is_empty() {
+                            None
+                        } else {
+                            Some(resolved.hostname.clone())
+                        };
+                        let ports_str = super::hostnames::format_ports(&resolved.open_ports);
+                        // Use MAC from discovery phase if available
+                        let mac = disc_map.get(ip).and_then(|m| m.clone()).unwrap_or_default();
+                        DeviceUpdate {
+                            ip: *ip,
+                            mac,
+                            hostname,
+                            discovery_info: resolved.details.clone(),
+                            open_ports: ports_str,
+                        }
+                    })
+                }).collect();
+
+                if let Ok(mut p) = pending.lock() {
+                    p.extend(updates);
+                }
             }
+
+            phase.store(SCAN_PHASE_IDLE, Ordering::Relaxed);
             scanning.store(false, Ordering::SeqCst);
         });
     }
 
-    /// Check if background scan has completed and merge results.
-    /// Called each tick. Returns previous device list if devices changed.
+    /// Drain pending buffer and merge updates into device list.
+    /// Called frequently (every 200ms) for maximum responsiveness.
+    /// Returns previous device list if devices changed (for alert checking).
     pub fn poll_results(&mut self) -> Option<Vec<LanDevice>> {
-        let new_data = if let Ok(mut r) = self.scan_result.lock() {
-            r.take()
-        } else {
-            None
+        // Track scanning state transitions
+        let currently_scanning = self.scanning.load(Ordering::SeqCst);
+        if currently_scanning {
+            self.was_scanning = true;
+        }
+
+        // Drain pending buffer
+        let batch = {
+            if let Ok(mut p) = self.pending.lock() {
+                if p.is_empty() {
+                    Vec::new()
+                } else {
+                    std::mem::take(&mut *p)
+                }
+            } else {
+                Vec::new()
+            }
         };
 
-        let Some(scan_results) = new_data else {
+        let has_updates = !batch.is_empty();
+        let scan_just_completed = self.was_scanning && !currently_scanning;
+
+        if !has_updates && !scan_just_completed {
             return None;
-        };
-
-        self.last_scan = Some(Instant::now());
-        let now = Local::now().time();
+        }
 
         let prev_devices = self.devices.clone();
+        let now = Local::now().time();
 
-        // Build new map — update existing, add new, mark offline
-        let mut seen_macs: std::collections::HashSet<String> = std::collections::HashSet::new();
+        // Merge each update into device list
+        for update in batch {
+            let ip_addr = IpAddr::V4(update.ip);
+            self.scan_seen_ips.insert(ip_addr);
 
-        for (ip, mac, hostname) in scan_results {
-            seen_macs.insert(mac.clone());
-            if let Some(existing) = self.devices.iter_mut().find(|d| d.mac == mac) {
-                existing.ip = IpAddr::V4(ip);
+            if let Some(existing) = self.devices.iter_mut().find(|d| d.ip == ip_addr) {
+                if existing.mac != update.mac && !update.mac.is_empty() {
+                    existing.vendor = mac_vendor(&update.mac);
+                    existing.mac = update.mac.clone();
+                }
                 existing.last_seen = now;
                 existing.is_online = true;
-                existing.custom_name = self.custom_labels.get(&mac).cloned();
-                if hostname.is_some() {
-                    existing.hostname = hostname;
+                existing.custom_name = self.custom_labels.get(&existing.mac).cloned();
+                if update.hostname.is_some() {
+                    existing.hostname = update.hostname;
+                }
+                if !update.discovery_info.is_empty() {
+                    existing.discovery_info = update.discovery_info;
+                }
+                if !update.open_ports.is_empty() {
+                    existing.open_ports = update.open_ports;
                 }
             } else {
                 self.devices.push(LanDevice {
-                    ip: IpAddr::V4(ip),
-                    mac: mac.clone(),
-                    hostname,
-                    vendor: mac_vendor_prefix(&mac),
+                    ip: ip_addr,
+                    mac: update.mac.clone(),
+                    hostname: update.hostname,
+                    vendor: mac_vendor(&update.mac),
                     first_seen: now,
                     last_seen: now,
                     is_online: true,
-                    custom_name: self.custom_labels.get(&mac).cloned(),
+                    custom_name: self.custom_labels.get(&update.mac).cloned(),
+                    discovery_info: update.discovery_info,
+                    open_ports: update.open_ports,
+                    bytes_sent: 0,
+                    bytes_received: 0,
+                    tick_sent: 0,
+                    tick_received: 0,
+                    speed_sent: 0.0,
+                    speed_received: 0.0,
                 });
             }
         }
 
-        // Mark unseen devices as offline
-        for device in &mut self.devices {
-            if !seen_macs.contains(&device.mac) {
-                device.is_online = false;
+        // When scan completes, mark unseen devices as offline
+        if scan_just_completed {
+            self.was_scanning = false;
+            self.last_scan = Some(Instant::now());
+            for device in &mut self.devices {
+                if !self.scan_seen_ips.contains(&device.ip) {
+                    device.is_online = false;
+                }
             }
+            self.scan_seen_ips.clear();
         }
 
-        Some(prev_devices)
+        if has_updates || scan_just_completed {
+            Some(prev_devices)
+        } else {
+            None
+        }
     }
 
     /// Called each tick. Auto-triggers scan every N ticks.
     pub fn tick(&mut self) {
         self.scan_tick += 1;
-        // Scan every 30 ticks (~30 seconds)
-        if self.scan_tick % 30 == 1 {
+        // Scan every 15 ticks (~15 seconds) for faster device discovery
+        if self.scan_tick % 15 == 1 {
             self.start_scan();
         }
     }
@@ -346,6 +616,19 @@ impl NetworkScanner {
     /// Is a scan currently in progress?
     pub fn is_scanning(&self) -> bool {
         self.scanning.load(Ordering::SeqCst)
+    }
+
+    /// Scan progress: (probed, total). Returns (0, 0) if not scanning.
+    pub fn scan_progress(&self) -> (usize, usize) {
+        (
+            self.scan_progress.0.load(Ordering::Relaxed),
+            self.scan_progress.1.load(Ordering::Relaxed),
+        )
+    }
+
+    /// Current scan phase (SCAN_PHASE_IDLE / ARP / DNS).
+    pub fn scan_phase(&self) -> u8 {
+        self.scan_phase.load(Ordering::Relaxed)
     }
 
     fn labels_path() -> PathBuf {
@@ -393,8 +676,77 @@ impl NetworkScanner {
     }
 }
 
-// ─── MAC vendor lookup (common prefixes) ────────────────────────────────────
+// ─── MAC vendor lookup ──────────────────────────────────────────────────────
 
-fn mac_vendor_prefix(mac: &str) -> Option<String> {
-    super::oui::lookup(mac).map(|s| s.to_string())
+/// Check if a MAC address has the locally-administered bit set (bit 1 of octet 0).
+fn is_locally_administered_mac(mac: &str) -> bool {
+    if let Some(first_byte_str) = mac.split(':').next() {
+        if let Ok(byte) = u8::from_str_radix(first_byte_str, 16) {
+            return byte & 0x02 != 0;
+        }
+    }
+    false
+}
+
+/// Known locally-administered MAC prefixes (not in IEEE OUI database).
+/// These are virtual/container/tunnel adapters that use the LA bit but are
+/// NOT random — they're assigned by specific software.
+fn local_admin_vendor(mac: &str) -> Option<&'static str> {
+    let upper = mac.to_uppercase();
+    let bytes: Vec<&str> = upper.split(':').collect();
+    if bytes.len() < 3 {
+        return None;
+    }
+
+    // Match on first 2 bytes (common) or 3 bytes (specific)
+    let prefix2 = format!("{}:{}", bytes[0], bytes[1]);
+    let prefix3 = format!("{}:{}:{}", bytes[0], bytes[1], bytes[2]);
+
+    match prefix3.as_str() {
+        // Docker default bridge (02:42:AC:xx:xx:xx)
+        s if s.starts_with("02:42:AC") => return Some("Docker Container"),
+        _ => {}
+    }
+
+    match prefix2.as_str() {
+        // Docker containers (02:42:xx)
+        "02:42" => Some("Docker Container"),
+        // Hyper-V (00:15:5D is in OUI, but some use locally-admin'd)
+        "00:15" => Some("Hyper-V VM"),
+        // Xen virtual machines
+        "FE:FF" => Some("Xen VM"),
+        // KVM/QEMU default (52:54:00 is common but 52 has LA bit)
+        "52:54" => Some("KVM/QEMU VM"),
+        // Parallels Desktop
+        "00:1C" => None, // Let OUI handle it
+        // OpenVPN TAP adapters
+        "00:FF" => Some("OpenVPN TAP"),
+        // WireGuard / other VPN
+        "A6:4D" => Some("WireGuard"),
+        // libvirt/virt-manager
+        "FE:54" => Some("Libvirt VM"),
+        // WSL2 (Hyper-V under the hood, but uses random LA MACs)
+        // Windows typically assigns these in the 00:15:5D range
+        _ => None,
+    }
+}
+
+pub(crate) fn mac_vendor(mac: &str) -> Option<String> {
+    // 1. Standard IEEE OUI lookup (39,000+ vendors)
+    if let Some(vendor) = super::oui::lookup(mac) {
+        return Some(vendor.to_string());
+    }
+
+    // 2. Known locally-administered prefixes (Docker, VMs, VPNs, etc.)
+    if let Some(vendor) = local_admin_vendor(mac) {
+        return Some(vendor.to_string());
+    }
+
+    // 3. Locally-administered but unrecognized → likely privacy-randomized
+    if is_locally_administered_mac(mac) {
+        return Some("Private MAC".to_string());
+    }
+
+    // 4. Unknown universally-administered MAC (vendor not in database)
+    None
 }

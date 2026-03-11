@@ -161,15 +161,33 @@ impl BandwidthTracker {
             }
         }
 
-        // Update connection counts and push speed samples
+        // Update connection counts and push speed samples.
+        // When an app had no measured traffic this tick but still has active
+        // connections, decay the previous value instead of slamming to 0.
+        // This prevents all rows flickering to "idle" when the sniffer
+        // produces no packets for a few consecutive ticks.
         for (key, app) in &mut self.apps {
             app.active_connections = conn_counts.get(key).copied().unwrap_or(0);
 
+            let has_tick_data = self.tick_down.contains_key(key) || self.tick_up.contains_key(key);
             let down = self.tick_down.get(key).copied().unwrap_or(0) as f64;
             let up = self.tick_up.get(key).copied().unwrap_or(0) as f64;
 
-            app.recent_down.push_back(down);
-            app.recent_up.push_back(up);
+            let (push_down, push_up) = if has_tick_data {
+                // Real data this tick — use it directly
+                (down, up)
+            } else if app.active_connections > 0 {
+                // No data this tick but app has active connections — decay previous
+                let prev_d = app.recent_down.back().copied().unwrap_or(0.0);
+                let prev_u = app.recent_up.back().copied().unwrap_or(0.0);
+                (prev_d * 0.6, prev_u * 0.6)
+            } else {
+                // No connections — truly idle
+                (0.0, 0.0)
+            };
+
+            app.recent_down.push_back(push_down);
+            app.recent_up.push_back(push_up);
             if app.recent_down.len() > 20 {
                 app.recent_down.pop_front();
             }

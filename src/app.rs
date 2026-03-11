@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::net::IpAddr;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
@@ -14,6 +14,7 @@ use crate::network::connections::fetch_connections;
 use crate::network::dns;
 use crate::network::firewall::FirewallManager;
 use crate::network::geoip::GeoIpResolver;
+use crate::network::networks::NetworksScanner;
 use crate::network::scanner::NetworkScanner;
 use crate::network::sniffer::PacketSniffer;
 use crate::network::speed::get_network_bytes;
@@ -36,6 +37,7 @@ pub struct App {
     prev_bytes_recv: u64,
     prev_bytes_sent: u64,
     prev_time: Instant,
+    prev_traffic_log_len: usize,
 
     // Connections tab
     pub connections: Vec<Connection>,
@@ -82,6 +84,8 @@ pub struct App {
     pub geoip: GeoIpResolver,
     /// System monitor (hosts file, proxy, WiFi, app hash)
     pub system_monitor: SystemMonitor,
+    /// Non-primary networks scanner (VPN, Docker, WSL, secondary adapters)
+    pub networks_scanner: NetworksScanner,
 
     // Detail popup overlay
     pub detail_popup: Option<DetailKind>,
@@ -89,8 +93,6 @@ pub struct App {
     /// Tick counter — incremented each update, used for live pulse indicator.
     pub tick_count: u64,
 
-    /// Selected row in Usage tab.
-    pub usage_scroll: usize,
 
     // Packets tab state
     pub packets_scroll: usize,
@@ -101,10 +103,23 @@ pub struct App {
     // Topology tab state
     pub topology_scroll: usize,
 
+    // Sort state for Devices tab
+    pub device_sort_column: usize,
+    pub device_sort_ascending: bool,
+    // Networks tab state
+    pub networks_scroll: usize,
+    pub networks_sort_column: usize,
+    pub networks_sort_ascending: bool,
+    pub bluetooth_expanded: bool,
+    // Sort state for Traffic tab
+    pub traffic_sort_column: Option<usize>,
+    pub traffic_sort_ascending: bool,
+    // Sort state for Alerts tab
+    pub alert_sort_column: Option<usize>,
+    pub alert_sort_ascending: bool,
+
     /// Whether incognito mode is active (no disk writes).
     pub incognito: bool,
-    /// Floating action menu on firewall tab.
-    pub firewall_menu: Option<FirewallMenuState>,
     /// Device rename state — Some(device_index) when renaming.
     pub renaming_device: Option<usize>,
     /// Text buffer for device rename.
@@ -149,6 +164,7 @@ impl App {
             prev_bytes_recv: recv,
             prev_bytes_sent: sent,
             prev_time: Instant::now(),
+            prev_traffic_log_len: 0,
 
             connections: Vec::new(),
             conn_scroll: 0,
@@ -177,6 +193,7 @@ impl App {
             bandwidth_tracker: BandwidthTracker::new(),
             alert_engine: AlertEngine::new(1000),
             network_scanner: NetworkScanner::new(),
+            networks_scanner: NetworksScanner::new(None), // primary_ip set after first scan
             firewall_manager: FirewallManager::new(),
             threat_detector: ThreatDetector::new(),
             usage_tracker: UsageTracker::new(),
@@ -185,7 +202,6 @@ impl App {
 
             detail_popup: None,
             tick_count: 0,
-            usage_scroll: 0,
 
             packets_scroll: 0,
             packets_filter: String::new(),
@@ -194,8 +210,18 @@ impl App {
 
             topology_scroll: 0,
 
+            device_sort_column: 0,
+            device_sort_ascending: false,
+            networks_scroll: 0,
+            networks_sort_column: 0,
+            networks_sort_ascending: false,
+            bluetooth_expanded: false,
+            traffic_sort_column: None,
+            traffic_sort_ascending: false,
+            alert_sort_column: None,
+            alert_sort_ascending: false,
+
             incognito: false,
-            firewall_menu: None,
             renaming_device: None,
             device_rename_text: String::new(),
 
@@ -215,6 +241,29 @@ impl App {
         }
     }
 
+    /// Fast poll: drain streaming scanner buffers between full ticks.
+    /// Called every 200ms for maximum responsiveness. Returns true if data changed.
+    pub fn fast_poll(&mut self) -> bool {
+        let mut changed = false;
+
+        // Poll devices scanner streaming buffer
+        if let Some(prev_devices) = self.network_scanner.poll_results() {
+            self.alert_engine.check_arp_anomalies(&self.network_scanner.devices);
+            self.alert_engine.check_device_changes(&self.network_scanner.devices, &prev_devices);
+            changed = true;
+        }
+
+        // Poll networks scanner streaming buffer
+        if self.networks_scanner.primary_ip.is_none() {
+            self.networks_scanner.primary_ip = self.network_scanner.local_ip;
+        }
+        if self.networks_scanner.poll_results() {
+            changed = true;
+        }
+
+        changed
+    }
+
     /// Refresh network speed and connections. Called each tick.
     pub fn update(&mut self, networks: &mut Networks) {
         networks.refresh();
@@ -222,14 +271,17 @@ impl App {
         let now = Instant::now();
         let elapsed = now.duration_since(self.prev_time).as_secs_f64();
 
+        let tick_delta_down = recv.saturating_sub(self.prev_bytes_recv);
+        let tick_delta_up = sent.saturating_sub(self.prev_bytes_sent);
+
         if elapsed > 0.0 {
-            let dr = recv.saturating_sub(self.prev_bytes_recv) as f64;
-            let ds = sent.saturating_sub(self.prev_bytes_sent) as f64;
+            let dr = tick_delta_down as f64;
+            let ds = tick_delta_up as f64;
             self.current_down_speed = dr / elapsed;
             self.current_up_speed = ds / elapsed;
 
-            self.total_down += recv.saturating_sub(self.prev_bytes_recv);
-            self.total_up += sent.saturating_sub(self.prev_bytes_sent);
+            self.total_down += tick_delta_down;
+            self.total_up += tick_delta_up;
 
             if self.current_down_speed > self.peak_down {
                 self.peak_down = self.current_down_speed;
@@ -297,6 +349,59 @@ impl App {
             self.traffic_tracker.ingest_packets(&new_packets, &self.connections, &self.dns_cache);
             // Per-app bandwidth tracking from sniffer data
             self.bandwidth_tracker.ingest_packets(&new_packets, &self.connections);
+
+            // Per-device bandwidth: correlate packets with LAN device IPs
+            // Build IP→index HashMap for O(1) lookups instead of O(n) per packet
+            let device_ip_index: HashMap<IpAddr, usize> = self.network_scanner.devices
+                .iter()
+                .enumerate()
+                .map(|(i, d)| (d.ip, i))
+                .collect();
+
+            let local_net: Option<(u32, u32)> = match (self.network_scanner.local_ip, self.network_scanner.subnet_mask) {
+                (Some(ip), Some(mask)) => Some((u32::from(ip) & u32::from(mask), u32::from(mask))),
+                _ => None,
+            };
+            let gateway_idx: Option<usize> = self.network_scanner.gateway
+                .and_then(|gw| device_ip_index.get(&IpAddr::V4(gw)).copied());
+
+            for pkt in &new_packets {
+                let bytes = pkt.payload_size as u64;
+                let is_inbound = pkt.direction == PacketDirection::Inbound;
+                let remote_ip = if is_inbound { pkt.src_ip } else { pkt.dst_ip };
+
+                // O(1) lookup: direct match to LAN device, or attribute to gateway
+                let dev_idx = if let Some(&idx) = device_ip_index.get(&remote_ip) {
+                    Some(idx)
+                } else if let Some(ref net) = local_net {
+                    let is_lan = match remote_ip {
+                        IpAddr::V4(v4) => (u32::from(v4) & net.1) == net.0,
+                        _ => false,
+                    };
+                    if !is_lan { gateway_idx } else { None }
+                } else {
+                    None
+                };
+
+                if let Some(idx) = dev_idx {
+                    let dev = &mut self.network_scanner.devices[idx];
+                    if is_inbound {
+                        dev.bytes_received += bytes;
+                        dev.tick_received += bytes;
+                    } else {
+                        dev.bytes_sent += bytes;
+                        dev.tick_sent += bytes;
+                    }
+                }
+            }
+        }
+
+        // Flush per-tick device speed: exponential moving average (0.3 new + 0.7 old)
+        for dev in &mut self.network_scanner.devices {
+            dev.speed_sent = dev.speed_sent * 0.7 + dev.tick_sent as f64 * 0.3;
+            dev.speed_received = dev.speed_received * 0.7 + dev.tick_received as f64 * 0.3;
+            dev.tick_sent = 0;
+            dev.tick_received = 0;
         }
 
         // ─── GlassWire-style module updates ──────────────────────────
@@ -345,11 +450,14 @@ impl App {
         }
 
         // Network scanner tick (auto-scans periodically)
+        // Polling is handled by fast_poll() at 200ms intervals
         self.network_scanner.tick();
-        if let Some(prev_devices) = self.network_scanner.poll_results() {
-            self.alert_engine.check_arp_anomalies(&self.network_scanner.devices);
-            self.alert_engine.check_device_changes(&self.network_scanner.devices, &prev_devices);
+
+        // Networks scanner tick (VPN, Docker, WSL, secondary adapters)
+        if self.networks_scanner.primary_ip.is_none() {
+            self.networks_scanner.primary_ip = self.network_scanner.local_ip;
         }
+        self.networks_scanner.tick();
 
         // System monitor tick (hosts file, proxy, WiFi, app hash changes)
         let sys_events = self.system_monitor.tick();
@@ -383,13 +491,17 @@ impl App {
         self.alert_engine.check_data_plan(used, limit, alert_pct);
 
         // Idle tracker tick (While You Were Away)
-        let delta_down = recv.saturating_sub(self.prev_bytes_recv);
-        let delta_up = sent.saturating_sub(self.prev_bytes_sent);
-        let new_conn_count = self.traffic_tracker.log.iter()
-            .rev()
-            .take_while(|e| matches!(e.event, TrafficEventKind::NewConnection))
-            .count();
-        self.alert_engine.idle_tracker.tick(new_conn_count, delta_down, delta_up);
+        let current_log_len = self.traffic_tracker.log.len();
+        let new_conn_count = if current_log_len > self.prev_traffic_log_len {
+            self.traffic_tracker.log[self.prev_traffic_log_len..]
+                .iter()
+                .filter(|e| matches!(e.event, TrafficEventKind::NewConnection))
+                .count()
+        } else {
+            0
+        };
+        self.prev_traffic_log_len = current_log_len;
+        self.alert_engine.idle_tracker.tick(new_conn_count, tick_delta_down, tick_delta_up);
 
         self.tick_count = self.tick_count.wrapping_add(1);
     }
@@ -538,6 +650,10 @@ impl App {
         for (key, _) in &self.firewall_manager.app_actions {
             map.entry(key.clone()).or_insert((key.clone(), 0));
         }
+        // Include apps with bandwidth data (had traffic earlier but may have no current connections)
+        for (key, bw) in &self.bandwidth_tracker.apps {
+            map.entry(key.clone()).or_insert((bw.process_name.clone(), 0));
+        }
         // Apply filter
         let ft = self.firewall_manager.filter_text.to_lowercase();
         let mut list: Vec<(String, bool, usize)> = map.into_values()
@@ -547,10 +663,40 @@ impl App {
                 (name, blocked, count)
             })
             .collect();
+        // Sort by bandwidth column if set, otherwise default sort
+        let sort_col = self.bandwidth_tracker.sort_column;
+        let sort_asc = self.bandwidth_tracker.sort_ascending;
+        let bw_apps = &self.bandwidth_tracker.apps;
         list.sort_by(|a, b| {
-            b.1.cmp(&a.1)           // blocked first
-                .then(b.2.cmp(&a.2)) // then most connections
-                .then(a.0.cmp(&b.0)) // then alphabetical
+            let ord = match sort_col {
+                0 => { // Total bytes
+                    let ta = bw_apps.get(&a.0.to_lowercase()).map(|b| b.total_bytes()).unwrap_or(0);
+                    let tb = bw_apps.get(&b.0.to_lowercase()).map(|b| b.total_bytes()).unwrap_or(0);
+                    tb.cmp(&ta)
+                }
+                1 => { // Download
+                    let da = bw_apps.get(&a.0.to_lowercase()).map(|b| b.download_bytes).unwrap_or(0);
+                    let db = bw_apps.get(&b.0.to_lowercase()).map(|b| b.download_bytes).unwrap_or(0);
+                    db.cmp(&da)
+                }
+                2 => { // Upload
+                    let ua = bw_apps.get(&a.0.to_lowercase()).map(|b| b.upload_bytes).unwrap_or(0);
+                    let ub = bw_apps.get(&b.0.to_lowercase()).map(|b| b.upload_bytes).unwrap_or(0);
+                    ub.cmp(&ua)
+                }
+                3 => { // Connections
+                    b.2.cmp(&a.2)
+                }
+                4 => { // Name
+                    a.0.to_lowercase().cmp(&b.0.to_lowercase())
+                }
+                _ => {
+                    b.1.cmp(&a.1)
+                        .then(b.2.cmp(&a.2))
+                        .then(a.0.cmp(&b.0))
+                }
+            };
+            if sort_asc { ord.reverse() } else { ord }
         });
         list
     }
@@ -615,20 +761,38 @@ impl App {
         // Notify idle tracker of user input
         self.alert_engine.idle_tracker.on_input();
 
-        // If detail popup is open, Esc/Enter/q closes it; other keys are swallowed
+        // If detail popup is open, handle navigation for FirewallApp or dismiss
         if self.detail_popup.is_some() {
-            match code {
-                KeyCode::Esc | KeyCode::Enter | KeyCode::Char('q') => {
-                    self.detail_popup = None;
+            if let Some(DetailKind::FirewallApp(ref mut detail)) = self.detail_popup {
+                match code {
+                    KeyCode::Up => { detail.selected_action = detail.selected_action.saturating_sub(1); }
+                    KeyCode::Down => { if detail.selected_action < 3 { detail.selected_action += 1; } }
+                    KeyCode::Enter => {
+                        if detail.selected_action < 3 {
+                            let name = detail.app_name.clone();
+                            let path = detail.app_path.clone();
+                            let action = match detail.selected_action {
+                                0 => FirewallAppAction::Allow,
+                                1 => FirewallAppAction::Deny,
+                                _ => FirewallAppAction::Drop,
+                            };
+                            self.detail_popup = None;
+                            self.firewall_manager.apply_action(&name, path.as_deref(), action);
+                        } else {
+                            self.detail_popup = None;
+                        }
+                    }
+                    KeyCode::Esc | KeyCode::Char('q') => { self.detail_popup = None; }
+                    _ => {}
                 }
-                _ => {}
+            } else {
+                match code {
+                    KeyCode::Esc | KeyCode::Enter | KeyCode::Char('q') => {
+                        self.detail_popup = None;
+                    }
+                    _ => {}
+                }
             }
-            return false;
-        }
-
-        // If firewall action menu is open, handle it
-        if self.firewall_menu.is_some() {
-            self.handle_firewall_menu_key(code);
             return false;
         }
 
@@ -666,9 +830,9 @@ impl App {
                     BottomTab::Packets => self.handle_packets_key(code),
                     BottomTab::Topology => self.handle_topology_key(code),
                     BottomTab::Alerts => self.handle_alerts_key(code),
-                    BottomTab::Usage => self.handle_usage_key(code),
                     BottomTab::Firewall => self.handle_firewall_key(code),
                     BottomTab::Devices => self.handle_devices_key(code),
+                    BottomTab::Networks => self.handle_networks_key(code),
                 }
             }
         }
@@ -715,13 +879,6 @@ impl App {
                 let idx = (total - 1).saturating_sub(selected);
                 alerts.get(idx).map(|a| DetailKind::Alert(a.clone()))
             }
-            BottomTab::Usage => {
-                let apps = self.bandwidth_tracker.sorted_apps();
-                let total = apps.len();
-                if total == 0 { return; }
-                let selected = self.usage_scroll.min(total - 1);
-                apps.get(selected).map(|a| DetailKind::AppBandwidth((*a).clone()))
-            }
             BottomTab::Devices => {
                 let devices = &self.network_scanner.devices;
                 let total = devices.len();
@@ -729,28 +886,72 @@ impl App {
                 let selected = self.device_scroll.min(total - 1);
                 devices.get(selected).map(|d| DetailKind::Device(d.clone()))
             }
+            BottomTab::Networks => {
+                let display_rows = crate::ui::networks::build_display_rows(self);
+                let total = display_rows.len();
+                if total == 0 { return; }
+                let selected = self.networks_scroll.min(total - 1);
+                match &display_rows[selected] {
+                    crate::ui::networks::NetworksRow::BluetoothHeader { .. } => {
+                        // Toggle expand on Enter
+                        self.bluetooth_expanded = !self.bluetooth_expanded;
+                        None
+                    }
+                    crate::ui::networks::NetworksRow::Device { device, .. } => {
+                        Some(DetailKind::Device((*device).clone()))
+                    }
+                }
+            }
             BottomTab::Firewall => {
-                // Enter opens the action menu (Allow / Deny / Drop)
+                // Enter opens combined detail popup with action buttons
                 let apps = self.firewall_app_list_filtered();
                 if apps.is_empty() { return; }
                 let selected = self.firewall_manager.scroll_offset.min(apps.len() - 1);
-                if let Some((name, _, _)) = apps.get(selected) {
+                if let Some((name, _, conn_count)) = apps.get(selected) {
                     let name = name.clone();
                     let path = self.connections.iter()
                         .find(|c| c.process_name.to_lowercase() == name.to_lowercase())
                         .and_then(|c| crate::network::connections::get_process_full_path(c.pid));
-                    // Pre-select current action if one exists
-                    let preselect = match self.firewall_manager.get_app_action(&name) {
+                    let current_action = self.firewall_manager.get_app_action(&name);
+                    let is_blocked = self.firewall_manager.is_psnet_blocked(&name);
+                    let preselect = match current_action {
                         Some(FirewallAppAction::Allow) => 0,
                         Some(FirewallAppAction::Deny) => 1,
                         Some(FirewallAppAction::Drop) => 2,
                         None => 0,
                     };
-                    self.firewall_menu = Some(FirewallMenuState {
+
+                    // Look up bandwidth data
+                    let key = name.to_lowercase();
+                    let (dl, ul, cd, cu, pd, pu, ls) = if let Some(bw) = self.bandwidth_tracker.apps.get(&key) {
+                        (
+                            bw.download_bytes,
+                            bw.upload_bytes,
+                            bw.smooth_down(),
+                            bw.smooth_up(),
+                            bw.recent_down.iter().copied().fold(0.0_f64, f64::max),
+                            bw.recent_up.iter().copied().fold(0.0_f64, f64::max),
+                            bw.last_seen.format("%H:%M:%S").to_string(),
+                        )
+                    } else {
+                        (0, 0, 0.0, 0.0, 0.0, 0.0, "-".to_string())
+                    };
+
+                    self.detail_popup = Some(DetailKind::FirewallApp(FirewallAppDetail {
                         app_name: name,
                         app_path: path,
-                        selected: preselect,
-                    });
+                        is_blocked,
+                        current_action: current_action.cloned(),
+                        conn_count: *conn_count,
+                        download_bytes: dl,
+                        upload_bytes: ul,
+                        current_down_speed: cd,
+                        current_up_speed: cu,
+                        peak_down_speed: pd,
+                        peak_up_speed: pu,
+                        last_seen: ls,
+                        selected_action: preselect,
+                    }));
                 }
                 return;
             }
@@ -852,36 +1053,6 @@ impl App {
         }
     }
 
-    fn handle_usage_key(&mut self, code: KeyCode) {
-        match code {
-            // Sort keys for bandwidth table
-            KeyCode::Char('1') => {
-                self.bandwidth_tracker.sort_column = 0; // Total
-                self.bandwidth_tracker.sort_ascending = !self.bandwidth_tracker.sort_ascending;
-            }
-            KeyCode::Char('2') => {
-                self.bandwidth_tracker.sort_column = 1; // Download
-                self.bandwidth_tracker.sort_ascending = !self.bandwidth_tracker.sort_ascending;
-            }
-            KeyCode::Char('3') => {
-                self.bandwidth_tracker.sort_column = 2; // Upload
-                self.bandwidth_tracker.sort_ascending = !self.bandwidth_tracker.sort_ascending;
-            }
-            KeyCode::Char('4') => {
-                self.bandwidth_tracker.sort_column = 4; // Name
-                self.bandwidth_tracker.sort_ascending = !self.bandwidth_tracker.sort_ascending;
-            }
-            // Export CSV
-            KeyCode::Char('e') | KeyCode::Char('E') => {
-                if let Some(data_dir) = dirs::data_dir() {
-                    let path = data_dir.join("psnet").join("usage_export.csv");
-                    let _ = self.usage_tracker.export_csv(&path.to_string_lossy());
-                }
-            }
-            _ => {}
-        }
-    }
-
     fn handle_firewall_key(&mut self, code: KeyCode) {
         match code {
             KeyCode::Char('r') | KeyCode::Char('R') => {
@@ -893,37 +1064,34 @@ impl App {
             KeyCode::Char('x') | KeyCode::Char('X') => {
                 self.firewall_manager.reset_all_psnet_rules();
             }
+            // Sort keys (merged from Usage tab)
+            KeyCode::Char('1') => {
+                self.bandwidth_tracker.sort_column = 0;
+                self.bandwidth_tracker.sort_ascending = !self.bandwidth_tracker.sort_ascending;
+            }
+            KeyCode::Char('2') => {
+                self.bandwidth_tracker.sort_column = 1;
+                self.bandwidth_tracker.sort_ascending = !self.bandwidth_tracker.sort_ascending;
+            }
+            KeyCode::Char('3') => {
+                self.bandwidth_tracker.sort_column = 2;
+                self.bandwidth_tracker.sort_ascending = !self.bandwidth_tracker.sort_ascending;
+            }
+            KeyCode::Char('4') => {
+                self.bandwidth_tracker.sort_column = 4;
+                self.bandwidth_tracker.sort_ascending = !self.bandwidth_tracker.sort_ascending;
+            }
+            // Export CSV
+            KeyCode::Char('e') | KeyCode::Char('E') => {
+                if let Some(data_dir) = dirs::data_dir() {
+                    let path = data_dir.join("psnet").join("usage_export.csv");
+                    let _ = self.usage_tracker.export_csv(&path.to_string_lossy());
+                }
+            }
             KeyCode::Backspace => { self.firewall_manager.filter_text.pop(); }
             KeyCode::Esc => { self.firewall_manager.filter_text.clear(); }
             KeyCode::Char(c) => {
                 self.firewall_manager.filter_text.push(c);
-            }
-            _ => {}
-        }
-    }
-
-    fn handle_firewall_menu_key(&mut self, code: KeyCode) {
-        let Some(ref mut menu) = self.firewall_menu else { return };
-        match code {
-            KeyCode::Up => {
-                menu.selected = menu.selected.saturating_sub(1);
-            }
-            KeyCode::Down => {
-                if menu.selected < 2 { menu.selected += 1; }
-            }
-            KeyCode::Enter => {
-                let name = menu.app_name.clone();
-                let path = menu.app_path.clone();
-                let action = match menu.selected {
-                    0 => FirewallAppAction::Allow,
-                    1 => FirewallAppAction::Deny,
-                    _ => FirewallAppAction::Drop,
-                };
-                self.firewall_menu = None;
-                self.firewall_manager.apply_action(&name, path.as_deref(), action);
-            }
-            KeyCode::Esc | KeyCode::Char('q') => {
-                self.firewall_menu = None;
             }
             _ => {}
         }
@@ -971,6 +1139,32 @@ impl App {
                     self.device_rename_text = current;
                     self.renaming_device = Some(idx);
                 }
+            }
+            _ => {}
+        }
+    }
+
+    /// Virtual row count for Networks tab (accounts for BT header + collapse).
+    fn networks_display_row_count(&self) -> usize {
+        let mut non_bt = 0usize;
+        let mut bt = 0usize;
+        for net in &self.networks_scanner.networks {
+            if net.category == NetworkCategory::Bluetooth {
+                bt += net.devices.len();
+            } else {
+                non_bt += net.devices.len();
+            }
+        }
+        non_bt + if bt > 0 { 1 } else { 0 } + if self.bluetooth_expanded { bt } else { 0 }
+    }
+
+    fn handle_networks_key(&mut self, code: KeyCode) {
+        match code {
+            KeyCode::Char('s') | KeyCode::Char('S') => {
+                self.networks_scanner.start_scan();
+            }
+            KeyCode::Char('b') | KeyCode::Char('B') => {
+                self.bluetooth_expanded = !self.bluetooth_expanded;
             }
             _ => {}
         }
@@ -1031,14 +1225,14 @@ impl App {
             BottomTab::Alerts => {
                 self.alert_engine.scroll_offset += n;
             }
-            BottomTab::Usage => {
-                self.usage_scroll = self.usage_scroll.saturating_sub(n);
-            }
             BottomTab::Firewall => {
                 self.firewall_manager.scroll_offset = self.firewall_manager.scroll_offset.saturating_sub(n);
             }
             BottomTab::Devices => {
                 self.device_scroll = self.device_scroll.saturating_sub(n);
+            }
+            BottomTab::Networks => {
+                self.networks_scroll = self.networks_scroll.saturating_sub(n);
             }
             BottomTab::Packets => {
                 self.packets_scroll = self.packets_scroll.saturating_sub(n);
@@ -1065,14 +1259,14 @@ impl App {
             BottomTab::Alerts => {
                 self.alert_engine.scroll_offset = self.alert_engine.scroll_offset.saturating_sub(n);
             }
-            BottomTab::Usage => {
-                self.usage_scroll += n;
-            }
             BottomTab::Firewall => {
                 self.firewall_manager.scroll_offset += n;
             }
             BottomTab::Devices => {
                 self.device_scroll += n;
+            }
+            BottomTab::Networks => {
+                self.networks_scroll += n;
             }
             BottomTab::Packets => {
                 self.packets_scroll += n;
@@ -1101,6 +1295,9 @@ impl App {
             BottomTab::Devices => {
                 self.device_scroll = 0;
             }
+            BottomTab::Networks => {
+                self.networks_scroll = 0;
+            }
             BottomTab::Packets => {
                 self.packets_scroll = 0;
             }
@@ -1127,6 +1324,9 @@ impl App {
             }
             BottomTab::Devices => {
                 self.device_scroll = self.network_scanner.devices.len();
+            }
+            BottomTab::Networks => {
+                self.networks_scroll = self.networks_display_row_count().saturating_sub(1);
             }
             BottomTab::Packets => {
                 let total = self.sniffer.recent(2000).len();
@@ -1157,12 +1357,10 @@ impl App {
 
                 // Tab bar is at y == 14 (after title:3 + speed:11)
                 if row == 14 {
-                    // Close any open popups/menus when switching tabs
+                    // Close any open popups when switching tabs
                     self.detail_popup = None;
-                    self.firewall_menu = None;
 
                     // Tab labels rendered as " {n} {label} " with " │ " separators (3 chars).
-                    // E.g.: " 1 Dashboard  │  2 Connections  │ ..."
                     let tab_labels: &[(&str, BottomTab)] = &[
                         ("1 Dashboard",   BottomTab::Dashboard),
                         ("2 Connections", BottomTab::Connections),
@@ -1170,9 +1368,9 @@ impl App {
                         ("4 Packets",     BottomTab::Packets),
                         ("5 Topology",    BottomTab::Topology),
                         ("6 Alerts",      BottomTab::Alerts),
-                        ("7 Usage",       BottomTab::Usage),
-                        ("8 Firewall",    BottomTab::Firewall),
-                        ("9 Devices",     BottomTab::Devices),
+                        ("7 Firewall",    BottomTab::Firewall),
+                        ("8 Devices",     BottomTab::Devices),
+                        ("9 Networks",    BottomTab::Networks),
                     ];
 
                     let x = col as usize;
@@ -1188,45 +1386,61 @@ impl App {
                         cursor += span_len + 3;
                     }
                 }
-                // Content area click: data rows start at y == 17
-                // (title:3 + speed:11 + tabs:1 = 15, then 2 rows for border+header)
-                // Content area ends before wire preview (frame_h - 8)
+                // Header row click — sort by column
+                // Most tabs: header at y=16 (border at 15, header at 16)
+                // Firewall: border(15) + status(3) + data_plan(4) + table_border(1) = header at y=24
+                else if self.is_header_row(row) {
+                    let frame_w = self.last_frame_size.width.saturating_sub(2); // subtract borders
+                    let x = col.saturating_sub(1); // adjust for left border
+                    self.handle_header_click(x, frame_w);
+                }
+                // Content area click: data rows start one row after the header
                 else if row >= 17 {
                     let content_end = _frame_h.saturating_sub(8);
                     if row < content_end {
-                        let clicked_row = (row - 17) as usize;
-                        match self.bottom_tab {
-                            BottomTab::Connections => {
-                                let max = self.filtered_connections().len().saturating_sub(1);
-                                self.conn_scroll = clicked_row.min(max);
+                        // Adjust for firewall's extra sub-sections
+                        let data_start = if self.bottom_tab == BottomTab::Firewall { 25 } else { 17 };
+                        if row < data_start { /* click in sub-section, ignore */ }
+                        else {
+                            let clicked_row = (row - data_start) as usize;
+                            match self.bottom_tab {
+                                BottomTab::Connections => {
+                                    let max = self.filtered_connections().len().saturating_sub(1);
+                                    self.conn_scroll = clicked_row.min(max);
+                                }
+                                BottomTab::Firewall => {
+                                    let max = self.firewall_app_list_filtered().len().saturating_sub(1);
+                                    self.firewall_manager.scroll_offset = clicked_row.min(max);
+                                }
+                                BottomTab::Devices => {
+                                    let max = self.network_scanner.devices.len().saturating_sub(1);
+                                    self.device_scroll = clicked_row.min(max);
+                                }
+                                BottomTab::Networks => {
+                                    let max = self.networks_display_row_count().saturating_sub(1);
+                                    let row = clicked_row.min(max);
+                                    self.networks_scroll = row;
+                                    // If clicked on BT header, toggle expand
+                                    let display_rows = crate::ui::networks::build_display_rows(self);
+                                    if let Some(crate::ui::networks::NetworksRow::BluetoothHeader { .. }) = display_rows.get(row) {
+                                        self.bluetooth_expanded = !self.bluetooth_expanded;
+                                    }
+                                }
+                                BottomTab::Packets => {
+                                    self.packets_scroll = clicked_row;
+                                }
+                                BottomTab::Alerts => {
+                                    self.alert_engine.scroll_offset = clicked_row;
+                                }
+                                BottomTab::Traffic => {
+                                    self.traffic_tracker.auto_scroll = false;
+                                    self.traffic_tracker.scroll_offset = clicked_row;
+                                }
+                                BottomTab::Topology => {
+                                    self.topology_scroll = clicked_row;
+                                }
+                                _ => {}
                             }
-                            BottomTab::Usage => {
-                                self.usage_scroll = clicked_row;
-                            }
-                            BottomTab::Firewall => {
-                                let max = self.firewall_app_list_filtered().len().saturating_sub(1);
-                                self.firewall_manager.scroll_offset = clicked_row.min(max);
-                            }
-                            BottomTab::Devices => {
-                                let max = self.network_scanner.devices.len().saturating_sub(1);
-                                self.device_scroll = clicked_row.min(max);
-                            }
-                            BottomTab::Packets => {
-                                self.packets_scroll = clicked_row;
-                            }
-                            BottomTab::Alerts => {
-                                self.alert_engine.scroll_offset = clicked_row;
-                            }
-                            BottomTab::Traffic => {
-                                // Traffic uses offset-from-end; clicking a visible row
-                                // selects it but we just set scroll_offset for now.
-                                self.traffic_tracker.auto_scroll = false;
-                                self.traffic_tracker.scroll_offset = clicked_row;
-                            }
-                            BottomTab::Topology => {
-                                self.topology_scroll = clicked_row;
-                            }
-                            _ => {}
                         }
                     }
                 }
@@ -1237,4 +1451,132 @@ impl App {
         }
         false
     }
+
+    /// Check if the given screen row is the header row for the current tab's table.
+    fn is_header_row(&self, row: u16) -> bool {
+        let header_y = match self.bottom_tab {
+            // Most tabs: outer block border at y=15, header at y=16
+            BottomTab::Connections | BottomTab::Devices | BottomTab::Networks
+            | BottomTab::Packets | BottomTab::Traffic | BottomTab::Alerts => 16,
+            // Firewall: border(15) + inner(16) + status(3=16,17,18) + data_plan(4=19,20,21,22)
+            //           + table_block_border(23) + header(24)
+            BottomTab::Firewall => 24,
+            _ => return false,
+        };
+        row == header_y
+    }
+
+    /// Handle a click on the header row — determine which column and toggle sort.
+    fn handle_header_click(&mut self, x: u16, frame_w: u16) {
+        match self.bottom_tab {
+            BottomTab::Connections => {
+                // Columns: Process(20), Remote Host(Min22), Geo(7), Service(14), State(14), Local(7)
+                let col = column_from_x(x, &[20, 0, 7, 14, 14, 7], frame_w);
+                // Map display column to sort column index used by toggle_sort:
+                // 0→Process(6), 1→RemoteHost(3), 2→Geo(skip), 3→Service(4), 4→State(5), 5→Local(2)
+                if let Some(sort_col) = match col {
+                    Some(0) => Some(6), // Process
+                    Some(1) => Some(3), // Remote Host
+                    Some(3) => Some(4), // Service
+                    Some(4) => Some(5), // State
+                    Some(5) => Some(2), // Local port
+                    _ => None,          // Geo not sortable
+                } {
+                    self.toggle_sort(sort_col);
+                }
+            }
+            BottomTab::Firewall => {
+                // Columns: Status(8), App(Min16), Conns(6), Down(10), Up(10), Total(10), Speed(22)
+                let col = column_from_x(x, &[8, 0, 6, 10, 10, 10, 22], frame_w);
+                if let Some(col) = col {
+                    // Map to bandwidth_tracker sort_column
+                    // 0=Status (skip), 1=App(name=4), 2=Conns(3), 3=Down(1), 4=Up(2), 5=Total(0), 6=Speed(skip)
+                    if let Some(sort_col) = match col {
+                        1 => Some(4), // Application name
+                        2 => Some(3), // Connections
+                        3 => Some(1), // Download
+                        4 => Some(2), // Upload
+                        5 => Some(0), // Total
+                        _ => None,
+                    } {
+                        if self.bandwidth_tracker.sort_column == sort_col {
+                            self.bandwidth_tracker.sort_ascending = !self.bandwidth_tracker.sort_ascending;
+                        } else {
+                            self.bandwidth_tracker.sort_column = sort_col;
+                            self.bandwidth_tracker.sort_ascending = false;
+                        }
+                    }
+                }
+            }
+            BottomTab::Devices => {
+                // Columns: Status(10), IP(22), Hostname(14), MAC(18), Vendor(20), Ports(22), First(9), Last(9), Recv(18), Sent(18), Details(Min)
+                let col = column_from_x(x, &[10, 22, 14, 18, 20, 22, 9, 9, 18, 18, 0], frame_w);
+                if let Some(col) = col {
+                    if self.device_sort_column == col {
+                        self.device_sort_ascending = !self.device_sort_ascending;
+                    } else {
+                        self.device_sort_column = col;
+                        self.device_sort_ascending = false;
+                    }
+                }
+            }
+            BottomTab::Networks => {
+                // Columns: Network(24), Type(10), Status(10), IP(18), Hostname(Min14), MAC(18), Vendor(20), Ports(22)
+                let col = column_from_x(x, &[24, 10, 10, 18, 0, 18, 20, 22], frame_w);
+                if let Some(col) = col {
+                    if self.networks_sort_column == col {
+                        self.networks_sort_ascending = !self.networks_sort_ascending;
+                    } else {
+                        self.networks_sort_column = col;
+                        self.networks_sort_ascending = false;
+                    }
+                }
+            }
+            BottomTab::Traffic => {
+                // Columns: Time(9), Process(16), Host(Min30), Service(14), Event(9), State(Min14)
+                let col = column_from_x(x, &[9, 16, 0, 14, 9, 0], frame_w);
+                if let Some(col) = col {
+                    if self.traffic_sort_column == Some(col) {
+                        self.traffic_sort_ascending = !self.traffic_sort_ascending;
+                    } else {
+                        self.traffic_sort_column = Some(col);
+                        self.traffic_sort_ascending = false;
+                    }
+                }
+            }
+            BottomTab::Alerts => {
+                // Columns: marker(1), Time(9), Severity(6), Type(16), Description(Min30)
+                let col = column_from_x(x, &[1, 9, 6, 16, 0], frame_w);
+                if let Some(col) = col {
+                    if col == 0 { return; } // skip marker column
+                    if self.alert_sort_column == Some(col) {
+                        self.alert_sort_ascending = !self.alert_sort_ascending;
+                    } else {
+                        self.alert_sort_column = Some(col);
+                        self.alert_sort_ascending = false;
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+}
+
+/// Determine which column index a click at x falls into.
+/// `widths` has 0 for Min-constraint columns (they split the remainder).
+fn column_from_x(x: u16, widths: &[u16], total_width: u16) -> Option<usize> {
+    let fixed_total: u16 = widths.iter().sum();
+    let min_count = widths.iter().filter(|&&w| w == 0).count() as u16;
+    let remaining = total_width.saturating_sub(fixed_total);
+    let min_each = if min_count > 0 { remaining / min_count } else { 0 };
+
+    let mut cursor: u16 = 0;
+    for (i, &w) in widths.iter().enumerate() {
+        let actual_w = if w == 0 { min_each } else { w };
+        if x >= cursor && x < cursor + actual_w {
+            return Some(i);
+        }
+        cursor += actual_w;
+    }
+    None
 }

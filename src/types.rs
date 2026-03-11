@@ -157,8 +157,8 @@ pub struct SpeedHistory {
 impl SpeedHistory {
     pub fn new(max_points: usize) -> Self {
         Self {
-            download: std::collections::VecDeque::from(vec![0.0; max_points]),
-            upload: std::collections::VecDeque::from(vec![0.0; max_points]),
+            download: std::collections::VecDeque::with_capacity(max_points),
+            upload: std::collections::VecDeque::with_capacity(max_points),
             max_points,
         }
     }
@@ -236,9 +236,9 @@ pub enum BottomTab {
     Packets,
     Topology,
     Alerts,
-    Usage,
     Firewall,
     Devices,
+    Networks,
 }
 
 impl BottomTab {
@@ -249,24 +249,24 @@ impl BottomTab {
             Self::Traffic => Self::Packets,
             Self::Packets => Self::Topology,
             Self::Topology => Self::Alerts,
-            Self::Alerts => Self::Usage,
-            Self::Usage => Self::Firewall,
+            Self::Alerts => Self::Firewall,
             Self::Firewall => Self::Devices,
-            Self::Devices => Self::Dashboard,
+            Self::Devices => Self::Networks,
+            Self::Networks => Self::Dashboard,
         }
     }
 
     pub fn prev(&self) -> Self {
         match self {
-            Self::Dashboard => Self::Devices,
+            Self::Dashboard => Self::Networks,
             Self::Connections => Self::Dashboard,
             Self::Traffic => Self::Connections,
             Self::Packets => Self::Traffic,
             Self::Topology => Self::Packets,
             Self::Alerts => Self::Topology,
-            Self::Usage => Self::Alerts,
-            Self::Firewall => Self::Usage,
+            Self::Firewall => Self::Alerts,
             Self::Devices => Self::Firewall,
+            Self::Networks => Self::Devices,
         }
     }
 
@@ -278,9 +278,9 @@ impl BottomTab {
             Self::Packets => "Packets",
             Self::Topology => "Topology",
             Self::Alerts => "Alerts",
-            Self::Usage => "Usage",
             Self::Firewall => "Firewall",
             Self::Devices => "Devices",
+            Self::Networks => "Networks",
         }
     }
 
@@ -292,9 +292,9 @@ impl BottomTab {
             Self::Packets => 3,
             Self::Topology => 4,
             Self::Alerts => 5,
-            Self::Usage => 6,
-            Self::Firewall => 7,
-            Self::Devices => 8,
+            Self::Firewall => 6,
+            Self::Devices => 7,
+            Self::Networks => 8,
         }
     }
 
@@ -306,9 +306,9 @@ impl BottomTab {
             3 => Some(Self::Packets),
             4 => Some(Self::Topology),
             5 => Some(Self::Alerts),
-            6 => Some(Self::Usage),
-            7 => Some(Self::Firewall),
-            8 => Some(Self::Devices),
+            6 => Some(Self::Firewall),
+            7 => Some(Self::Devices),
+            8 => Some(Self::Networks),
             _ => None,
         }
     }
@@ -652,6 +652,64 @@ impl AppBandwidth {
     pub fn total_bytes(&self) -> u64 {
         self.download_bytes + self.upload_bytes
     }
+
+    /// Smoothed recent download speed (average of last 3 samples).
+    /// Prevents flickering between "idle" and real values on alternating ticks.
+    pub fn smooth_down(&self) -> f64 {
+        let n = self.recent_down.len();
+        if n == 0 { return 0.0; }
+        let take = n.min(3);
+        let sum: f64 = self.recent_down.iter().rev().take(take).sum();
+        sum / take as f64
+    }
+
+    /// Smoothed recent upload speed (average of last 3 samples).
+    pub fn smooth_up(&self) -> f64 {
+        let n = self.recent_up.len();
+        if n == 0 { return 0.0; }
+        let take = n.min(3);
+        let sum: f64 = self.recent_up.iter().rev().take(take).sum();
+        sum / take as f64
+    }
+}
+
+// ─── Network category (for Networks tab) ─────────────────────────────────────
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum NetworkCategory {
+    Vpn,
+    Docker,
+    Wsl,
+    HyperV,
+    Virtual,
+    Secondary,
+    Bluetooth,
+    MeshVpn,
+    Hotspot,
+    Tunnel,
+}
+
+/// A non-primary network (VPN, Docker, WSL, secondary adapter, etc.).
+#[derive(Clone, Debug)]
+pub struct RemoteNetwork {
+    /// Human-readable name (e.g., "WireGuard Tunnel", "Docker: bridge").
+    pub name: String,
+    /// Network category.
+    pub category: NetworkCategory,
+    /// Internal adapter name.
+    pub adapter_name: String,
+    /// Our IP on this network.
+    pub local_ip: std::net::Ipv4Addr,
+    /// Subnet mask.
+    pub subnet_mask: std::net::Ipv4Addr,
+    /// CIDR notation (e.g., "10.0.0.0/24").
+    pub subnet_cidr: String,
+    /// Gateway address (if configured).
+    pub gateway: Option<std::net::Ipv4Addr>,
+    /// Whether the adapter is active.
+    pub is_active: bool,
+    /// Devices discovered on this network.
+    pub devices: Vec<LanDevice>,
 }
 
 // ─── LAN device (scanner) ───────────────────────────────────────────────────
@@ -667,6 +725,20 @@ pub struct LanDevice {
     pub is_online: bool,
     /// User-assigned custom label for this device.
     pub custom_name: Option<String>,
+    /// Aggregated discovery details from all resolution methods.
+    pub discovery_info: String,
+    /// Open ports discovered via TCP connect scan.
+    pub open_ports: String,
+    /// Bytes sent from this PC to this device (cumulative).
+    pub bytes_sent: u64,
+    /// Bytes received by this PC from this device (cumulative).
+    pub bytes_received: u64,
+    /// Current tick accumulators (reset each tick).
+    pub tick_sent: u64,
+    pub tick_received: u64,
+    /// Smoothed speed (bytes/s) from last few ticks.
+    pub speed_sent: f64,
+    pub speed_received: f64,
 }
 
 // ─── Firewall rule ──────────────────────────────────────────────────────────
@@ -759,11 +831,24 @@ impl FirewallAppAction {
     }
 }
 
-/// State for the floating firewall action menu.
-pub struct FirewallMenuState {
+/// Combined firewall + bandwidth detail for the popup overlay.
+#[derive(Clone, Debug)]
+pub struct FirewallAppDetail {
     pub app_name: String,
     pub app_path: Option<String>,
-    pub selected: usize, // 0=Allow, 1=Deny, 2=Drop
+    pub is_blocked: bool,
+    pub current_action: Option<FirewallAppAction>,
+    pub conn_count: usize,
+    // Bandwidth data
+    pub download_bytes: u64,
+    pub upload_bytes: u64,
+    pub current_down_speed: f64,
+    pub current_up_speed: f64,
+    pub peak_down_speed: f64,
+    pub peak_up_speed: f64,
+    pub last_seen: String,
+    // Action selector state
+    pub selected_action: usize, // 0=Allow, 1=Deny, 2=Drop, 3=Back
 }
 
 // ─── Data plan / usage persistence ──────────────────────────────────────────
@@ -846,7 +931,6 @@ pub enum DetailKind {
     Connection(Connection),
     TrafficEvent(TrafficEntry),
     Alert(Alert),
-    AppBandwidth(AppBandwidth),
     Device(LanDevice),
-    FirewallRule(FirewallRule),
+    FirewallApp(FirewallAppDetail),
 }

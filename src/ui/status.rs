@@ -16,9 +16,9 @@ pub fn draw_tab_menu(f: &mut Frame, area: Rect, app: &App) {
         BottomTab::Packets,
         BottomTab::Topology,
         BottomTab::Alerts,
-        BottomTab::Usage,
         BottomTab::Firewall,
         BottomTab::Devices,
+        BottomTab::Networks,
     ];
     let mut tab_spans: Vec<Span<'static>> = Vec::new();
     for (i, tab) in tabs.iter().enumerate() {
@@ -96,13 +96,11 @@ pub fn draw_key_hints(f: &mut Frame, area: Rect, app: &App) {
             key_span("c", "Clear All"),
             key_span("z", &format!("{}", if app.alert_engine.is_snoozed() { "Unsnooze" } else { "Snooze 5m" })),
         ],
-        BottomTab::Usage => vec![
-            key_span("1-4", "Sort"),
-            key_span("e", "Export CSV"),
-        ],
         BottomTab::Firewall => vec![
-            key_span("Enter", "Action"),
+            key_span("Enter", "Detail"),
+            key_span("1-4", "Sort"),
             key_span("r", "Refresh"),
+            key_span("e", "Export"),
             key_span("f", "Filter"),
             key_span("x", "Reset All"),
             key_span("Esc", "Clear"),
@@ -110,6 +108,10 @@ pub fn draw_key_hints(f: &mut Frame, area: Rect, app: &App) {
         BottomTab::Devices => vec![
             key_span("s", "Scan Now"),
             key_span("r", "Rename"),
+        ],
+        BottomTab::Networks => vec![
+            key_span("s", "Scan Now"),
+            key_span("b", &format!("{}", if app.bluetooth_expanded { "Collapse BT" } else { "Expand BT" })),
         ],
         BottomTab::Packets => vec![
             key_span("Space", &format!("{}", if app.packets_paused { "Resume" } else { "Pause" })),

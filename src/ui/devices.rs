@@ -9,10 +9,39 @@ use ratatui::widgets::{
 use ratatui::Frame;
 
 use crate::app::App;
+use crate::utils::format_bytes;
+
+fn format_speed(bps: f64) -> String {
+    if bps < 1.0 {
+        "—".to_string()
+    } else {
+        format!("{}/s", format_bytes(bps as u64))
+    }
+}
 
 pub fn draw_devices(f: &mut Frame, area: Rect, app: &App) {
     let scanner = &app.network_scanner;
-    let devices = &scanner.devices;
+    let mut devices: Vec<&crate::types::LanDevice> = scanner.devices.iter().collect();
+    // Sort by selected column
+    let sort_col = app.device_sort_column;
+    let sort_asc = app.device_sort_ascending;
+    devices.sort_by(|a, b| {
+        let ord = match sort_col {
+            0 => b.is_online.cmp(&a.is_online),     // Status: online first
+            1 => a.ip.to_string().cmp(&b.ip.to_string()), // IP
+            2 => a.hostname.as_deref().unwrap_or("~").cmp(&b.hostname.as_deref().unwrap_or("~")),
+            3 => a.mac.cmp(&b.mac),
+            4 => a.vendor.as_deref().unwrap_or("~").cmp(&b.vendor.as_deref().unwrap_or("~")),
+            5 => a.open_ports.cmp(&b.open_ports),    // Ports
+            6 => a.first_seen.cmp(&b.first_seen),
+            7 => b.last_seen.cmp(&a.last_seen),      // Last seen: most recent first
+            8 => a.speed_received.partial_cmp(&b.speed_received).unwrap_or(std::cmp::Ordering::Equal),
+            9 => a.speed_sent.partial_cmp(&b.speed_sent).unwrap_or(std::cmp::Ordering::Equal),
+            10 => a.discovery_info.cmp(&b.discovery_info),
+            _ => std::cmp::Ordering::Equal,
+        };
+        if sort_asc { ord.reverse() } else { ord }
+    });
     let total = devices.len();
     let online = scanner.online_count();
 
@@ -37,14 +66,24 @@ pub fn draw_devices(f: &mut Frame, area: Rect, app: &App) {
         .fg(Color::Rgb(160, 180, 220))
         .add_modifier(Modifier::BOLD);
 
+    let si = |col: usize| -> &str {
+        if app.device_sort_column == col {
+            if app.device_sort_ascending { " \u{25b2}" } else { " \u{25bc}" }
+        } else { "" }
+    };
+
     let header = Row::new(vec![
-        Cell::from(Span::styled("Status", hdr_style)),
-        Cell::from(Span::styled("IP Address", hdr_style)),
-        Cell::from(Span::styled("Hostname", hdr_style)),
-        Cell::from(Span::styled("MAC Address", hdr_style)),
-        Cell::from(Span::styled("Name / Vendor", hdr_style)),
-        Cell::from(Span::styled("First Seen", hdr_style)),
-        Cell::from(Span::styled("Last Seen", hdr_style)),
+        Cell::from(Span::styled(format!("Status{}", si(0)), hdr_style)),
+        Cell::from(Span::styled(format!("IP Address{}", si(1)), hdr_style)),
+        Cell::from(Span::styled(format!("Hostname{}", si(2)), hdr_style)),
+        Cell::from(Span::styled(format!("MAC{}", si(3)), hdr_style)),
+        Cell::from(Span::styled(format!("Vendor{}", si(4)), hdr_style)),
+        Cell::from(Span::styled(format!("Ports{}", si(5)), hdr_style)),
+        Cell::from(Span::styled(format!("First{}", si(6)), hdr_style)),
+        Cell::from(Span::styled(format!("Last{}", si(7)), hdr_style)),
+        Cell::from(Span::styled(format!("↓ Recv{}", si(8)), hdr_style)),
+        Cell::from(Span::styled(format!("↑ Sent{}", si(9)), hdr_style)),
+        Cell::from(Span::styled(format!("Details{}", si(10)), hdr_style)),
     ])
     .height(1)
     .style(Style::default().bg(Color::Rgb(18, 25, 42)));
@@ -124,6 +163,18 @@ pub fn draw_devices(f: &mut Frame, area: Rect, app: &App) {
                     Style::default().fg(vendor_color),
                 )),
                 Cell::from(Span::styled(
+                    if device.open_ports.is_empty() {
+                        "—".to_string()
+                    } else {
+                        device.open_ports.clone()
+                    },
+                    Style::default().fg(if device.open_ports.is_empty() {
+                        Color::Rgb(60, 70, 90)
+                    } else {
+                        Color::Rgb(180, 200, 120)
+                    }),
+                )),
+                Cell::from(Span::styled(
                     first_seen,
                     Style::default().fg(Color::Rgb(90, 100, 120)),
                 )),
@@ -131,13 +182,71 @@ pub fn draw_devices(f: &mut Frame, area: Rect, app: &App) {
                     last_seen,
                     Style::default().fg(Color::Rgb(90, 100, 120)),
                 )),
+                Cell::from(Span::styled(
+                    if device.bytes_received > 0 {
+                        format!("{} ({})", format_bytes(device.bytes_received), format_speed(device.speed_received))
+                    } else {
+                        "—".to_string()
+                    },
+                    Style::default().fg(if device.speed_received > 0.0 {
+                        Color::Rgb(80, 200, 255)
+                    } else {
+                        Color::Rgb(60, 70, 90)
+                    }),
+                )),
+                Cell::from(Span::styled(
+                    if device.bytes_sent > 0 {
+                        format!("{} ({})", format_bytes(device.bytes_sent), format_speed(device.speed_sent))
+                    } else {
+                        "—".to_string()
+                    },
+                    Style::default().fg(if device.speed_sent > 0.0 {
+                        Color::Rgb(255, 180, 100)
+                    } else {
+                        Color::Rgb(60, 70, 90)
+                    }),
+                )),
+                Cell::from(Span::styled(
+                    if device.discovery_info.is_empty() {
+                        "—".to_string()
+                    } else {
+                        device.discovery_info.clone()
+                    },
+                    Style::default().fg(if device.discovery_info.is_empty() {
+                        Color::Rgb(60, 70, 90)
+                    } else {
+                        Color::Rgb(140, 160, 130)
+                    }),
+                )),
             ])
             .style(Style::default().bg(row_bg))
         })
         .collect();
 
     // Title
-    let scanning_str = if scanner.is_scanning() { " 🔍 Scanning..." } else { "" };
+    let scanning_str = if scanner.is_scanning() {
+        let (probed, total) = scanner.scan_progress();
+        let phase = scanner.scan_phase();
+        match phase {
+            crate::network::scanner::SCAN_PHASE_ARP => {
+                if total > 0 {
+                    format!(" 🔍 ARP {}/{} IPs", probed, total)
+                } else {
+                    " 🔍 Starting...".to_string()
+                }
+            }
+            crate::network::scanner::SCAN_PHASE_DNS => {
+                if total > 0 {
+                    format!(" 🔍 DNS {}/{} hosts", probed, total)
+                } else {
+                    " 🔍 Resolving hostnames...".to_string()
+                }
+            }
+            _ => " 🔍 Scanning...".to_string(),
+        }
+    } else {
+        String::new()
+    };
     let local_ip_str = scanner.local_ip
         .map(|ip| format!("  Local: {}", ip))
         .unwrap_or_default();
@@ -195,11 +304,15 @@ pub fn draw_devices(f: &mut Frame, area: Rect, app: &App) {
         [
             Constraint::Length(10),  // Status
             Constraint::Length(22),  // IP Address
-            Constraint::Min(16),     // Hostname
+            Constraint::Length(14),  // Hostname
             Constraint::Length(18),  // MAC Address
-            Constraint::Length(16),  // Vendor
-            Constraint::Length(10),  // First Seen
-            Constraint::Length(10),  // Last Seen
+            Constraint::Length(20),  // Vendor (wider to avoid truncation)
+            Constraint::Length(22),  // Ports
+            Constraint::Length(9),   // First Seen
+            Constraint::Length(9),   // Last Seen
+            Constraint::Length(18),  // Recv
+            Constraint::Length(18),  // Sent
+            Constraint::Min(20),    // Details
         ],
     )
     .header(header)

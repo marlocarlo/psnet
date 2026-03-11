@@ -107,17 +107,38 @@ pub fn draw_alerts(f: &mut Frame, area: Rect, app: &App) {
         .fg(Color::Rgb(160, 180, 220))
         .add_modifier(Modifier::BOLD);
 
+    let si = |col: usize| -> &str {
+        if app.alert_sort_column == Some(col) {
+            if app.alert_sort_ascending { " \u{25b2}" } else { " \u{25bc}" }
+        } else { "" }
+    };
+
     let header = Row::new(vec![
         Cell::from(Span::styled("", hdr_style)),
-        Cell::from(Span::styled("Time", hdr_style)),
-        Cell::from(Span::styled("Severity", hdr_style)),
-        Cell::from(Span::styled("Type", hdr_style)),
+        Cell::from(Span::styled(format!("Time{}", si(1)), hdr_style)),
+        Cell::from(Span::styled(format!("Sev{}", si(2)), hdr_style)),
+        Cell::from(Span::styled(format!("Type{}", si(3)), hdr_style)),
         Cell::from(Span::styled("Description", hdr_style)),
     ])
     .height(1)
     .style(Style::default().bg(Color::Rgb(18, 25, 42)));
 
-    let rows: Vec<Row> = alerts
+    // Sort alerts if a sort column is selected
+    let mut sorted_alerts: Vec<&crate::types::Alert> = alerts.iter().collect();
+    if let Some(sort_col) = app.alert_sort_column {
+        let asc = app.alert_sort_ascending;
+        sorted_alerts.sort_by(|a, b| {
+            let ord = match sort_col {
+                1 => a.timestamp.cmp(&b.timestamp),
+                2 => a.kind.severity().label().cmp(b.kind.severity().label()),
+                3 => a.kind.label().cmp(b.kind.label()),
+                _ => std::cmp::Ordering::Equal,
+            };
+            if asc { ord } else { ord.reverse() }
+        });
+    }
+
+    let rows: Vec<Row> = sorted_alerts
         .iter()
         .rev()
         .enumerate()
