@@ -1,3 +1,4 @@
 /target
 .playwright-mcp/
 *.nupkg
+.claude/worktrees/
