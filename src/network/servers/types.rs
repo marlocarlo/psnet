@@ -324,6 +324,19 @@ pub enum ServerKind {
     IntelSUR,
     HyperVManager,
 
+    // -- Windows system services (svchost-hosted) --
+    RpcEndpointMapper,
+    SSDP,
+    IPsec,
+    LLMNR,
+    CDPSvc,
+    QWAVE,
+    FDResPub,
+    IpHelper,
+    WindowsEventLog,
+    TaskScheduler,
+    InternetConnectionSharing,
+
     // -- Other / Unknown --
     CustomHttp,
     GenericTcp,
@@ -631,6 +644,18 @@ impl ServerKind {
             Self::IntelSUR => "Intel SUR",
             Self::HyperVManager => "Hyper-V Manager",
 
+            Self::RpcEndpointMapper => "RPC Endpoint Mapper",
+            Self::SSDP => "SSDP (UPnP Discovery)",
+            Self::IPsec => "IPsec (IKE)",
+            Self::LLMNR => "LLMNR",
+            Self::CDPSvc => "Connected Devices Platform",
+            Self::QWAVE => "Quality Audio/Video (qWave)",
+            Self::FDResPub => "Function Discovery",
+            Self::IpHelper => "IP Helper Service",
+            Self::WindowsEventLog => "Windows Event Log",
+            Self::TaskScheduler => "Task Scheduler",
+            Self::InternetConnectionSharing => "Internet Connection Sharing",
+
             Self::CustomHttp => "HTTP Server (unknown)",
             Self::GenericTcp => "TCP Listener",
             Self::GenericUdp => "UDP Listener",
@@ -908,7 +933,18 @@ impl ServerKind {
             | Self::NordVPN
             | Self::AppleMobileDevice
             | Self::IntelSUR
-            | Self::HyperVManager => ServerCategory::SystemService,
+            | Self::HyperVManager
+            | Self::RpcEndpointMapper
+            | Self::SSDP
+            | Self::IPsec
+            | Self::LLMNR
+            | Self::CDPSvc
+            | Self::QWAVE
+            | Self::FDResPub
+            | Self::IpHelper
+            | Self::WindowsEventLog
+            | Self::TaskScheduler
+            | Self::InternetConnectionSharing => ServerCategory::SystemService,
 
             Self::CustomHttp
             | Self::GenericTcp
@@ -1149,6 +1185,18 @@ impl ServerKind {
             Self::AppleMobileDevice => "AMDS",
             Self::IntelSUR => "ISUR",
             Self::HyperVManager => "HV",
+
+            Self::RpcEndpointMapper => "RPC",
+            Self::SSDP => "SSDP",
+            Self::IPsec => "IKE",
+            Self::LLMNR => "LLMR",
+            Self::CDPSvc => "CDP",
+            Self::QWAVE => "QW",
+            Self::FDResPub => "FD",
+            Self::IpHelper => "IPH",
+            Self::WindowsEventLog => "EVT",
+            Self::TaskScheduler => "TS",
+            Self::InternetConnectionSharing => "ICS",
 
             // Other
             Self::CustomHttp => "h?",
@@ -1472,6 +1520,18 @@ impl ServerKind {
             Self::IntelSUR => "Intel Software Update and Retrieval service",
             Self::HyperVManager => "Microsoft Hyper-V Virtual Machine Management Service",
 
+            Self::RpcEndpointMapper => "Windows RPC Endpoint Mapper for DCOM and RPC services",
+            Self::SSDP => "Simple Service Discovery Protocol for UPnP device discovery",
+            Self::IPsec => "Internet Key Exchange for IPsec VPN tunnels",
+            Self::LLMNR => "Link-Local Multicast Name Resolution for local hostname lookup",
+            Self::CDPSvc => "Windows Connected Devices Platform for device pairing",
+            Self::QWAVE => "Quality Windows Audio Video Experience for streaming QoS",
+            Self::FDResPub => "Function Discovery Resource Publication for UPnP/WSD",
+            Self::IpHelper => "Windows IP Helper for IPv6 transition and Teredo tunneling",
+            Self::WindowsEventLog => "Windows Event Log RPC service endpoint",
+            Self::TaskScheduler => "Windows Task Scheduler RPC service endpoint",
+            Self::InternetConnectionSharing => "Windows Internet Connection Sharing (DNS/DHCP relay)",
+
             Self::CustomHttp => "Unidentified HTTP server responding on this port",
             Self::GenericTcp => "Unknown TCP service listening for connections",
             Self::GenericUdp => "Unknown UDP service accepting datagrams",
@@ -1709,6 +1769,18 @@ impl ServerKind {
             Self::AppleMobileDevice => "\u{1F34E}",
             Self::IntelSUR => "\u{1F4BB}",
             Self::HyperVManager => "\u{1F5A5}",
+
+            Self::RpcEndpointMapper => "\u{1F517}",
+            Self::SSDP => "\u{1F4E1}",
+            Self::IPsec => "\u{1F512}",
+            Self::LLMNR => "\u{1F4DB}",
+            Self::CDPSvc => "\u{1F4F2}",
+            Self::QWAVE => "\u{1F3B5}",
+            Self::FDResPub => "\u{1F50D}",
+            Self::IpHelper => "\u{1F310}",
+            Self::WindowsEventLog => "\u{1F4CB}",
+            Self::TaskScheduler => "\u{23F0}",
+            Self::InternetConnectionSharing => "\u{1F4E1}",
 
             // Other
             Self::CustomHttp => "\u{1F310}",

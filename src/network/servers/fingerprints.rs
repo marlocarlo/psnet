@@ -3951,20 +3951,16 @@ pub static FINGERPRINTS: &[TechFingerprint] = &[
 
     // ── RPC Endpoint Mapper ──
     TechFingerprint {
-        kind: ServerKind::GenericTcp,
+        kind: ServerKind::RpcEndpointMapper,
         priority: 5,
         process_names: &[],
         exe_path_contains: &[],
         cmdline_contains: &["rpcss"],
         cmdline_requires_process: &["svchost"],
-        http_server_contains: &[],
-        http_powered_by_contains: &[],
-        http_header_contains: &[],
-        html_title_contains: &[],
-        banner_starts_with: &[],
-        banner_contains: &[],
-        default_ports: &[135],
-        version_from_header_prefix: None,
+        http_server_contains: &[], http_powered_by_contains: &[],
+        http_header_contains: &[], html_title_contains: &[],
+        banner_starts_with: &[], banner_contains: &[],
+        default_ports: &[135], version_from_header_prefix: None,
     },
 
     // ── DNS Client ──
@@ -4163,8 +4159,8 @@ pub static FINGERPRINTS: &[TechFingerprint] = &[
 
     // ── Windows Event Log ──
     TechFingerprint {
-        kind: ServerKind::GenericTcp,
-        priority: 8,
+        kind: ServerKind::WindowsEventLog,
+        priority: 5,
         process_names: &[],
         exe_path_contains: &[],
         cmdline_contains: &["eventlog"],
@@ -4181,8 +4177,8 @@ pub static FINGERPRINTS: &[TechFingerprint] = &[
 
     // ── Task Scheduler ──
     TechFingerprint {
-        kind: ServerKind::GenericTcp,
-        priority: 8,
+        kind: ServerKind::TaskScheduler,
+        priority: 5,
         process_names: &[],
         exe_path_contains: &[],
         cmdline_contains: &["schedule"],
@@ -4269,8 +4265,8 @@ pub static FINGERPRINTS: &[TechFingerprint] = &[
 
     // ── IPsec Policy Agent ──
     TechFingerprint {
-        kind: ServerKind::GenericTcp,
-        priority: 8,
+        kind: ServerKind::IPsec,
+        priority: 5,
         process_names: &[],
         exe_path_contains: &[],
         cmdline_contains: &["policyagent"],
@@ -4287,8 +4283,8 @@ pub static FINGERPRINTS: &[TechFingerprint] = &[
 
     // ── SSDP Discovery (UPnP) ──
     TechFingerprint {
-        kind: ServerKind::GenericUdp,
-        priority: 8,
+        kind: ServerKind::SSDP,
+        priority: 5,
         process_names: &[],
         exe_path_contains: &[],
         cmdline_contains: &["ssdpsrv"],
@@ -4305,8 +4301,8 @@ pub static FINGERPRINTS: &[TechFingerprint] = &[
 
     // ── Connected Devices Platform (CDPSvc) ──
     TechFingerprint {
-        kind: ServerKind::GenericTcp,
-        priority: 8,
+        kind: ServerKind::CDPSvc,
+        priority: 5,
         process_names: &[],
         exe_path_contains: &[],
         cmdline_contains: &["cdpsvc"],
@@ -4344,8 +4340,8 @@ pub static FINGERPRINTS: &[TechFingerprint] = &[
 
     // ── IP Helper (iphlpsvc) — IPv6 transition, Teredo, ISATAP ──
     TechFingerprint {
-        kind: ServerKind::GenericTcp,
-        priority: 8,
+        kind: ServerKind::IpHelper,
+        priority: 5,
         process_names: &[],
         exe_path_contains: &[],
         cmdline_contains: &["iphlpsvc"],
@@ -4362,8 +4358,8 @@ pub static FINGERPRINTS: &[TechFingerprint] = &[
 
     // ── IKE and AuthIP IPsec Keying Modules ──
     TechFingerprint {
-        kind: ServerKind::GenericUdp,
-        priority: 8,
+        kind: ServerKind::IPsec,
+        priority: 5,
         process_names: &[],
         exe_path_contains: &[],
         cmdline_contains: &["ikeext"],
@@ -4380,8 +4376,8 @@ pub static FINGERPRINTS: &[TechFingerprint] = &[
 
     // ── Internet Connection Sharing (SharedAccess) ──
     TechFingerprint {
-        kind: ServerKind::GenericTcp,
-        priority: 8,
+        kind: ServerKind::InternetConnectionSharing,
+        priority: 5,
         process_names: &[],
         exe_path_contains: &[],
         cmdline_contains: &["sharedaccess"],
@@ -9180,6 +9176,278 @@ pub static FINGERPRINTS: &[TechFingerprint] = &[
         http_header_contains: &[], html_title_contains: &[],
         banner_starts_with: &[], banner_contains: &[],
         default_ports: &[53], version_from_header_prefix: None,
+    },
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // WINDOWS SYSTEM SERVICES (svchost-hosted)
+    // svchost fingerprints use cmdline-only matching (no process_names) to avoid
+    // false positives — svchost hosts dozens of services, so process name alone
+    // would match all of them. The cmdline contains the service group (-k flag)
+    // which uniquely identifies the hosted service.
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    // ── RPC Endpoint Mapper (svchost -k RPCSS) ──
+    TechFingerprint {
+        kind: ServerKind::RpcEndpointMapper, priority: 5,
+        process_names: &[],
+        exe_path_contains: &[],
+        cmdline_contains: &["rpcss"], cmdline_requires_process: &["svchost"],
+        http_server_contains: &[], http_powered_by_contains: &[],
+        http_header_contains: &[], html_title_contains: &[],
+        banner_starts_with: &[], banner_contains: &[],
+        default_ports: &[135], version_from_header_prefix: None,
+    },
+
+    // ── SSDP / UPnP Discovery (svchost -k LocalServiceAndNoImpersonation / SSDPSRV) ──
+    TechFingerprint {
+        kind: ServerKind::SSDP, priority: 5,
+        process_names: &[],
+        exe_path_contains: &[],
+        cmdline_contains: &["localserviceandnoimpersonation"], cmdline_requires_process: &["svchost"],
+        http_server_contains: &[], http_powered_by_contains: &[],
+        http_header_contains: &[], html_title_contains: &[],
+        banner_starts_with: &[], banner_contains: &[],
+        default_ports: &[1900], version_from_header_prefix: None,
+    },
+
+    // ── IPsec IKE (svchost -k NetworkServiceNetworkRestricted / IKEEXT) ──
+    TechFingerprint {
+        kind: ServerKind::IPsec, priority: 5,
+        process_names: &[],
+        exe_path_contains: &[],
+        cmdline_contains: &["ikeext"], cmdline_requires_process: &["svchost"],
+        http_server_contains: &[], http_powered_by_contains: &[],
+        http_header_contains: &[], html_title_contains: &[],
+        banner_starts_with: &[], banner_contains: &[],
+        default_ports: &[500, 4500], version_from_header_prefix: None,
+    },
+
+    // ── Internet Connection Sharing / SharedAccess (DNS/DHCP relay) ──
+    TechFingerprint {
+        kind: ServerKind::InternetConnectionSharing, priority: 5,
+        process_names: &[],
+        exe_path_contains: &[],
+        cmdline_contains: &["sharedaccess"], cmdline_requires_process: &["svchost"],
+        http_server_contains: &[], http_powered_by_contains: &[],
+        http_header_contains: &[], html_title_contains: &[],
+        banner_starts_with: &[], banner_contains: &[],
+        default_ports: &[53, 67, 68], version_from_header_prefix: None,
+    },
+
+    // ── LLMNR / DNS Cache (svchost -k NetworkService / Dnscache) ──
+    TechFingerprint {
+        kind: ServerKind::LLMNR, priority: 5,
+        process_names: &[],
+        exe_path_contains: &[],
+        cmdline_contains: &["networkservice -p"], cmdline_requires_process: &["svchost"],
+        http_server_contains: &[], http_powered_by_contains: &[],
+        http_header_contains: &[], html_title_contains: &[],
+        banner_starts_with: &[], banner_contains: &[],
+        default_ports: &[5355], version_from_header_prefix: None,
+    },
+
+    // ── Connected Devices Platform (svchost -k LocalService -p) ──
+    TechFingerprint {
+        kind: ServerKind::CDPSvc, priority: 5,
+        process_names: &[],
+        exe_path_contains: &[],
+        cmdline_contains: &["localservice -p"], cmdline_requires_process: &["svchost"],
+        http_server_contains: &[], http_powered_by_contains: &[],
+        http_header_contains: &[], html_title_contains: &[],
+        banner_starts_with: &[], banner_contains: &[],
+        default_ports: &[5040, 5050], version_from_header_prefix: None,
+    },
+
+    // ── Quality Windows Audio Video Experience (QWAVE) ──
+    TechFingerprint {
+        kind: ServerKind::QWAVE, priority: 5,
+        process_names: &[],
+        exe_path_contains: &[],
+        cmdline_contains: &["qwave"], cmdline_requires_process: &["svchost"],
+        http_server_contains: &[], http_powered_by_contains: &[],
+        http_header_contains: &[], html_title_contains: &[],
+        banner_starts_with: &[], banner_contains: &[],
+        default_ports: &[2177], version_from_header_prefix: None,
+    },
+
+    // ── Function Discovery Resource Publication (FDResPub) ──
+    TechFingerprint {
+        kind: ServerKind::FDResPub, priority: 5,
+        process_names: &[],
+        exe_path_contains: &[],
+        cmdline_contains: &["fdrespub"], cmdline_requires_process: &["svchost"],
+        http_server_contains: &[], http_powered_by_contains: &[],
+        http_header_contains: &[], html_title_contains: &[],
+        banner_starts_with: &[], banner_contains: &[],
+        default_ports: &[3702], version_from_header_prefix: None,
+    },
+
+    // ── IP Helper Service (iphlpsvc) ──
+    TechFingerprint {
+        kind: ServerKind::IpHelper, priority: 5,
+        process_names: &[],
+        exe_path_contains: &[],
+        cmdline_contains: &["iphlpsvc"], cmdline_requires_process: &["svchost"],
+        http_server_contains: &[], http_powered_by_contains: &[],
+        http_header_contains: &[], html_title_contains: &[],
+        banner_starts_with: &[], banner_contains: &[],
+        default_ports: &[], version_from_header_prefix: None,
+    },
+
+    // ── Windows Event Log (svchost -k LocalServiceNetworkRestricted -p) ──
+    TechFingerprint {
+        kind: ServerKind::WindowsEventLog, priority: 5,
+        process_names: &[],
+        exe_path_contains: &[],
+        cmdline_contains: &["localservicenetworkrestricted"], cmdline_requires_process: &["svchost"],
+        http_server_contains: &[], http_powered_by_contains: &[],
+        http_header_contains: &[], html_title_contains: &[],
+        banner_starts_with: &[], banner_contains: &[],
+        default_ports: &[], version_from_header_prefix: None,
+    },
+
+    // ── Task Scheduler (svchost -k netsvcs -p) ──
+    TechFingerprint {
+        kind: ServerKind::TaskScheduler, priority: 5,
+        process_names: &[],
+        exe_path_contains: &[],
+        cmdline_contains: &["netsvcs"], cmdline_requires_process: &["svchost"],
+        http_server_contains: &[], http_powered_by_contains: &[],
+        http_header_contains: &[], html_title_contains: &[],
+        banner_starts_with: &[], banner_contains: &[],
+        default_ports: &[], version_from_header_prefix: None,
+    },
+
+    // ── IPsec Policy Agent (svchost -k NetworkServiceNetworkRestricted) ──
+    TechFingerprint {
+        kind: ServerKind::IPsec, priority: 6,
+        process_names: &[],
+        exe_path_contains: &[],
+        cmdline_contains: &["policyagent"], cmdline_requires_process: &["svchost"],
+        http_server_contains: &[], http_powered_by_contains: &[],
+        http_header_contains: &[], html_title_contains: &[],
+        banner_starts_with: &[], banner_contains: &[],
+        default_ports: &[], version_from_header_prefix: None,
+    },
+
+    // ── Windows Explorer (shell, RPC listener) ──
+    TechFingerprint {
+        kind: ServerKind::GenericTcp, priority: 10,
+        process_names: &["explorer"],
+        exe_path_contains: &["\\explorer.exe"],
+        cmdline_contains: &[], cmdline_requires_process: &[],
+        http_server_contains: &[], http_powered_by_contains: &[],
+        http_header_contains: &[], html_title_contains: &[],
+        banner_starts_with: &[], banner_contains: &[],
+        default_ports: &[], version_from_header_prefix: None,
+    },
+
+    // ── Claude Desktop App ──
+    TechFingerprint {
+        kind: ServerKind::GenericUdp, priority: 10,
+        process_names: &["claude"],
+        exe_path_contains: &["claude"],
+        cmdline_contains: &[], cmdline_requires_process: &[],
+        http_server_contains: &[], http_powered_by_contains: &[],
+        http_header_contains: &[], html_title_contains: &[],
+        banner_starts_with: &[], banner_contains: &[],
+        default_ports: &[], version_from_header_prefix: None,
+    },
+
+    // ── Windows services.exe (SCM) ──
+    TechFingerprint {
+        kind: ServerKind::GenericTcp, priority: 10,
+        process_names: &["services"],
+        exe_path_contains: &["\\services.exe"],
+        cmdline_contains: &[], cmdline_requires_process: &[],
+        http_server_contains: &[], http_powered_by_contains: &[],
+        http_header_contains: &[], html_title_contains: &[],
+        banner_starts_with: &[], banner_contains: &[],
+        default_ports: &[], version_from_header_prefix: None,
+    },
+
+    // ── Windows lsass.exe (Local Security Authority) ──
+    TechFingerprint {
+        kind: ServerKind::GenericTcp, priority: 10,
+        process_names: &["lsass"],
+        exe_path_contains: &["\\lsass.exe"],
+        cmdline_contains: &[], cmdline_requires_process: &[],
+        http_server_contains: &[], http_powered_by_contains: &[],
+        http_header_contains: &[], html_title_contains: &[],
+        banner_starts_with: &[], banner_contains: &[],
+        default_ports: &[], version_from_header_prefix: None,
+    },
+
+    // ── Windows wininit.exe (Windows Initialization) ──
+    TechFingerprint {
+        kind: ServerKind::GenericTcp, priority: 10,
+        process_names: &["wininit"],
+        exe_path_contains: &["\\wininit.exe"],
+        cmdline_contains: &[], cmdline_requires_process: &[],
+        http_server_contains: &[], http_powered_by_contains: &[],
+        http_header_contains: &[], html_title_contains: &[],
+        banner_starts_with: &[], banner_contains: &[],
+        default_ports: &[], version_from_header_prefix: None,
+    },
+
+    // ── DAS Host (Device Association Service) ──
+    TechFingerprint {
+        kind: ServerKind::GenericTcp, priority: 10,
+        process_names: &["dashost"],
+        exe_path_contains: &["dashost.exe"],
+        cmdline_contains: &[], cmdline_requires_process: &[],
+        http_server_contains: &[], http_powered_by_contains: &[],
+        http_header_contains: &[], html_title_contains: &[],
+        banner_starts_with: &[], banner_contains: &[],
+        default_ports: &[3702], version_from_header_prefix: None,
+    },
+
+    // ── OpenVPN ──
+    TechFingerprint {
+        kind: ServerKind::OpenVPN, priority: 5,
+        process_names: &["openvpn"],
+        exe_path_contains: &["openvpn"],
+        cmdline_contains: &[], cmdline_requires_process: &[],
+        http_server_contains: &[], http_powered_by_contains: &[],
+        http_header_contains: &[], html_title_contains: &[],
+        banner_starts_with: &[], banner_contains: &[],
+        default_ports: &[1194], version_from_header_prefix: None,
+    },
+
+    // ── Windows MultiPoint Server (WmsSvc.exe) ──
+    TechFingerprint {
+        kind: ServerKind::GenericTcp, priority: 10,
+        process_names: &["wmssvc"],
+        exe_path_contains: &["multipoint server", "wmssvc"],
+        cmdline_contains: &[], cmdline_requires_process: &[],
+        http_server_contains: &[], http_powered_by_contains: &[],
+        http_header_contains: &[], html_title_contains: &[],
+        banner_starts_with: &[], banner_contains: &[],
+        default_ports: &[3702], version_from_header_prefix: None,
+    },
+
+    // ── ChatGPT Desktop App ──
+    TechFingerprint {
+        kind: ServerKind::GenericUdp, priority: 10,
+        process_names: &["chatgpt"],
+        exe_path_contains: &["chatgpt"],
+        cmdline_contains: &[], cmdline_requires_process: &[],
+        http_server_contains: &[], http_powered_by_contains: &[],
+        http_header_contains: &[], html_title_contains: &[],
+        banner_starts_with: &[], banner_contains: &[],
+        default_ports: &[], version_from_header_prefix: None,
+    },
+
+    // ── Comet (background process) ──
+    TechFingerprint {
+        kind: ServerKind::GenericTcp, priority: 10,
+        process_names: &["comet"],
+        exe_path_contains: &["comet"],
+        cmdline_contains: &[], cmdline_requires_process: &[],
+        http_server_contains: &[], http_powered_by_contains: &[],
+        http_header_contains: &[], html_title_contains: &[],
+        banner_starts_with: &[], banner_contains: &[],
+        default_ports: &[], version_from_header_prefix: None,
     },
 ];
 

@@ -5,7 +5,7 @@
 //! returns ONLY listening sockets — much faster than `TCP_TABLE_OWNER_PID_ALL`.
 //! Typical call completes in 1-5 ms.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
 use sysinfo::{Pid, ProcessesToUpdate, System};
@@ -66,6 +66,159 @@ const TCP_TABLE_OWNER_PID_LISTENER: u32 = 3;
 const UDP_TABLE_OWNER_PID: u32 = 1;
 
 const NO_ERROR: u32 = 0;
+
+// ─── Windows SCM FFI (advapi32) for svchost service resolution ──────────────
+
+#[link(name = "advapi32")]
+extern "system" {
+    fn OpenSCManagerW(
+        lpMachineName: *const u16,
+        lpDatabaseName: *const u16,
+        dwDesiredAccess: u32,
+    ) -> *mut std::ffi::c_void;
+
+    fn EnumServicesStatusExW(
+        hSCManager: *mut std::ffi::c_void,
+        InfoLevel: u32,
+        dwServiceType: u32,
+        dwServiceState: u32,
+        lpServices: *mut u8,
+        cbBufSize: u32,
+        pcbBytesNeeded: *mut u32,
+        lpServicesReturned: *mut u32,
+        lpResumeHandle: *mut u32,
+        pszGroupName: *const u16,
+    ) -> i32;
+
+    fn CloseServiceHandle(hSCObject: *mut std::ffi::c_void) -> i32;
+}
+
+const SC_MANAGER_ENUMERATE_SERVICE: u32 = 0x0004;
+const SC_ENUM_PROCESS_INFO: u32 = 0;
+const SERVICE_WIN32: u32 = 0x30;
+const SERVICE_ACTIVE: u32 = 0x01;
+
+#[repr(C)]
+#[allow(non_snake_case, non_camel_case_types)]
+struct ENUM_SERVICE_STATUS_PROCESSW {
+    lpServiceName: *const u16,
+    lpDisplayName: *const u16,
+    ServiceStatusProcess: SERVICE_STATUS_PROCESS,
+}
+
+#[repr(C)]
+#[allow(non_snake_case, non_camel_case_types)]
+struct SERVICE_STATUS_PROCESS {
+    dwServiceType: u32,
+    dwCurrentState: u32,
+    dwControlsAccepted: u32,
+    dwWin32ExitCode: u32,
+    dwServiceSpecificExitCode: u32,
+    dwCheckPoint: u32,
+    dwWaitHint: u32,
+    dwProcessId: u32,
+    dwServiceFlags: u32,
+}
+
+/// Read a null-terminated UTF-16 string from a raw pointer.
+unsafe fn wstr_to_string(ptr: *const u16) -> String {
+    if ptr.is_null() {
+        return String::new();
+    }
+    let mut len = 0;
+    while *ptr.add(len) != 0 {
+        len += 1;
+    }
+    String::from_utf16_lossy(std::slice::from_raw_parts(ptr, len))
+}
+
+/// Resolve Windows service names for a set of PIDs using the SCM API.
+/// Returns a map of PID -> Vec<service_name> (lowercase).
+/// Equivalent to `tasklist /svc` for the given PIDs.
+pub fn resolve_service_names(pids: &[u32]) -> HashMap<u32, Vec<String>> {
+    let mut result: HashMap<u32, Vec<String>> = HashMap::new();
+    if pids.is_empty() {
+        return result;
+    }
+
+    let pid_set: HashSet<u32> = pids.iter().copied().collect();
+
+    unsafe {
+        let scm = OpenSCManagerW(
+            std::ptr::null(),
+            std::ptr::null(),
+            SC_MANAGER_ENUMERATE_SERVICE,
+        );
+        if scm.is_null() {
+            return result;
+        }
+
+        // First call to get required buffer size
+        let mut bytes_needed: u32 = 0;
+        let mut services_returned: u32 = 0;
+        let mut resume_handle: u32 = 0;
+
+        EnumServicesStatusExW(
+            scm,
+            SC_ENUM_PROCESS_INFO,
+            SERVICE_WIN32,
+            SERVICE_ACTIVE,
+            std::ptr::null_mut(),
+            0,
+            &mut bytes_needed,
+            &mut services_returned,
+            &mut resume_handle,
+            std::ptr::null(),
+        );
+
+        if bytes_needed == 0 {
+            CloseServiceHandle(scm);
+            return result;
+        }
+
+        // Allocate buffer and enumerate
+        let buf_size = bytes_needed;
+        let mut buf = vec![0u8; buf_size as usize];
+        resume_handle = 0;
+        services_returned = 0;
+
+        let ret = EnumServicesStatusExW(
+            scm,
+            SC_ENUM_PROCESS_INFO,
+            SERVICE_WIN32,
+            SERVICE_ACTIVE,
+            buf.as_mut_ptr(),
+            buf_size,
+            &mut bytes_needed,
+            &mut services_returned,
+            &mut resume_handle,
+            std::ptr::null(),
+        );
+
+        if ret == 0 && services_returned == 0 {
+            CloseServiceHandle(scm);
+            return result;
+        }
+
+        let entries = std::slice::from_raw_parts(
+            buf.as_ptr() as *const ENUM_SERVICE_STATUS_PROCESSW,
+            services_returned as usize,
+        );
+
+        for entry in entries {
+            let pid = entry.ServiceStatusProcess.dwProcessId;
+            if pid == 0 || !pid_set.contains(&pid) {
+                continue;
+            }
+            let name = wstr_to_string(entry.lpServiceName).to_lowercase();
+            result.entry(pid).or_default().push(name);
+        }
+
+        CloseServiceHandle(scm);
+    }
+
+    result
+}
 
 // ─── MIB structs (repr C, matching Windows layout) ───────────────────────────
 
@@ -162,6 +315,10 @@ pub fn enumerate_listeners() -> Vec<RawListener> {
 
 /// Resolve process details for a set of PIDs.
 /// Returns `HashMap<pid, ProcessInfo>` with name, exe path, and command line.
+///
+/// For svchost.exe processes where the command line is empty (common when running
+/// without elevated privileges), queries the Windows Service Control Manager to
+/// resolve the hosted service name(s) and populates the cmdline field.
 pub fn resolve_process_info(pids: &[u32]) -> HashMap<u32, ProcessInfo> {
     let mut map = HashMap::new();
     if pids.is_empty() {
@@ -172,6 +329,9 @@ pub fn resolve_process_info(pids: &[u32]) -> HashMap<u32, ProcessInfo> {
     let sysinfo_pids: Vec<Pid> = pids.iter().map(|&p| Pid::from_u32(p)).collect();
     sys.refresh_processes(ProcessesToUpdate::Some(&sysinfo_pids), true);
 
+    // Collect svchost PIDs that need service name resolution
+    let mut svchost_pids: Vec<u32> = Vec::new();
+
     for &pid in pids {
         if let Some(proc) = sys.process(Pid::from_u32(pid)) {
             let name = proc.name().to_string_lossy().to_string();
@@ -180,11 +340,28 @@ pub fn resolve_process_info(pids: &[u32]) -> HashMap<u32, ProcessInfo> {
                 .map(|p| p.to_string_lossy().to_string())
                 .unwrap_or_default();
             let cmdline = proc.cmd().iter().map(|s| s.to_string_lossy()).collect::<Vec<_>>().join(" ");
+
+            if name.eq_ignore_ascii_case("svchost.exe") && cmdline.is_empty() {
+                svchost_pids.push(pid);
+            }
+
             map.insert(pid, ProcessInfo {
                 name,
                 exe_path,
                 cmdline,
             });
+        }
+    }
+
+    // Resolve service names for svchost.exe processes with empty cmdlines
+    if !svchost_pids.is_empty() {
+        let svc_map = resolve_service_names(&svchost_pids);
+        for (pid, services) in svc_map {
+            if let Some(info) = map.get_mut(&pid) {
+                if info.cmdline.is_empty() {
+                    info.cmdline = format!("svchost.exe -k {}", services.join(","));
+                }
+            }
         }
     }
 
