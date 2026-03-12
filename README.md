@@ -336,6 +336,12 @@ Contributions are welcome! Here are some areas where help would be great:
 
 MIT License — see [LICENSE](LICENSE) for details.
 
+### Third-Party Data Attribution
+
+- **GeoIP** — This product includes GeoIP data created by [DB-IP](https://db-ip.com), licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+- **Wappalyzer** — HTTP header fingerprints derived from [dochne/wappalyzer](https://github.com/dochne/wappalyzer) (MIT License).
+- **OUI Database** — MAC vendor data from the [IEEE OUI registry](https://standards-oui.ieee.org/) (public domain).
+
 ---
 
 <p align="center">
