@@ -733,19 +733,89 @@ fn discover_wsl_networks() -> Vec<RemoteNetwork> {
 
     let now = Local::now().time();
     let mut devices = Vec::new();
+    let mut first_ip: Option<Ipv4Addr> = None;
 
     for inst in &instances {
-        if let Some(ip) = inst.ip {
+        // Build version tag: "WSL2" / "WSL1" / "WSL"
+        let ver_tag = match inst.wsl_version {
+            1 => "WSL1",
+            2 => "WSL2",
+            _ => "WSL",
+        };
+
+        // Build vendor string with OS info
+        let vendor = if !inst.os_pretty_name.is_empty() {
+            format!("{} ({})", ver_tag, inst.os_pretty_name)
+        } else {
+            format!("{} Instance", ver_tag)
+        };
+
+        // Build hostname: prefer Linux hostname, fall back to distro name
+        let hostname = if !inst.linux_hostname.is_empty() && inst.linux_hostname != inst.name {
+            format!("{} ({})", inst.name, inst.linux_hostname)
+        } else {
+            inst.name.clone()
+        };
+
+        // Build rich discovery_info
+        let mut info_parts: Vec<String> = vec![format!("WSL:{}", inst.name)];
+        if inst.wsl_version > 0 {
+            info_parts.push(format!("VER:{}", inst.wsl_version));
+        }
+        if inst.is_default {
+            info_parts.push("DEFAULT".to_string());
+        }
+        if !inst.os_id.is_empty() {
+            info_parts.push(format!("OS:{}", inst.os_id));
+        }
+        if !inst.os_version.is_empty() {
+            info_parts.push(format!("OSVER:{}", inst.os_version));
+        }
+        if !inst.kernel.is_empty() {
+            info_parts.push(format!("KERN:{}", inst.kernel));
+        }
+        if inst.all_ips.len() > 1 {
+            let extra: Vec<String> = inst.all_ips.iter().skip(1).map(|ip| ip.to_string()).collect();
+            info_parts.push(format!("IPs:{}", extra.join(",")));
+        }
+
+        // Use first available IP
+        let ip = inst.ip.or_else(|| inst.all_ips.first().copied());
+
+        if let Some(ip) = ip {
+            if first_ip.is_none() {
+                first_ip = Some(ip);
+            }
             devices.push(LanDevice {
                 ip: IpAddr::V4(ip),
-                mac: String::new(),
-                hostname: Some(inst.name.clone()),
-                vendor: Some("WSL Instance".to_string()),
+                mac: inst.mac.clone(),
+                hostname: Some(hostname),
+                vendor: Some(vendor),
                 first_seen: now,
                 last_seen: now,
                 is_online: inst.is_running,
                 custom_name: None,
-                discovery_info: format!("WSL:{}", inst.name),
+                discovery_info: info_parts.join("  "),
+                open_ports: String::new(),
+                bytes_sent: 0,
+                bytes_received: 0,
+                tick_sent: 0,
+                tick_received: 0,
+                speed_sent: 0.0,
+                speed_received: 0.0,
+            });
+        } else if !inst.is_running {
+            // Include stopped instances with no IP so user sees them
+            devices.push(LanDevice {
+                ip: IpAddr::V4(Ipv4Addr::UNSPECIFIED),
+                mac: String::new(),
+                hostname: Some(hostname),
+                vendor: Some(vendor),
+                first_seen: now,
+                last_seen: now,
+                is_online: false,
+                custom_name: None,
+                discovery_info: info_parts.join("  "),
                 open_ports: String::new(),
                 bytes_sent: 0,
                 bytes_received: 0,
@@ -761,13 +831,25 @@ fn discover_wsl_networks() -> Vec<RemoteNetwork> {
         return Vec::new();
     }
 
+    // Derive network address from first discovered IP instead of hardcoding
+    let (local_ip, subnet_mask, cidr) = if let Some(ip) = first_ip {
+        let octets = ip.octets();
+        // WSL2 typically uses 172.x.x.x/20 or similar
+        let net = Ipv4Addr::new(octets[0], octets[1], octets[2] & 0xF0, 0);
+        let mask = Ipv4Addr::new(255, 255, 240, 0);
+        let cidr = format!("{}/20", net);
+        (ip, mask, cidr)
+    } else {
+        (Ipv4Addr::new(172, 28, 0, 1), Ipv4Addr::new(255, 240, 0, 0), "172.16.0.0/12".to_string())
+    };
+
     vec![RemoteNetwork {
         name: "WSL".to_string(),
         category: NetworkCategory::Wsl,
         adapter_name: String::new(),
-        local_ip: Ipv4Addr::new(172, 28, 0, 1),
-        subnet_mask: Ipv4Addr::new(255, 240, 0, 0),
-        subnet_cidr: "172.16.0.0/12".to_string(),
+        local_ip,
+        subnet_mask,
+        subnet_cidr: cidr,
         gateway: None,
         devices,
     }]
