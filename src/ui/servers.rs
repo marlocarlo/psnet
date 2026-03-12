@@ -144,70 +144,299 @@ pub fn draw_servers(f: &mut Frame, area: Rect, app: &App) {
     let udp_total = all.len() - tcp_total;
     let up = all.iter().filter(|s| s.is_responsive).count();
 
-    // Layout: header bar + main list + detail panel
+    // Category counts for charts
+    let cat_counts = {
+        let mut m: Vec<(ServerCategory, usize)> = Vec::new();
+        let mut cm: HashMap<ServerCategory, usize> = HashMap::new();
+        for s in all { *cm.entry(s.server_kind.category()).or_insert(0) += 1; }
+        for (k, v) in cm { m.push((k, v)); }
+        m.sort_by_key(|(c, _)| cat_priority(c));
+        m
+    };
+    let total_conns: usize = conn_counts.values().sum();
+    let tls_count = all.iter().filter(|s| s.details.contains("TLS: yes")).count();
+
+    // Port range stats
+    let well_known = all.iter().filter(|s| s.port <= 1023).count();
+    let registered = all.iter().filter(|s| s.port > 1023 && s.port < 49152).count();
+    let dynamic = all.iter().filter(|s| s.port >= 49152).count();
+
+    // Layout: dashboard strip + filter? + main list + detail panel
     let has_filter = !sc.filter_text.is_empty();
-    let header_h = if has_filter { 3 } else { 2 };
+    let filter_h = if has_filter { 1 } else { 0 };
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(header_h),
+            Constraint::Length(5),
+            Constraint::Length(filter_h),
             Constraint::Min(6),
             Constraint::Length(5),
         ])
         .split(area);
 
-    draw_header(f, chunks[0], all.len(), tcp_total, udp_total, up, sc.is_scanning(), &sc.filter_text, entry_count);
-    draw_list(f, chunks[1], &rows, selected);
-    draw_detail(f, chunks[2], &filtered, selected, &conn_counts);
+    draw_dashboard(f, chunks[0], all.len(), tcp_total, udp_total, up, &cat_counts,
+                   total_conns, tls_count, well_known, registered, dynamic, sc.is_scanning());
+    if has_filter {
+        draw_filter_bar(f, chunks[1], &sc.filter_text, entry_count);
+    }
+    draw_list(f, chunks[2], &rows, selected);
+    draw_detail(f, chunks[3], &filtered, selected, &conn_counts);
 }
 
-// ─── Header bar ─────────────────────────────────────────────────────────────
+// ─── Dashboard strip ────────────────────────────────────────────────────────
 
-fn draw_header(
+#[allow(clippy::too_many_arguments)]
+fn draw_dashboard(
     f: &mut Frame, area: Rect,
     total: usize, tcp: usize, udp: usize, up: usize,
-    scanning: bool, filter: &str, filtered: usize,
+    cat_counts: &[(ServerCategory, usize)],
+    total_conns: usize, tls_count: usize,
+    well_known: usize, registered: usize, dynamic: usize,
+    scanning: bool,
 ) {
-    let sep = Span::styled(" \u{2502} ", Style::default().fg(Color::Rgb(25, 35, 55)));
+    // Split into 3 panels: Protocol | Categories | Status
+    let panels = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([
+            Constraint::Length(24),
+            Constraint::Min(30),
+            Constraint::Length(26),
+        ])
+        .split(area);
 
-    let mut l1 = vec![
+    draw_proto_panel(f, panels[0], total, tcp, udp, scanning);
+    draw_category_panel(f, panels[1], cat_counts, total);
+    draw_status_panel(f, panels[2], up, total, total_conns, tls_count, well_known, registered, dynamic);
+}
+
+/// Left panel: TCP/UDP gauge bars
+fn draw_proto_panel(f: &mut Frame, area: Rect, total: usize, tcp: usize, udp: usize, scanning: bool) {
+    let block = Block::default()
+        .borders(Borders::RIGHT)
+        .border_style(Style::default().fg(Color::Rgb(20, 30, 50)))
+        .style(Style::default().bg(BG));
+    let inner = block.inner(area);
+    f.render_widget(block, area);
+
+    let w = inner.width as usize;
+    let bar_w = w.saturating_sub(11); // room for label + count
+
+    // Title
+    let title = Line::from(vec![
+        Span::styled(" \u{25C8} ", Style::default().fg(Color::Rgb(80, 150, 240))),
         Span::styled(
-            format!(" \u{1F50C} {} services ", total),
+            format!("{} ", total),
             Style::default().fg(BRIGHT).add_modifier(Modifier::BOLD),
         ),
-        sep.clone(),
-        Span::styled(" TCP ", Style::default().fg(Color::Rgb(30, 40, 60)).bg(TCP_COLOR).add_modifier(Modifier::BOLD)),
-        Span::styled(format!(" {} ", tcp), Style::default().fg(BRIGHT)),
-        Span::styled("  ", Style::default()),
-        Span::styled(" UDP ", Style::default().fg(Color::Rgb(30, 30, 10)).bg(UDP_COLOR).add_modifier(Modifier::BOLD)),
-        Span::styled(format!(" {} ", udp), Style::default().fg(BRIGHT)),
-        sep.clone(),
-        Span::styled("\u{25CF} ", Style::default().fg(GREEN)),
-        Span::styled(format!("{} responding", up), Style::default().fg(TEXT)),
-    ];
-    if scanning {
-        l1.push(sep);
-        l1.push(Span::styled("\u{25CC} scanning\u{2026}", Style::default().fg(YELLOW)));
+        Span::styled("services", Style::default().fg(TEXT)),
+    ]);
+
+    // TCP bar
+    let tcp_ratio = if total > 0 { tcp as f64 / total as f64 } else { 0.0 };
+    let tcp_fill = (tcp_ratio * bar_w as f64).round() as usize;
+    let tcp_line = Line::from(vec![
+        Span::styled(" TCP ", Style::default().fg(TCP_COLOR).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            "\u{2588}".repeat(tcp_fill),
+            Style::default().fg(TCP_COLOR),
+        ),
+        Span::styled(
+            "\u{2591}".repeat(bar_w.saturating_sub(tcp_fill)),
+            Style::default().fg(Color::Rgb(20, 30, 50)),
+        ),
+        Span::styled(
+            format!(" {}", tcp),
+            Style::default().fg(BRIGHT),
+        ),
+    ]);
+
+    // UDP bar
+    let udp_ratio = if total > 0 { udp as f64 / total as f64 } else { 0.0 };
+    let udp_fill = (udp_ratio * bar_w as f64).round() as usize;
+    let udp_line = Line::from(vec![
+        Span::styled(" UDP ", Style::default().fg(UDP_COLOR).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            "\u{2588}".repeat(udp_fill),
+            Style::default().fg(UDP_COLOR),
+        ),
+        Span::styled(
+            "\u{2591}".repeat(bar_w.saturating_sub(udp_fill)),
+            Style::default().fg(Color::Rgb(20, 30, 50)),
+        ),
+        Span::styled(
+            format!(" {}", udp),
+            Style::default().fg(BRIGHT),
+        ),
+    ]);
+
+    // Scanning indicator or ratio
+    let bottom = if scanning {
+        Line::from(Span::styled(" \u{25CC} scanning\u{2026}", Style::default().fg(YELLOW)))
+    } else {
+        let pct = if total > 0 { (tcp * 100) / total } else { 0 };
+        Line::from(vec![
+            Span::styled(format!(" {}% tcp", pct), Style::default().fg(DIM)),
+            Span::styled(format!(" / {}% udp", 100_usize.saturating_sub(pct)), Style::default().fg(DIM)),
+        ])
+    };
+
+    let lines = vec![title, tcp_line, udp_line, bottom];
+    f.render_widget(Paragraph::new(lines), inner);
+}
+
+/// Center panel: Category distribution horizontal bar chart
+fn draw_category_panel(f: &mut Frame, area: Rect, cat_counts: &[(ServerCategory, usize)], total: usize) {
+    let block = Block::default()
+        .borders(Borders::RIGHT)
+        .border_style(Style::default().fg(Color::Rgb(20, 30, 50)))
+        .style(Style::default().bg(BG));
+    let inner = block.inner(area);
+    f.render_widget(block, area);
+
+    if cat_counts.is_empty() {
+        return;
     }
 
-    let mut lines = vec![Line::from(l1)];
+    let w = inner.width as usize;
+    let max_count = cat_counts.iter().map(|(_, c)| *c).max().unwrap_or(1).max(1);
 
-    if !filter.is_empty() {
+    // Title: stacked bar showing all categories proportionally
+    let mut stacked: Vec<Span> = vec![Span::styled(" ", Style::default())];
+    let stack_w = w.saturating_sub(2);
+    for (cat, count) in cat_counts {
+        let seg = if total > 0 { (*count * stack_w).max(1) / total.max(1) } else { 0 };
+        let seg = seg.max(if *count > 0 { 1 } else { 0 });
+        let cc = cat_color(cat);
+        stacked.push(Span::styled("\u{2588}".repeat(seg), Style::default().fg(cc)));
+    }
+    let used: usize = stacked.iter().map(|s| s.content.len()).sum();
+    if used < w {
+        stacked.push(Span::styled(
+            " ".repeat(w - used),
+            Style::default(),
+        ));
+    }
+
+    // Up to 3 category rows (top categories)
+    let label_w = 7; // fixed label width
+    let bar_w = w.saturating_sub(label_w + 6); // room for label + count
+    let mut lines: Vec<Line> = vec![Line::from(stacked)];
+
+    for (cat, count) in cat_counts.iter().take(3) {
+        let cc = cat_color(cat);
+        let fill = (*count * bar_w) / max_count;
+        let lbl = cat.short_label();
         lines.push(Line::from(vec![
-            Span::styled(" \u{1F50D} ", Style::default().fg(YELLOW)),
-            Span::styled(filter.to_string(), Style::default().fg(YELLOW).add_modifier(Modifier::BOLD)),
+            Span::styled(format!(" {:<lw$}", lbl, lw = label_w), Style::default().fg(cc)),
             Span::styled(
-                format!("  {} match{}", filtered, if filtered == 1 { "" } else { "es" }),
-                Style::default().fg(DIM),
+                "\u{2588}".repeat(fill),
+                Style::default().fg(cc),
+            ),
+            Span::styled(
+                "\u{2500}".repeat(bar_w.saturating_sub(fill)),
+                Style::default().fg(Color::Rgb(18, 25, 40)),
+            ),
+            Span::styled(
+                format!(" {:>2}", count),
+                Style::default().fg(BRIGHT),
             ),
         ]));
     }
 
+    // If more categories, show "+N more" on remaining line
+    if cat_counts.len() > 3 {
+        let extra = cat_counts.len() - 3;
+        let extra_total: usize = cat_counts.iter().skip(3).map(|(_, c)| *c).sum();
+        let mut dots: Vec<Span> = vec![Span::styled(" ", Style::default())];
+        for (cat, _) in cat_counts.iter().skip(3) {
+            let cc = cat_color(cat);
+            dots.push(Span::styled("\u{25CF} ", Style::default().fg(cc)));
+        }
+        dots.push(Span::styled(
+            format!("+{} more ({} svc)", extra, extra_total),
+            Style::default().fg(DIM),
+        ));
+        lines.push(Line::from(dots));
+    }
+
+    f.render_widget(Paragraph::new(lines), inner);
+}
+
+/// Right panel: Status indicators
+fn draw_status_panel(
+    f: &mut Frame, area: Rect,
+    up: usize, total: usize, total_conns: usize, tls_count: usize,
+    well_known: usize, registered: usize, dynamic: usize,
+) {
     let block = Block::default()
-        .borders(Borders::BOTTOM)
-        .border_style(Style::default().fg(BORDER))
+        .borders(Borders::NONE)
         .style(Style::default().bg(BG));
-    f.render_widget(Paragraph::new(lines).block(block), area);
+    let inner = block.inner(area);
+    f.render_widget(block, area);
+
+    let down = total.saturating_sub(up);
+
+    // Status donut (text-based ring)
+    let ring_pct = if total > 0 { (up * 100) / total } else { 0 };
+    let ring_segs = 10;
+    let filled = if total > 0 { (up * ring_segs + total / 2) / total.max(1) } else { 0 };
+    let mut ring: Vec<Span> = vec![Span::styled(" ", Style::default())];
+    for i in 0..ring_segs {
+        if i < filled {
+            ring.push(Span::styled("\u{25C9}", Style::default().fg(GREEN)));
+        } else {
+            ring.push(Span::styled("\u{25CB}", Style::default().fg(Color::Rgb(40, 20, 20))));
+        }
+    }
+    ring.push(Span::styled(
+        format!(" {}%", ring_pct),
+        Style::default().fg(if ring_pct > 70 { GREEN } else if ring_pct > 30 { YELLOW } else { Color::Rgb(200, 80, 80) }).add_modifier(Modifier::BOLD),
+    ));
+
+    // Responding / silent
+    let status_line = Line::from(vec![
+        Span::styled(" \u{25CF} ", Style::default().fg(GREEN)),
+        Span::styled(format!("{} up", up), Style::default().fg(GREEN)),
+        Span::styled("  \u{25CB} ", Style::default().fg(DIM)),
+        Span::styled(format!("{} silent", down), Style::default().fg(DIM)),
+    ]);
+
+    // Connections + TLS
+    let conn_line = Line::from(vec![
+        Span::styled(" \u{21C4} ", Style::default().fg(Color::Rgb(100, 160, 230))),
+        Span::styled(format!("{} conn", total_conns), Style::default().fg(TEXT)),
+        Span::styled("  \u{1F512} ", Style::default().fg(GREEN)),
+        Span::styled(format!("{} tls", tls_count), Style::default().fg(TEXT)),
+    ]);
+
+    // Port ranges mini bar
+    let port_line = Line::from(vec![
+        Span::styled(" \u{25AA}", Style::default().fg(Color::Rgb(90, 180, 255))),
+        Span::styled(format!("{}", well_known), Style::default().fg(Color::Rgb(90, 180, 255))),
+        Span::styled(" \u{25AA}", Style::default().fg(Color::Rgb(70, 190, 110))),
+        Span::styled(format!("{}", registered), Style::default().fg(Color::Rgb(70, 190, 110))),
+        Span::styled(" \u{25AA}", Style::default().fg(Color::Rgb(80, 95, 120))),
+        Span::styled(format!("{} ports", dynamic), Style::default().fg(Color::Rgb(80, 95, 120))),
+    ]);
+
+    let lines = vec![Line::from(ring), status_line, conn_line, port_line];
+    f.render_widget(Paragraph::new(lines), inner);
+}
+
+/// Filter bar (shown only when filter is active)
+fn draw_filter_bar(f: &mut Frame, area: Rect, filter: &str, filtered: usize) {
+    let line = Line::from(vec![
+        Span::styled(" \u{1F50D} ", Style::default().fg(YELLOW)),
+        Span::styled(filter.to_string(), Style::default().fg(YELLOW).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            format!("  {} match{}", filtered, if filtered == 1 { "" } else { "es" }),
+            Style::default().fg(DIM),
+        ),
+    ]);
+    f.render_widget(
+        Paragraph::new(line).style(Style::default().bg(BG)),
+        area,
+    );
 }
 
 // ─── Card list ──────────────────────────────────────────────────────────────

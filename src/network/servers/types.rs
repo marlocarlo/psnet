@@ -1924,6 +1924,21 @@ impl ServerCategory {
         }
     }
 
+    /// Short label for compact chart displays (max 6 chars).
+    pub fn short_label(&self) -> &str {
+        match self {
+            Self::WebServer => "Web",
+            Self::AppRuntime => "App",
+            Self::WebFramework => "Frame",
+            Self::DevTool => "Dev",
+            Self::Database => "DB",
+            Self::MessageBroker => "MQ",
+            Self::Infrastructure => "Infra",
+            Self::SystemService => "System",
+            Self::Other => "Other",
+        }
+    }
+
     pub fn color(&self) -> (u8, u8, u8) {
         match self {
             Self::WebServer => (0, 200, 120),       // green
