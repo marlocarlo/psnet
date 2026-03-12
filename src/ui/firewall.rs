@@ -462,8 +462,12 @@ fn draw_firewall_apps(
 }
 
 fn truncate_str(s: &str, max_len: usize) -> String {
-    if s.len() > max_len {
-        format!("{}\u{2026}", &s[..max_len.saturating_sub(1)])
+    if s.chars().count() > max_len {
+        let end = s.char_indices()
+            .nth(max_len.saturating_sub(1))
+            .map(|(i, _)| i)
+            .unwrap_or(s.len());
+        format!("{}\u{2026}", &s[..end])
     } else {
         s.to_string()
     }

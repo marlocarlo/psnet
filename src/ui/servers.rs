@@ -39,8 +39,12 @@ fn cat_color(cat: &ServerCategory) -> Color {
 }
 
 fn trunc(s: &str, max: usize) -> String {
-    if s.len() > max && max > 1 {
-        format!("{}\u{2026}", &s[..max.saturating_sub(1)])
+    if s.chars().count() > max && max > 1 {
+        let end = s.char_indices()
+            .nth(max.saturating_sub(1))
+            .map(|(i, _)| i)
+            .unwrap_or(s.len());
+        format!("{}\u{2026}", &s[..end])
     } else {
         s.to_string()
     }

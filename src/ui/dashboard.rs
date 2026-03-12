@@ -377,8 +377,12 @@ fn draw_top_countries(f: &mut Frame, area: Rect, app: &App) {
 }
 
 fn truncate_name(s: &str, max: usize) -> String {
-    if s.len() > max {
-        format!("{}…", &s[..max.saturating_sub(1)])
+    if s.chars().count() > max {
+        let end = s.char_indices()
+            .nth(max.saturating_sub(1))
+            .map(|(i, _)| i)
+            .unwrap_or(s.len());
+        format!("{}…", &s[..end])
     } else {
         s.to_string()
     }
