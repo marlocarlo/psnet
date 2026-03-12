@@ -144,22 +144,22 @@ pub fn draw_servers(f: &mut Frame, area: Rect, app: &App) {
     let udp_total = all.len() - tcp_total;
     let up = all.iter().filter(|s| s.is_responsive).count();
 
+    // TCP bind address breakdown
+    let tcp_all: Vec<&ListeningPort> = all.iter()
+        .filter(|s| matches!(s.proto, ListenProto::Tcp))
+        .collect();
+    let bind_stats = BindStats::from_servers(&tcp_all);
+
     // Category counts for charts
     let cat_counts = {
-        let mut m: Vec<(ServerCategory, usize)> = Vec::new();
         let mut cm: HashMap<ServerCategory, usize> = HashMap::new();
         for s in all { *cm.entry(s.server_kind.category()).or_insert(0) += 1; }
-        for (k, v) in cm { m.push((k, v)); }
+        let mut m: Vec<(ServerCategory, usize)> = cm.into_iter().collect();
         m.sort_by_key(|(c, _)| cat_priority(c));
         m
     };
     let total_conns: usize = conn_counts.values().sum();
     let tls_count = all.iter().filter(|s| s.details.contains("TLS: yes")).count();
-
-    // Port range stats
-    let well_known = all.iter().filter(|s| s.port <= 1023).count();
-    let registered = all.iter().filter(|s| s.port > 1023 && s.port < 49152).count();
-    let dynamic = all.iter().filter(|s| s.port >= 49152).count();
 
     // Layout: dashboard strip + filter? + main list + detail panel
     let has_filter = !sc.filter_text.is_empty();
@@ -175,12 +175,63 @@ pub fn draw_servers(f: &mut Frame, area: Rect, app: &App) {
         .split(area);
 
     draw_dashboard(f, chunks[0], all.len(), tcp_total, udp_total, up, &cat_counts,
-                   total_conns, tls_count, well_known, registered, dynamic, sc.is_scanning());
+                   total_conns, tls_count, &bind_stats, sc.is_scanning());
     if has_filter {
         draw_filter_bar(f, chunks[1], &sc.filter_text, entry_count);
     }
     draw_list(f, chunks[2], &rows, selected);
     draw_detail(f, chunks[3], &filtered, selected, &conn_counts);
+}
+
+// ─── Bind address stats ─────────────────────────────────────────────────────
+
+struct BindStats {
+    /// 0.0.0.0 — listening on all interfaces
+    all_interfaces: usize,
+    /// 127.0.0.1
+    loopback_v4: usize,
+    /// ::1
+    loopback_v6: usize,
+    /// :: — IPv6 all interfaces
+    all_interfaces_v6: usize,
+    /// Specific IPs (not 0.0.0.0/127.0.0.1/::/::1) → (ip_string, count)
+    specific: Vec<(String, usize)>,
+    tcp_total: usize,
+}
+
+impl BindStats {
+    fn from_servers(tcp: &[&ListeningPort]) -> Self {
+        use std::net::IpAddr;
+        let mut all_if = 0usize;
+        let mut lo4 = 0usize;
+        let mut lo6 = 0usize;
+        let mut all_if6 = 0usize;
+        let mut specific_map: HashMap<String, usize> = HashMap::new();
+
+        for s in tcp {
+            match s.bind_addr {
+                IpAddr::V4(v4) if v4.is_unspecified() => all_if += 1,
+                IpAddr::V4(v4) if v4.is_loopback() => lo4 += 1,
+                IpAddr::V6(v6) if v6.is_unspecified() => all_if6 += 1,
+                IpAddr::V6(v6) if v6.is_loopback() => lo6 += 1,
+                other => {
+                    *specific_map.entry(other.to_string()).or_insert(0) += 1;
+                }
+            }
+        }
+
+        let mut specific: Vec<(String, usize)> = specific_map.into_iter().collect();
+        specific.sort_by(|a, b| b.1.cmp(&a.1));
+
+        Self {
+            all_interfaces: all_if,
+            loopback_v4: lo4,
+            loopback_v6: lo6,
+            all_interfaces_v6: all_if6,
+            specific,
+            tcp_total: tcp.len(),
+        }
+    }
 }
 
 // ─── Dashboard strip ────────────────────────────────────────────────────────
@@ -191,26 +242,26 @@ fn draw_dashboard(
     total: usize, tcp: usize, udp: usize, up: usize,
     cat_counts: &[(ServerCategory, usize)],
     total_conns: usize, tls_count: usize,
-    well_known: usize, registered: usize, dynamic: usize,
+    bind_stats: &BindStats,
     scanning: bool,
 ) {
-    // Split into 3 panels: Protocol | Categories | Status
+    // Split into 3 panels: Bind Addresses | Categories | Quick Stats
     let panels = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([
-            Constraint::Length(24),
-            Constraint::Min(30),
-            Constraint::Length(26),
+            Constraint::Percentage(38),
+            Constraint::Percentage(36),
+            Constraint::Percentage(26),
         ])
         .split(area);
 
-    draw_proto_panel(f, panels[0], total, tcp, udp, scanning);
+    draw_bind_panel(f, panels[0], bind_stats, scanning);
     draw_category_panel(f, panels[1], cat_counts, total);
-    draw_status_panel(f, panels[2], up, total, total_conns, tls_count, well_known, registered, dynamic);
+    draw_stats_panel(f, panels[2], total, tcp, udp, up, total_conns, tls_count);
 }
 
-/// Left panel: TCP/UDP gauge bars
-fn draw_proto_panel(f: &mut Frame, area: Rect, total: usize, tcp: usize, udp: usize, scanning: bool) {
+/// Left panel: TCP bind address breakdown
+fn draw_bind_panel(f: &mut Frame, area: Rect, bs: &BindStats, scanning: bool) {
     let block = Block::default()
         .borders(Borders::RIGHT)
         .border_style(Style::default().fg(Color::Rgb(20, 30, 50)))
@@ -219,68 +270,72 @@ fn draw_proto_panel(f: &mut Frame, area: Rect, total: usize, tcp: usize, udp: us
     f.render_widget(block, area);
 
     let w = inner.width as usize;
-    let bar_w = w.saturating_sub(11); // room for label + count
+    let max_count = [bs.all_interfaces, bs.loopback_v4, bs.loopback_v6, bs.all_interfaces_v6]
+        .iter()
+        .copied()
+        .chain(bs.specific.iter().map(|(_, c)| *c))
+        .max()
+        .unwrap_or(1)
+        .max(1);
 
-    // Title
-    let title = Line::from(vec![
-        Span::styled(" \u{25C8} ", Style::default().fg(Color::Rgb(80, 150, 240))),
-        Span::styled(
-            format!("{} ", total),
-            Style::default().fg(BRIGHT).add_modifier(Modifier::BOLD),
-        ),
-        Span::styled("services", Style::default().fg(TEXT)),
-    ]);
+    // Title line
+    let mut title_spans = vec![
+        Span::styled(" TCP BIND ", Style::default().fg(Color::Rgb(20, 30, 50)).bg(TCP_COLOR).add_modifier(Modifier::BOLD)),
+        Span::styled(format!("  {} listeners", bs.tcp_total), Style::default().fg(TEXT)),
+    ];
+    if scanning {
+        title_spans.push(Span::styled("  \u{25CC} scanning\u{2026}", Style::default().fg(YELLOW)));
+    }
 
-    // TCP bar
-    let tcp_ratio = if total > 0 { tcp as f64 / total as f64 } else { 0.0 };
-    let tcp_fill = (tcp_ratio * bar_w as f64).round() as usize;
-    let tcp_line = Line::from(vec![
-        Span::styled(" TCP ", Style::default().fg(TCP_COLOR).add_modifier(Modifier::BOLD)),
-        Span::styled(
-            "\u{2588}".repeat(tcp_fill),
-            Style::default().fg(TCP_COLOR),
-        ),
-        Span::styled(
-            "\u{2591}".repeat(bar_w.saturating_sub(tcp_fill)),
-            Style::default().fg(Color::Rgb(20, 30, 50)),
-        ),
-        Span::styled(
-            format!(" {}", tcp),
-            Style::default().fg(BRIGHT),
-        ),
-    ]);
+    let label_w = 14;
+    let bar_w = w.saturating_sub(label_w + 5);
 
-    // UDP bar
-    let udp_ratio = if total > 0 { udp as f64 / total as f64 } else { 0.0 };
-    let udp_fill = (udp_ratio * bar_w as f64).round() as usize;
-    let udp_line = Line::from(vec![
-        Span::styled(" UDP ", Style::default().fg(UDP_COLOR).add_modifier(Modifier::BOLD)),
-        Span::styled(
-            "\u{2588}".repeat(udp_fill),
-            Style::default().fg(UDP_COLOR),
-        ),
-        Span::styled(
-            "\u{2591}".repeat(bar_w.saturating_sub(udp_fill)),
-            Style::default().fg(Color::Rgb(20, 30, 50)),
-        ),
-        Span::styled(
-            format!(" {}", udp),
-            Style::default().fg(BRIGHT),
-        ),
-    ]);
+    // Build rows: show each bind type that has >0 count
+    let mut entries: Vec<(String, usize, Color)> = Vec::new();
+    if bs.all_interfaces > 0 {
+        entries.push(("0.0.0.0  *".into(), bs.all_interfaces, Color::Rgb(100, 200, 240)));
+    }
+    if bs.loopback_v4 > 0 {
+        entries.push(("127.0.0.1".into(), bs.loopback_v4, Color::Rgb(180, 140, 255)));
+    }
+    if bs.all_interfaces_v6 > 0 {
+        entries.push(("[::]  *".into(), bs.all_interfaces_v6, Color::Rgb(80, 180, 200)));
+    }
+    if bs.loopback_v6 > 0 {
+        entries.push(("[::1]".into(), bs.loopback_v6, Color::Rgb(150, 120, 220)));
+    }
+    for (ip, count) in bs.specific.iter().take(2) {
+        let ip_display = if ip.len() > 13 { &ip[..13] } else { ip.as_str() };
+        entries.push((ip_display.to_string(), *count, Color::Rgb(200, 180, 100)));
+    }
 
-    // Scanning indicator or ratio
-    let bottom = if scanning {
-        Line::from(Span::styled(" \u{25CC} scanning\u{2026}", Style::default().fg(YELLOW)))
-    } else {
-        let pct = if total > 0 { (tcp * 100) / total } else { 0 };
-        Line::from(vec![
-            Span::styled(format!(" {}% tcp", pct), Style::default().fg(DIM)),
-            Span::styled(format!(" / {}% udp", 100_usize.saturating_sub(pct)), Style::default().fg(DIM)),
-        ])
-    };
+    let mut lines: Vec<Line> = vec![Line::from(title_spans)];
 
-    let lines = vec![title, tcp_line, udp_line, bottom];
+    for (label, count, color) in entries.iter().take(4) {
+        let fill = (*count * bar_w) / max_count;
+        let fill = fill.max(if *count > 0 { 1 } else { 0 });
+        lines.push(Line::from(vec![
+            Span::styled(format!(" {:<lw$}", label.as_str(), lw = label_w), Style::default().fg(*color)),
+            Span::styled(
+                "\u{2588}".repeat(fill),
+                Style::default().fg(*color),
+            ),
+            Span::styled(
+                "\u{2500}".repeat(bar_w.saturating_sub(fill)),
+                Style::default().fg(Color::Rgb(18, 25, 40)),
+            ),
+            Span::styled(
+                format!(" {:>2}", count),
+                Style::default().fg(BRIGHT),
+            ),
+        ]));
+    }
+
+    // Pad remaining lines if fewer than 4 entries
+    while lines.len() < 5 {
+        lines.push(Line::from(""));
+    }
+
     f.render_widget(Paragraph::new(lines), inner);
 }
 
@@ -311,15 +366,12 @@ fn draw_category_panel(f: &mut Frame, area: Rect, cat_counts: &[(ServerCategory,
     }
     let used: usize = stacked.iter().map(|s| s.content.len()).sum();
     if used < w {
-        stacked.push(Span::styled(
-            " ".repeat(w - used),
-            Style::default(),
-        ));
+        stacked.push(Span::styled(" ".repeat(w - used), Style::default()));
     }
 
-    // Up to 3 category rows (top categories)
-    let label_w = 7; // fixed label width
-    let bar_w = w.saturating_sub(label_w + 6); // room for label + count
+    // Up to 3 category rows (top categories by count)
+    let label_w = 7;
+    let bar_w = w.saturating_sub(label_w + 6);
     let mut lines: Vec<Line> = vec![Line::from(stacked)];
 
     for (cat, count) in cat_counts.iter().take(3) {
@@ -328,29 +380,19 @@ fn draw_category_panel(f: &mut Frame, area: Rect, cat_counts: &[(ServerCategory,
         let lbl = cat.short_label();
         lines.push(Line::from(vec![
             Span::styled(format!(" {:<lw$}", lbl, lw = label_w), Style::default().fg(cc)),
-            Span::styled(
-                "\u{2588}".repeat(fill),
-                Style::default().fg(cc),
-            ),
-            Span::styled(
-                "\u{2500}".repeat(bar_w.saturating_sub(fill)),
-                Style::default().fg(Color::Rgb(18, 25, 40)),
-            ),
-            Span::styled(
-                format!(" {:>2}", count),
-                Style::default().fg(BRIGHT),
-            ),
+            Span::styled("\u{2588}".repeat(fill), Style::default().fg(cc)),
+            Span::styled("\u{2500}".repeat(bar_w.saturating_sub(fill)), Style::default().fg(Color::Rgb(18, 25, 40))),
+            Span::styled(format!(" {:>2}", count), Style::default().fg(BRIGHT)),
         ]));
     }
 
-    // If more categories, show "+N more" on remaining line
+    // Remaining categories as colored dots
     if cat_counts.len() > 3 {
         let extra = cat_counts.len() - 3;
         let extra_total: usize = cat_counts.iter().skip(3).map(|(_, c)| *c).sum();
         let mut dots: Vec<Span> = vec![Span::styled(" ", Style::default())];
         for (cat, _) in cat_counts.iter().skip(3) {
-            let cc = cat_color(cat);
-            dots.push(Span::styled("\u{25CF} ", Style::default().fg(cc)));
+            dots.push(Span::styled("\u{25CF} ", Style::default().fg(cat_color(cat))));
         }
         dots.push(Span::styled(
             format!("+{} more ({} svc)", extra, extra_total),
@@ -362,11 +404,11 @@ fn draw_category_panel(f: &mut Frame, area: Rect, cat_counts: &[(ServerCategory,
     f.render_widget(Paragraph::new(lines), inner);
 }
 
-/// Right panel: Status indicators
-fn draw_status_panel(
+/// Right panel: Quick stats summary
+fn draw_stats_panel(
     f: &mut Frame, area: Rect,
-    up: usize, total: usize, total_conns: usize, tls_count: usize,
-    well_known: usize, registered: usize, dynamic: usize,
+    total: usize, tcp: usize, udp: usize, up: usize,
+    total_conns: usize, tls_count: usize,
 ) {
     let block = Block::default()
         .borders(Borders::NONE)
@@ -376,51 +418,34 @@ fn draw_status_panel(
 
     let down = total.saturating_sub(up);
 
-    // Status donut (text-based ring)
-    let ring_pct = if total > 0 { (up * 100) / total } else { 0 };
-    let ring_segs = 10;
-    let filled = if total > 0 { (up * ring_segs + total / 2) / total.max(1) } else { 0 };
-    let mut ring: Vec<Span> = vec![Span::styled(" ", Style::default())];
-    for i in 0..ring_segs {
-        if i < filled {
-            ring.push(Span::styled("\u{25C9}", Style::default().fg(GREEN)));
-        } else {
-            ring.push(Span::styled("\u{25CB}", Style::default().fg(Color::Rgb(40, 20, 20))));
-        }
-    }
-    ring.push(Span::styled(
-        format!(" {}%", ring_pct),
-        Style::default().fg(if ring_pct > 70 { GREEN } else if ring_pct > 30 { YELLOW } else { Color::Rgb(200, 80, 80) }).add_modifier(Modifier::BOLD),
-    ));
+    let l1 = Line::from(vec![
+        Span::styled(format!(" {} ", total), Style::default().fg(BRIGHT).add_modifier(Modifier::BOLD)),
+        Span::styled("services  ", Style::default().fg(TEXT)),
+        Span::styled(" TCP ", Style::default().fg(Color::Rgb(20, 30, 50)).bg(TCP_COLOR).add_modifier(Modifier::BOLD)),
+        Span::styled(format!(" {} ", tcp), Style::default().fg(BRIGHT)),
+    ]);
 
-    // Responding / silent
-    let status_line = Line::from(vec![
+    let l2 = Line::from(vec![
         Span::styled(" \u{25CF} ", Style::default().fg(GREEN)),
         Span::styled(format!("{} up", up), Style::default().fg(GREEN)),
         Span::styled("  \u{25CB} ", Style::default().fg(DIM)),
         Span::styled(format!("{} silent", down), Style::default().fg(DIM)),
     ]);
 
-    // Connections + TLS
-    let conn_line = Line::from(vec![
+    let l3 = Line::from(vec![
         Span::styled(" \u{21C4} ", Style::default().fg(Color::Rgb(100, 160, 230))),
         Span::styled(format!("{} conn", total_conns), Style::default().fg(TEXT)),
         Span::styled("  \u{1F512} ", Style::default().fg(GREEN)),
         Span::styled(format!("{} tls", tls_count), Style::default().fg(TEXT)),
     ]);
 
-    // Port ranges mini bar
-    let port_line = Line::from(vec![
-        Span::styled(" \u{25AA}", Style::default().fg(Color::Rgb(90, 180, 255))),
-        Span::styled(format!("{}", well_known), Style::default().fg(Color::Rgb(90, 180, 255))),
-        Span::styled(" \u{25AA}", Style::default().fg(Color::Rgb(70, 190, 110))),
-        Span::styled(format!("{}", registered), Style::default().fg(Color::Rgb(70, 190, 110))),
-        Span::styled(" \u{25AA}", Style::default().fg(Color::Rgb(80, 95, 120))),
-        Span::styled(format!("{} ports", dynamic), Style::default().fg(Color::Rgb(80, 95, 120))),
+    let l4 = Line::from(vec![
+        Span::styled(" ", Style::default()),
+        Span::styled(" UDP ", Style::default().fg(Color::Rgb(30, 30, 10)).bg(UDP_COLOR).add_modifier(Modifier::BOLD)),
+        Span::styled(format!(" {} ", udp), Style::default().fg(BRIGHT)),
     ]);
 
-    let lines = vec![Line::from(ring), status_line, conn_line, port_line];
-    f.render_widget(Paragraph::new(lines), inner);
+    f.render_widget(Paragraph::new(vec![l1, l2, l3, l4]), inner);
 }
 
 /// Filter bar (shown only when filter is active)
