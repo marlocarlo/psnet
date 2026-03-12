@@ -1,4 +1,4 @@
-//! Servers tab UI — clean card-based layout with category grouping.
+//! Servers tab UI — card-based layout grouped by TCP/UDP protocol.
 
 use std::collections::HashMap;
 
@@ -16,34 +16,26 @@ use crate::network::servers::types::{ListenProto, ListeningPort, ServerCategory}
 // ─── Theme ──────────────────────────────────────────────────────────────────
 
 const BG: Color = Color::Rgb(12, 15, 26);
-const ROW_BG: Color = Color::Rgb(14, 18, 32);
-const ROW_ALT_BG: Color = Color::Rgb(16, 20, 35);
+const CARD_BG: Color = Color::Rgb(16, 20, 36);
+const CARD_ALT: Color = Color::Rgb(14, 18, 32);
 const SEL_BG: Color = Color::Rgb(20, 36, 68);
-const SEL_BORDER: Color = Color::Rgb(60, 120, 220);
-const DIM_BG: Color = Color::Rgb(10, 12, 22);
+const SEL_ACCENT: Color = Color::Rgb(60, 130, 240);
+const UNRESPONSIVE_BG: Color = Color::Rgb(10, 12, 22);
 const BORDER: Color = Color::Rgb(30, 42, 65);
 const DIM: Color = Color::Rgb(50, 60, 80);
 const LABEL: Color = Color::Rgb(70, 85, 110);
-const TEXT: Color = Color::Rgb(150, 165, 195);
+const TEXT: Color = Color::Rgb(140, 158, 190);
 const BRIGHT: Color = Color::Rgb(200, 215, 240);
 const GREEN: Color = Color::Rgb(70, 195, 110);
 const YELLOW: Color = Color::Rgb(220, 185, 60);
+const TCP_COLOR: Color = Color::Rgb(80, 150, 240);
+const UDP_COLOR: Color = Color::Rgb(220, 170, 50);
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 fn cat_color(cat: &ServerCategory) -> Color {
     let (r, g, b) = cat.color();
     Color::Rgb(r, g, b)
-}
-
-fn port_color(port: u16) -> Color {
-    if port <= 1023 {
-        Color::Rgb(90, 180, 255)
-    } else if port <= 9999 {
-        Color::Rgb(70, 190, 110)
-    } else {
-        Color::Rgb(80, 95, 120)
-    }
 }
 
 fn trunc(s: &str, max: usize) -> String {
@@ -57,20 +49,29 @@ fn trunc(s: &str, max: usize) -> String {
 fn cat_priority(cat: &ServerCategory) -> u8 {
     match cat {
         ServerCategory::DevTool => 0,
-        ServerCategory::AppRuntime | ServerCategory::WebServer | ServerCategory::WebFramework => 1,
-        ServerCategory::Database => 2,
-        ServerCategory::MessageBroker => 3,
-        ServerCategory::Infrastructure => 4,
-        ServerCategory::SystemService => 5,
+        ServerCategory::WebServer | ServerCategory::WebFramework => 1,
+        ServerCategory::AppRuntime => 2,
+        ServerCategory::Database => 3,
+        ServerCategory::MessageBroker => 4,
+        ServerCategory::Infrastructure => 5,
+        ServerCategory::SystemService => 6,
         ServerCategory::Other => 9,
     }
 }
 
-// ─── Display row ────────────────────────────────────────────────────────────
+// ─── Display rows ───────────────────────────────────────────────────────────
 
 enum Row<'a> {
-    Header { cat: ServerCategory, count: usize, collapsed: bool },
-    Entry  { server: &'a ListeningPort, idx: usize, conns: usize },
+    /// Protocol section header: "TCP Services (12)" or "UDP Services (5)"
+    ProtoHeader { proto: ListenProto, count: usize },
+    /// Category sub-header within a protocol section
+    CatHeader { cat: ServerCategory, count: usize, collapsed: bool },
+    /// Server card line 1: icon + name + port + status badges
+    CardTop { server: &'a ListeningPort, idx: usize, conns: usize },
+    /// Server card line 2: category tag + process + description/path
+    CardBot { server: &'a ListeningPort, idx: usize },
+    /// Blank separator between cards
+    Spacer,
 }
 
 // ─── Main draw ──────────────────────────────────────────────────────────────
@@ -84,33 +85,53 @@ pub fn draw_servers(f: &mut Frame, area: Rect, app: &App) {
     let conn_counts: HashMap<u16, usize> = {
         let mut m = HashMap::new();
         for c in &app.connections {
-            let listen = c.state.as_ref().map(|s| matches!(s, crate::types::TcpState::Listen)).unwrap_or(false);
+            let listen = c.state.as_ref()
+                .map(|s| matches!(s, crate::types::TcpState::Listen))
+                .unwrap_or(false);
             if !listen { *m.entry(c.local_port).or_insert(0) += 1; }
         }
         m
     };
 
-    // Group by category
-    let mut by_cat: HashMap<ServerCategory, Vec<&ListeningPort>> = HashMap::new();
-    for s in &filtered {
-        by_cat.entry(s.server_kind.category()).or_default().push(s);
-    }
-    let mut cats: Vec<ServerCategory> = by_cat.keys().cloned().collect();
-    cats.sort_by_key(|c| cat_priority(c));
-    for v in by_cat.values_mut() { v.sort_by_key(|s| s.port); }
+    // Split filtered into TCP and UDP, then sub-group by category
+    let tcp_servers: Vec<&ListeningPort> = filtered.iter()
+        .filter(|s| matches!(s.proto, ListenProto::Tcp))
+        .copied().collect();
+    let udp_servers: Vec<&ListeningPort> = filtered.iter()
+        .filter(|s| matches!(s.proto, ListenProto::Udp))
+        .copied().collect();
 
-    // Build flat row list
+    // Build flat row list: TCP first, then UDP
     let mut rows: Vec<Row> = Vec::new();
     let mut entry_count: usize = 0;
-    for cat in &cats {
-        if let Some(servers) = by_cat.get(cat) {
-            let collapsed = sc.collapsed_categories.contains(cat);
-            rows.push(Row::Header { cat: cat.clone(), count: servers.len(), collapsed });
-            if !collapsed {
-                for s in servers {
-                    let conns = conn_counts.get(&s.port).copied().unwrap_or(0);
-                    rows.push(Row::Entry { server: s, idx: entry_count, conns });
-                    entry_count += 1;
+
+    for (proto, servers) in [(ListenProto::Tcp, &tcp_servers), (ListenProto::Udp, &udp_servers)] {
+        if servers.is_empty() { continue; }
+
+        rows.push(Row::ProtoHeader { proto, count: servers.len() });
+
+        // Sub-group by category within this protocol
+        let mut by_cat: HashMap<ServerCategory, Vec<&ListeningPort>> = HashMap::new();
+        for s in servers {
+            by_cat.entry(s.server_kind.category()).or_default().push(s);
+        }
+        let mut cats: Vec<ServerCategory> = by_cat.keys().cloned().collect();
+        cats.sort_by_key(|c| cat_priority(c));
+        for v in by_cat.values_mut() { v.sort_by_key(|s| s.port); }
+
+        for cat in &cats {
+            if let Some(cat_servers) = by_cat.get(cat) {
+                let collapsed = sc.collapsed_categories.contains(cat);
+                rows.push(Row::CatHeader { cat: cat.clone(), count: cat_servers.len(), collapsed });
+
+                if !collapsed {
+                    for (i, s) in cat_servers.iter().enumerate() {
+                        if i > 0 { rows.push(Row::Spacer); }
+                        let conns = conn_counts.get(&s.port).copied().unwrap_or(0);
+                        rows.push(Row::CardTop { server: s, idx: entry_count, conns });
+                        rows.push(Row::CardBot { server: s, idx: entry_count });
+                        entry_count += 1;
+                    }
                 }
             }
         }
@@ -119,11 +140,11 @@ pub fn draw_servers(f: &mut Frame, area: Rect, app: &App) {
     let selected = if entry_count > 0 { sc.scroll_offset.min(entry_count - 1) } else { 0 };
 
     // Stats
-    let tcp = all.iter().filter(|s| matches!(s.proto, ListenProto::Tcp)).count();
-    let udp = all.len() - tcp;
+    let tcp_total = all.iter().filter(|s| matches!(s.proto, ListenProto::Tcp)).count();
+    let udp_total = all.len() - tcp_total;
     let up = all.iter().filter(|s| s.is_responsive).count();
 
-    // Layout: header(2) + list(fill) + detail(5)
+    // Layout: header bar + main list + detail panel
     let has_filter = !sc.filter_text.is_empty();
     let header_h = if has_filter { 3 } else { 2 };
     let chunks = Layout::default()
@@ -135,12 +156,12 @@ pub fn draw_servers(f: &mut Frame, area: Rect, app: &App) {
         ])
         .split(area);
 
-    draw_header(f, chunks[0], all.len(), tcp, udp, up, sc.is_scanning(), &sc.filter_text, entry_count);
+    draw_header(f, chunks[0], all.len(), tcp_total, udp_total, up, sc.is_scanning(), &sc.filter_text, entry_count);
     draw_list(f, chunks[1], &rows, selected);
     draw_detail(f, chunks[2], &filtered, selected, &conn_counts);
 }
 
-// ─── Compact header ─────────────────────────────────────────────────────────
+// ─── Header bar ─────────────────────────────────────────────────────────────
 
 fn draw_header(
     f: &mut Frame, area: Rect,
@@ -150,27 +171,35 @@ fn draw_header(
     let sep = Span::styled(" \u{2502} ", Style::default().fg(Color::Rgb(25, 35, 55)));
 
     let mut l1 = vec![
-        Span::styled(format!(" \u{25C8} {} ", total), Style::default().fg(BRIGHT).add_modifier(Modifier::BOLD)),
-        Span::styled("TCP ", Style::default().fg(Color::Rgb(80, 150, 240))),
-        Span::styled(format!("{}", tcp), Style::default().fg(BRIGHT)),
-        Span::styled("  UDP ", Style::default().fg(YELLOW)),
-        Span::styled(format!("{}", udp), Style::default().fg(BRIGHT)),
+        Span::styled(
+            format!(" \u{1F50C} {} services ", total),
+            Style::default().fg(BRIGHT).add_modifier(Modifier::BOLD),
+        ),
+        sep.clone(),
+        Span::styled(" TCP ", Style::default().fg(Color::Rgb(30, 40, 60)).bg(TCP_COLOR).add_modifier(Modifier::BOLD)),
+        Span::styled(format!(" {} ", tcp), Style::default().fg(BRIGHT)),
+        Span::styled("  ", Style::default()),
+        Span::styled(" UDP ", Style::default().fg(Color::Rgb(30, 30, 10)).bg(UDP_COLOR).add_modifier(Modifier::BOLD)),
+        Span::styled(format!(" {} ", udp), Style::default().fg(BRIGHT)),
         sep.clone(),
         Span::styled("\u{25CF} ", Style::default().fg(GREEN)),
-        Span::styled(format!("{} up", up), Style::default().fg(TEXT)),
+        Span::styled(format!("{} responding", up), Style::default().fg(TEXT)),
     ];
     if scanning {
-        l1.push(sep.clone());
-        l1.push(Span::styled("\u{25CC} scanning", Style::default().fg(YELLOW)));
+        l1.push(sep);
+        l1.push(Span::styled("\u{25CC} scanning\u{2026}", Style::default().fg(YELLOW)));
     }
 
     let mut lines = vec![Line::from(l1)];
 
     if !filter.is_empty() {
         lines.push(Line::from(vec![
-            Span::styled(" \u{25B7} ", Style::default().fg(YELLOW)),
+            Span::styled(" \u{1F50D} ", Style::default().fg(YELLOW)),
             Span::styled(filter.to_string(), Style::default().fg(YELLOW).add_modifier(Modifier::BOLD)),
-            Span::styled(format!("  {} match{}", filtered, if filtered == 1 { "" } else { "es" }), Style::default().fg(DIM)),
+            Span::styled(
+                format!("  {} match{}", filtered, if filtered == 1 { "" } else { "es" }),
+                Style::default().fg(DIM),
+            ),
         ]));
     }
 
@@ -181,7 +210,7 @@ fn draw_header(
     f.render_widget(Paragraph::new(lines).block(block), area);
 }
 
-// ─── Server list ────────────────────────────────────────────────────────────
+// ─── Card list ──────────────────────────────────────────────────────────────
 
 fn draw_list(f: &mut Frame, area: Rect, rows: &[Row], selected: usize) {
     let block = Block::default()
@@ -191,10 +220,13 @@ fn draw_list(f: &mut Frame, area: Rect, rows: &[Row], selected: usize) {
     f.render_widget(block, area);
 
     if rows.is_empty() {
-        let msg = Paragraph::new(Line::from(Span::styled(
-            "  No services detected. Press 's' to scan.",
-            Style::default().fg(DIM),
-        ))).style(Style::default().bg(BG));
+        let msg = Paragraph::new(vec![
+            Line::from(""),
+            Line::from(Span::styled(
+                "  No listening services detected. Press 's' to scan.",
+                Style::default().fg(DIM),
+            )),
+        ]).style(Style::default().bg(BG));
         f.render_widget(msg, inner);
         return;
     }
@@ -202,8 +234,10 @@ fn draw_list(f: &mut Frame, area: Rect, rows: &[Row], selected: usize) {
     let h = inner.height as usize;
     let w = inner.width as usize;
 
-    // Find selected entry's display position
-    let sel_pos = rows.iter().position(|r| matches!(r, Row::Entry { idx, .. } if *idx == selected)).unwrap_or(0);
+    // Find the display position of the selected entry's CardTop
+    let sel_pos = rows.iter()
+        .position(|r| matches!(r, Row::CardTop { idx, .. } if *idx == selected))
+        .unwrap_or(0);
 
     // Viewport centering
     let total = rows.len();
@@ -220,38 +254,80 @@ fn draw_list(f: &mut Frame, area: Rect, rows: &[Row], selected: usize) {
         let row_area = Rect::new(inner.x, y, inner.width, 1);
 
         match row {
-            Row::Header { cat, count, collapsed } => {
+            Row::ProtoHeader { proto, count } => {
+                render_proto_header(f, row_area, *proto, *count, w);
+            }
+            Row::CatHeader { cat, count, collapsed } => {
                 render_cat_header(f, row_area, cat, *count, *collapsed, w);
             }
-            Row::Entry { server, idx, conns } => {
-                render_entry(f, row_area, server, *idx == selected, *conns, w, *idx);
+            Row::CardTop { server, idx, conns } => {
+                render_card_top(f, row_area, server, *idx == selected, *conns, w);
+            }
+            Row::CardBot { server, idx } => {
+                render_card_bot(f, row_area, server, *idx == selected, w);
+            }
+            Row::Spacer => {
+                f.render_widget(
+                    Paragraph::new("").style(Style::default().bg(BG)),
+                    row_area,
+                );
             }
         }
     }
 
     // Scrollbar
     if total > h {
-        let sb_area = Rect { x: area.x + area.width - 1, y: inner.y, width: 1, height: inner.height };
+        let sb_area = Rect {
+            x: area.x + area.width - 1, y: inner.y,
+            width: 1, height: inner.height,
+        };
         let mut state = ScrollbarState::new(total.saturating_sub(h)).position(start);
         f.render_stateful_widget(
-            Scrollbar::new(ScrollbarOrientation::VerticalRight).style(Style::default().fg(Color::Rgb(30, 50, 90))),
+            Scrollbar::new(ScrollbarOrientation::VerticalRight)
+                .style(Style::default().fg(Color::Rgb(30, 50, 90))),
             sb_area, &mut state,
         );
     }
 }
 
+// ─── Protocol section header ────────────────────────────────────────────────
+
+fn render_proto_header(f: &mut Frame, area: Rect, proto: ListenProto, count: usize, w: usize) {
+    let (label, color, icon) = match proto {
+        ListenProto::Tcp => ("TCP SERVICES", TCP_COLOR, "\u{25C6}"),
+        ListenProto::Udp => ("UDP SERVICES", UDP_COLOR, "\u{25C7}"),
+    };
+
+    let prefix = format!(" {} {} ", icon, label);
+    let suffix = format!(" {} ", count);
+    let fill_len = w.saturating_sub(prefix.len() + suffix.len());
+    let fill: String = "\u{2500}".repeat(fill_len);
+
+    let line = Line::from(vec![
+        Span::styled(prefix, Style::default().fg(color).add_modifier(Modifier::BOLD)),
+        Span::styled(fill, Style::default().fg(Color::Rgb(25, 38, 60))),
+        Span::styled(suffix, Style::default().fg(color).add_modifier(Modifier::BOLD)),
+    ]);
+    f.render_widget(
+        Paragraph::new(line).style(Style::default().bg(Color::Rgb(12, 16, 30))),
+        area,
+    );
+}
+
+// ─── Category sub-header ────────────────────────────────────────────────────
+
 fn render_cat_header(f: &mut Frame, area: Rect, cat: &ServerCategory, count: usize, collapsed: bool, w: usize) {
     let cc = cat_color(cat);
-    let icon = if collapsed { "\u{25B8}" } else { "\u{25BE}" };
-    let label = cat.label().to_uppercase();
-    let prefix = format!("  {} {} ", icon, label);
+    let arrow = if collapsed { "\u{25B8}" } else { "\u{25BE}" };
+    let label = cat.label();
+    let prefix = format!("    {} {} ", arrow, label);
     let suffix = format!(" {} ", count);
     let fill_len = w.saturating_sub(prefix.len() + suffix.len());
     let fill: String = "\u{2508}".repeat(fill_len);
 
     let line = Line::from(vec![
-        Span::styled(prefix, Style::default().fg(cc).add_modifier(Modifier::BOLD)),
-        Span::styled(fill, Style::default().fg(Color::Rgb(20, 28, 45))),
+        Span::styled(prefix, Style::default().fg(cc)),
+        Span::styled(fill, Style::default().fg(Color::Rgb(18, 25, 40))),
         Span::styled(suffix, Style::default().fg(cc)),
     ]);
     f.render_widget(
@@ -260,85 +336,133 @@ fn render_cat_header(f: &mut Frame, area: Rect, cat: &ServerCategory, count: usi
     );
 }
 
-fn render_entry(f: &mut Frame, area: Rect, s: &ListeningPort, sel: bool, conns: usize, w: usize, idx: usize) {
+// ─── Card line 1: icon + name + port + status ───────────────────────────────
+
+fn render_card_top(f: &mut Frame, area: Rect, s: &ListeningPort, sel: bool, conns: usize, w: usize) {
     let (kr, kg, kb) = s.server_kind.color();
     let kc = Color::Rgb(kr, kg, kb);
+    let proto_color = match s.proto {
+        ListenProto::Tcp => TCP_COLOR,
+        ListenProto::Udp => UDP_COLOR,
+    };
 
     let mut spans: Vec<Span> = Vec::new();
 
-    // Selection gutter
+    // Left accent bar + selection
     if sel {
-        spans.push(Span::styled(" \u{25B8}", Style::default().fg(SEL_BORDER).add_modifier(Modifier::BOLD)));
+        spans.push(Span::styled(" \u{2588}\u{25B8}", Style::default().fg(SEL_ACCENT)));
     } else {
-        spans.push(Span::styled("  ", Style::default()));
+        spans.push(Span::styled(" \u{2502} ", Style::default().fg(Color::Rgb(25, 35, 55))));
     }
 
     // Icon
-    spans.push(Span::styled(format!(" {} ", s.display_icon()), Style::default().fg(kc)));
+    spans.push(Span::styled(format!("{} ", s.display_icon()), Style::default().fg(kc)));
 
-    // Name (bold) — max 20 chars
-    let name_max = if w > 100 { 24 } else { 18 };
+    // Name (bold, category-colored)
+    let name_max = if w > 110 { 26 } else if w > 80 { 20 } else { 16 };
     spans.push(Span::styled(
-        format!("{:<width$}", trunc(&s.display_name(), name_max), width = name_max),
+        format!("{:<w$}", trunc(&s.display_name(), name_max), w = name_max),
         Style::default().fg(kc).add_modifier(Modifier::BOLD),
     ));
 
-    // Port badge — right-aligned feel
-    let proto_ch = match s.proto { ListenProto::Tcp => 't', ListenProto::Udp => 'u' };
+    // Port with protocol color
+    let proto_tag = match s.proto { ListenProto::Tcp => "tcp", ListenProto::Udp => "udp" };
     spans.push(Span::styled(
-        format!(" :{:<5}/{} ", s.port, proto_ch),
-        Style::default().fg(port_color(s.port)),
+        format!(" :{}/{}", s.port, proto_tag),
+        Style::default().fg(proto_color).add_modifier(Modifier::BOLD),
     ));
 
-    // Status dot
+    // Status
+    spans.push(Span::styled("  ", Style::default()));
     if s.is_responsive {
-        spans.push(Span::styled("\u{25CF}", Style::default().fg(GREEN)));
+        spans.push(Span::styled("\u{25CF} UP", Style::default().fg(GREEN).add_modifier(Modifier::BOLD)));
     } else {
-        spans.push(Span::styled("\u{25CB}", Style::default().fg(DIM)));
+        spans.push(Span::styled("\u{25CB} \u{2014}\u{2014}", Style::default().fg(DIM)));
     }
 
-    // TLS lock
+    // TLS
     if s.details.contains("TLS: yes") {
-        spans.push(Span::styled(" \u{1F512}", Style::default().fg(GREEN)));
-    } else {
-        spans.push(Span::styled("   ", Style::default()));
+        spans.push(Span::styled("  \u{1F512}", Style::default().fg(GREEN)));
     }
 
-    // Version (compact)
+    // Version badge
     if let Some(ref ver) = s.version {
-        spans.push(Span::styled(
-            format!(" v{}", trunc(ver, 8)),
-            Style::default().fg(YELLOW),
-        ));
+        spans.push(Span::styled(format!("  v{}", trunc(ver, 10)), Style::default().fg(YELLOW)));
     }
 
     // Active connections
     if conns > 0 {
         let cc = if conns > 10 { Color::Rgb(255, 140, 90) } else { GREEN };
-        spans.push(Span::styled(format!(" \u{2022}{}", conns), Style::default().fg(cc)));
-    }
-
-    // Spacer + secondary info (process or description) — fill remaining width
-    let used: usize = spans.iter().map(|sp| sp.content.len()).sum();
-    let remaining = w.saturating_sub(used + 1);
-    if remaining > 8 {
-        spans.push(Span::styled("  ", Style::default()));
-        // Show process name for known services, description for unknown
-        let info = if !s.process_name.is_empty() && s.process_name != "System" {
-            let stem = s.process_name.strip_suffix(".exe")
-                .or_else(|| s.process_name.strip_suffix(".EXE"))
-                .unwrap_or(&s.process_name);
-            format!("{} ({})", stem, s.pid)
-        } else {
-            s.display_description()
-        };
-        spans.push(Span::styled(trunc(&info, remaining - 2), Style::default().fg(LABEL)));
+        spans.push(Span::styled(
+            format!("  \u{2022}{}conn", conns),
+            Style::default().fg(cc),
+        ));
     }
 
     let bg = if sel { SEL_BG }
-    else if !s.is_responsive { DIM_BG }
-    else if idx % 2 == 0 { ROW_BG }
-    else { ROW_ALT_BG };
+    else if !s.is_responsive { UNRESPONSIVE_BG }
+    else { CARD_BG };
+
+    f.render_widget(
+        Paragraph::new(Line::from(spans)).style(Style::default().bg(bg)),
+        area,
+    );
+}
+
+// ─── Card line 2: category + process + description ──────────────────────────
+
+fn render_card_bot(f: &mut Frame, area: Rect, s: &ListeningPort, sel: bool, w: usize) {
+    let cat = s.server_kind.category();
+    let cc = cat_color(&cat);
+
+    let mut spans: Vec<Span> = Vec::new();
+
+    // Left accent continuation
+    if sel {
+        spans.push(Span::styled(" \u{2588} ", Style::default().fg(SEL_ACCENT)));
+    } else {
+        spans.push(Span::styled(" \u{2502} ", Style::default().fg(Color::Rgb(25, 35, 55))));
+    }
+
+    // Category tag (colored pill)
+    let cat_label = cat.label();
+    spans.push(Span::styled(
+        format!(" {} ", cat_label),
+        Style::default().fg(cc),
+    ));
+
+    // Process name + PID
+    spans.push(Span::styled("  ", Style::default()));
+    if !s.process_name.is_empty() {
+        let stem = s.process_name.strip_suffix(".exe")
+            .or_else(|| s.process_name.strip_suffix(".EXE"))
+            .unwrap_or(&s.process_name);
+        spans.push(Span::styled(
+            trunc(stem, 18),
+            Style::default().fg(Color::Rgb(100, 170, 110)),
+        ));
+        spans.push(Span::styled(
+            format!("({})", s.pid),
+            Style::default().fg(LABEL),
+        ));
+    }
+
+    // Fill remaining with description or path
+    let used: usize = spans.iter().map(|sp| sp.content.len()).sum();
+    let remaining = w.saturating_sub(used + 2);
+    if remaining > 10 {
+        spans.push(Span::styled("  ", Style::default()));
+        let desc = s.display_description();
+        if desc.len() > 3 && desc != s.server_kind.description() {
+            spans.push(Span::styled(trunc(&desc, remaining), Style::default().fg(LABEL)));
+        } else if !s.exe_path.is_empty() {
+            spans.push(Span::styled(trunc(&s.exe_path, remaining), Style::default().fg(DIM)));
+        }
+    }
+
+    let bg = if sel { SEL_BG }
+    else if !s.is_responsive { UNRESPONSIVE_BG }
+    else { CARD_ALT };
 
     f.render_widget(
         Paragraph::new(Line::from(spans)).style(Style::default().bg(bg)),
@@ -360,7 +484,7 @@ fn draw_detail(
 
     if filtered.is_empty() || selected >= filtered.len() {
         let empty = Paragraph::new(Line::from(Span::styled(
-            "  \u{2191}\u{2193} browse  Enter detail  o open  y copy  \u{2190} collapse  \u{2192} expand",
+            "  \u{2191}\u{2193} browse  Enter detail  s scan  o open folder  y copy path  \u{2190}\u{2192} collapse/expand",
             Style::default().fg(DIM),
         ))).block(block);
         f.render_widget(empty, area);
@@ -372,14 +496,16 @@ fn draw_detail(
     let (kr, kg, kb) = s.server_kind.color();
     let kc = Color::Rgb(kr, kg, kb);
     let pipe = || Span::styled(" \u{2502} ", Style::default().fg(Color::Rgb(25, 35, 55)));
+    let proto_color = match s.proto { ListenProto::Tcp => TCP_COLOR, ListenProto::Udp => UDP_COLOR };
 
-    // Line 1: Identity
+    // Line 1: Identity + status
+    let proto_tag = match s.proto { ListenProto::Tcp => "TCP", ListenProto::Udp => "UDP" };
     let mut l1 = vec![
         Span::styled(format!(" {} ", s.display_icon()), Style::default().fg(kc)),
         Span::styled(s.display_name(), Style::default().fg(kc).add_modifier(Modifier::BOLD)),
-        Span::styled(format!("  {}", s.server_kind.category().label()), Style::default().fg(cat_color(&s.server_kind.category()))),
         pipe(),
-        Span::styled(format!(":{}/{}", s.port, s.proto.label()), Style::default().fg(port_color(s.port)).add_modifier(Modifier::BOLD)),
+        Span::styled(format!(" {} ", proto_tag), Style::default().fg(Color::Rgb(20, 25, 40)).bg(proto_color).add_modifier(Modifier::BOLD)),
+        Span::styled(format!(" :{}", s.port), Style::default().fg(proto_color).add_modifier(Modifier::BOLD)),
     ];
     if let Some(ref v) = s.version {
         l1.push(pipe());
@@ -387,12 +513,17 @@ fn draw_detail(
     }
     l1.push(pipe());
     l1.push(Span::styled(
-        if s.is_responsive { "\u{25CF} up" } else { "\u{25CB} down" },
+        if s.is_responsive { "\u{25CF} Responding" } else { "\u{25CB} Not responding" },
         Style::default().fg(if s.is_responsive { GREEN } else { DIM }),
     ));
     if conns > 0 {
         l1.push(pipe());
-        l1.push(Span::styled(format!("{} conn", conns), Style::default().fg(TEXT)));
+        l1.push(Span::styled(format!("{} connection{}", conns, if conns == 1 { "" } else { "s" }), Style::default().fg(TEXT)));
+    }
+    let has_tls = s.details.contains("TLS: yes");
+    if has_tls {
+        l1.push(pipe());
+        l1.push(Span::styled("\u{1F512} TLS", Style::default().fg(GREEN).add_modifier(Modifier::BOLD)));
     }
 
     // Line 2: Process + path
@@ -405,27 +536,27 @@ fn draw_detail(
         Span::styled(exe, Style::default().fg(Color::Rgb(90, 105, 140))),
     ]);
 
-    // Line 3: Detected techs or banner
-    let mut l3_spans: Vec<Span> = vec![Span::styled("  ", Style::default())];
+    // Line 3: Detected techs / banner / description
+    let mut l3: Vec<Span> = vec![Span::styled("  ", Style::default())];
     if !s.detected_techs.is_empty() {
+        l3.push(Span::styled("Tech: ", Style::default().fg(LABEL)));
         for (i, t) in s.detected_techs.iter().take(6).enumerate() {
-            if i > 0 { l3_spans.push(Span::styled("  ", Style::default())); }
+            if i > 0 { l3.push(Span::styled(" \u{00B7} ", Style::default().fg(DIM))); }
             let label = if t.version.is_empty() { t.name.clone() } else { format!("{}/{}", t.name, t.version) };
-            l3_spans.push(Span::styled(label, Style::default().fg(Color::Rgb(160, 145, 230))));
+            l3.push(Span::styled(label, Style::default().fg(Color::Rgb(160, 145, 230))));
         }
         if s.detected_techs.len() > 6 {
-            l3_spans.push(Span::styled(format!("  +{}", s.detected_techs.len() - 6), Style::default().fg(DIM)));
+            l3.push(Span::styled(format!("  +{}", s.detected_techs.len() - 6), Style::default().fg(DIM)));
         }
     } else if let Some(ref title) = s.http_title {
-        l3_spans.push(Span::styled(format!("\u{201C}{}\u{201D}", trunc(title, 50)), Style::default().fg(TEXT)));
+        l3.push(Span::styled(format!("Title: \u{201C}{}\u{201D}", trunc(title, 50)), Style::default().fg(TEXT)));
     } else if let Some(ref banner) = s.banner {
         let clean = banner.replace(['\r', '\n'], " ");
-        l3_spans.push(Span::styled(trunc(&clean, 60), Style::default().fg(LABEL)));
+        l3.push(Span::styled(format!("Banner: {}", trunc(&clean, 55)), Style::default().fg(LABEL)));
     } else {
-        l3_spans.push(Span::styled(s.display_description(), Style::default().fg(LABEL)));
+        l3.push(Span::styled(s.display_description(), Style::default().fg(LABEL)));
     }
 
-    let detail = Paragraph::new(vec![Line::from(l1), l2, Line::from(l3_spans)])
-        .block(block);
+    let detail = Paragraph::new(vec![Line::from(l1), l2, Line::from(l3)]).block(block);
     f.render_widget(detail, area);
 }
