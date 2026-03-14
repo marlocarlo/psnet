@@ -16,17 +16,25 @@
     <releaseNotes>$repoUrl$/releases</releaseNotes>
     <copyright>Copyright (c) 2026 PSNET Contributors</copyright>
     <tags>network monitor tui terminal windows rust cli wireshark sniffer connections speed</tags>
-    <summary>A beautiful real-time TUI network monitor for Windows — built in Rust</summary>
+    <summary>A beautiful real-time TUI network monitor for Windows — 9 tabs, GeoIP, device discovery, firewall, topology</summary>
     <description><![CDATA[## PSNET — See your network. Understand your network.
 
 PSNET is a **zero-dependency** (no Npcap/WinPcap needed) TUI network monitor built in Rust for Windows.
-It gives you real-time visibility into everything happening on your network:
+A single 12 MB binary gives you 9 interactive tabs:
 
-- **Live speed graphs** — sparkline waveforms for download and upload
-- **Smart connection table** — DNS-resolved hostnames, service labels, process names
-- **Traffic event log** — Wireshark-style connection lifecycle events
-- **Wire preview** — real packet payload inspection (requires Administrator)
-- **Beautiful dark theme** — consistent deep navy palette with Unicode box-drawing
+- **Dashboard** — GlassWire-style traffic graph, world map, health gauge, top apps/countries
+- **Connections** — live table with DNS hostnames, service labels, process names, TCP state
+- **Servers** — listening ports with 200+ fingerprinted services, TCP exposure panel, bind address badges
+- **Packets** — Wireshark-style packet inspector with protocol dissection, GeoIP, hex view
+- **Topology** — hub-and-spoke network diagram of your machine's connections
+- **Alerts** — categorized security alerts with severity and recommendations
+- **Firewall** — per-app firewall management (block/allow) with bandwidth stats
+- **Devices** — LAN device scanner with MAC vendor lookup (35,000+ OUI entries)
+- **Networks** — multi-adapter view (VPN, Docker, WSL, Hyper-V, Bluetooth)
+
+Plus always-visible speed sparklines and wire preview (live packet payloads).
+
+**Embedded databases:** GeoIP country (DB-IP), 200+ server fingerprints, 6,500+ Wappalyzer web technology signatures, 35,000+ MAC vendor prefixes.
 
 ### Quick Start
 

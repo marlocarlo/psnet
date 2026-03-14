@@ -50,26 +50,12 @@ fn trunc(s: &str, max: usize) -> String {
     }
 }
 
-fn cat_priority(cat: &ServerCategory) -> u8 {
-    match cat {
-        ServerCategory::DevTool => 0,
-        ServerCategory::WebServer | ServerCategory::WebFramework => 1,
-        ServerCategory::AppRuntime => 2,
-        ServerCategory::Database => 3,
-        ServerCategory::MessageBroker => 4,
-        ServerCategory::Infrastructure => 5,
-        ServerCategory::SystemService => 6,
-        ServerCategory::Other => 9,
-    }
-}
-
 // ─── Display rows ───────────────────────────────────────────────────────────
 
 enum Row<'a> {
     /// Protocol section header: "TCP Services (12)" or "UDP Services (5)"
     ProtoHeader { proto: ListenProto, count: usize },
-    /// Category sub-header within a protocol section
-    CatHeader { cat: ServerCategory, count: usize, collapsed: bool },
+
     /// Server card line 1: icon + name + port + status badges
     CardTop { server: &'a ListeningPort, idx: usize, conns: usize },
     /// Server card line 2: category tag + process + description/path
@@ -105,7 +91,7 @@ pub fn draw_servers(f: &mut Frame, area: Rect, app: &App) {
         .filter(|s| matches!(s.proto, ListenProto::Udp))
         .copied().collect();
 
-    // Build flat row list: TCP first, then UDP
+    // Build flat row list: TCP first, then UDP (flat, no category grouping)
     let mut rows: Vec<Row> = Vec::new();
     let mut entry_count: usize = 0;
 
@@ -114,30 +100,15 @@ pub fn draw_servers(f: &mut Frame, area: Rect, app: &App) {
 
         rows.push(Row::ProtoHeader { proto, count: servers.len() });
 
-        // Sub-group by category within this protocol
-        let mut by_cat: HashMap<ServerCategory, Vec<&ListeningPort>> = HashMap::new();
-        for s in servers {
-            by_cat.entry(s.server_kind.category()).or_default().push(s);
-        }
-        let mut cats: Vec<ServerCategory> = by_cat.keys().cloned().collect();
-        cats.sort_by_key(|c| cat_priority(c));
-        for v in by_cat.values_mut() { v.sort_by_key(|s| s.port); }
+        let mut sorted: Vec<&ListeningPort> = servers.clone();
+        sorted.sort_by_key(|s| s.port);
 
-        for cat in &cats {
-            if let Some(cat_servers) = by_cat.get(cat) {
-                let collapsed = sc.collapsed_categories.contains(cat);
-                rows.push(Row::CatHeader { cat: cat.clone(), count: cat_servers.len(), collapsed });
-
-                if !collapsed {
-                    for (i, s) in cat_servers.iter().enumerate() {
-                        if i > 0 { rows.push(Row::Spacer); }
-                        let conns = conn_counts.get(&s.port).copied().unwrap_or(0);
-                        rows.push(Row::CardTop { server: s, idx: entry_count, conns });
-                        rows.push(Row::CardBot { server: s, idx: entry_count });
-                        entry_count += 1;
-                    }
-                }
-            }
+        for (i, s) in sorted.iter().enumerate() {
+            if i > 0 { rows.push(Row::Spacer); }
+            let conns = conn_counts.get(&s.port).copied().unwrap_or(0);
+            rows.push(Row::CardTop { server: s, idx: entry_count, conns });
+            rows.push(Row::CardBot { server: s, idx: entry_count });
+            entry_count += 1;
         }
     }
 
@@ -154,14 +125,6 @@ pub fn draw_servers(f: &mut Frame, area: Rect, app: &App) {
         .collect();
     let bind_stats = BindStats::from_servers(&tcp_all);
 
-    // Category counts for charts
-    let cat_counts = {
-        let mut cm: HashMap<ServerCategory, usize> = HashMap::new();
-        for s in all { *cm.entry(s.server_kind.category()).or_insert(0) += 1; }
-        let mut m: Vec<(ServerCategory, usize)> = cm.into_iter().collect();
-        m.sort_by_key(|(c, _)| cat_priority(c));
-        m
-    };
     let total_conns: usize = conn_counts.values().sum();
     let tls_count = all.iter().filter(|s| s.details.contains("TLS: yes")).count();
 
@@ -178,7 +141,7 @@ pub fn draw_servers(f: &mut Frame, area: Rect, app: &App) {
         ])
         .split(area);
 
-    draw_dashboard(f, chunks[0], all.len(), tcp_total, udp_total, up, &cat_counts,
+    draw_dashboard(f, chunks[0], all.len(), tcp_total, udp_total, up,
                    total_conns, tls_count, &bind_stats, sc.is_scanning());
     if has_filter {
         draw_filter_bar(f, chunks[1], &sc.filter_text, entry_count);
@@ -244,12 +207,11 @@ impl BindStats {
 fn draw_dashboard(
     f: &mut Frame, area: Rect,
     total: usize, tcp: usize, udp: usize, up: usize,
-    cat_counts: &[(ServerCategory, usize)],
     total_conns: usize, tls_count: usize,
     bind_stats: &BindStats,
     scanning: bool,
 ) {
-    // Split into 3 panels: Bind Addresses | Categories | Quick Stats
+    // Split into 3 panels: Bind Addresses | Exposure Summary | Quick Stats
     let panels = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([
@@ -260,7 +222,7 @@ fn draw_dashboard(
         .split(area);
 
     draw_bind_panel(f, panels[0], bind_stats, scanning);
-    draw_category_panel(f, panels[1], cat_counts, total);
+    draw_exposure_panel(f, panels[1], bind_stats);
     draw_stats_panel(f, panels[2], total, tcp, udp, up, total_conns, tls_count);
 }
 
@@ -343,8 +305,8 @@ fn draw_bind_panel(f: &mut Frame, area: Rect, bs: &BindStats, scanning: bool) {
     f.render_widget(Paragraph::new(lines), inner);
 }
 
-/// Center panel: Category distribution horizontal bar chart
-fn draw_category_panel(f: &mut Frame, area: Rect, cat_counts: &[(ServerCategory, usize)], total: usize) {
+/// Center panel: TCP exposure summary — how exposed is this system?
+fn draw_exposure_panel(f: &mut Frame, area: Rect, bs: &BindStats) {
     let block = Block::default()
         .borders(Borders::RIGHT)
         .border_style(Style::default().fg(Color::Rgb(20, 30, 50)))
@@ -352,60 +314,63 @@ fn draw_category_panel(f: &mut Frame, area: Rect, cat_counts: &[(ServerCategory,
     let inner = block.inner(area);
     f.render_widget(block, area);
 
-    if cat_counts.is_empty() {
-        return;
-    }
+    let exposed = bs.all_interfaces + bs.all_interfaces_v6
+        + bs.specific.iter().map(|(_, c)| *c).sum::<usize>();
+    let local_only = bs.loopback_v4 + bs.loopback_v6;
+    let total = bs.tcp_total;
 
-    let w = inner.width as usize;
-    let max_count = cat_counts.iter().map(|(_, c)| *c).max().unwrap_or(1).max(1);
+    // Exposure ratio bar
+    let bar_w = inner.width.saturating_sub(4) as usize;
+    let exposed_fill = if total > 0 { (exposed * bar_w) / total.max(1) } else { 0 };
+    let local_fill = if total > 0 { (local_only * bar_w) / total.max(1) } else { 0 };
+    let remainder = bar_w.saturating_sub(exposed_fill + local_fill);
 
-    // Title: stacked bar showing all categories proportionally
-    let mut stacked: Vec<Span> = vec![Span::styled(" ", Style::default())];
-    let stack_w = w.saturating_sub(2);
-    for (cat, count) in cat_counts {
-        let seg = if total > 0 { (*count * stack_w).max(1) / total.max(1) } else { 0 };
-        let seg = seg.max(if *count > 0 { 1 } else { 0 });
-        let cc = cat_color(cat);
-        stacked.push(Span::styled("\u{2588}".repeat(seg), Style::default().fg(cc)));
-    }
-    let used: usize = stacked.iter().map(|s| s.content.len()).sum();
-    if used < w {
-        stacked.push(Span::styled(" ".repeat(w - used), Style::default()));
-    }
+    let exposure_color = if exposed == 0 {
+        Color::Rgb(70, 195, 110) // green — fully local
+    } else if exposed <= local_only {
+        Color::Rgb(220, 185, 60) // yellow — moderate
+    } else {
+        Color::Rgb(255, 100, 80) // red — mostly exposed
+    };
 
-    // Up to 3 category rows (top categories by count)
-    let label_w = 7;
-    let bar_w = w.saturating_sub(label_w + 6);
-    let mut lines: Vec<Line> = vec![Line::from(stacked)];
+    let (level_label, level_color) = if exposed == 0 {
+        ("Minimal", Color::Rgb(70, 195, 110))
+    } else if exposed <= 3 {
+        ("Low", Color::Rgb(100, 200, 140))
+    } else if exposed <= local_only {
+        ("Moderate", Color::Rgb(220, 185, 60))
+    } else {
+        ("High", Color::Rgb(255, 100, 80))
+    };
 
-    for (cat, count) in cat_counts.iter().take(3) {
-        let cc = cat_color(cat);
-        let fill = (*count * bar_w) / max_count;
-        let lbl = cat.short_label();
-        lines.push(Line::from(vec![
-            Span::styled(format!(" {:<lw$}", lbl, lw = label_w), Style::default().fg(cc)),
-            Span::styled("\u{2588}".repeat(fill), Style::default().fg(cc)),
-            Span::styled("\u{2500}".repeat(bar_w.saturating_sub(fill)), Style::default().fg(Color::Rgb(18, 25, 40))),
-            Span::styled(format!(" {:>2}", count), Style::default().fg(BRIGHT)),
-        ]));
-    }
+    let l0 = Line::from(vec![
+        Span::styled(" TCP EXPOSURE ", Style::default().fg(Color::Rgb(20, 30, 50)).bg(exposure_color).add_modifier(Modifier::BOLD)),
+        Span::styled(format!("  {}", level_label), Style::default().fg(level_color).add_modifier(Modifier::BOLD)),
+    ]);
 
-    // Remaining categories as colored dots
-    if cat_counts.len() > 3 {
-        let extra = cat_counts.len() - 3;
-        let extra_total: usize = cat_counts.iter().skip(3).map(|(_, c)| *c).sum();
-        let mut dots: Vec<Span> = vec![Span::styled(" ", Style::default())];
-        for (cat, _) in cat_counts.iter().skip(3) {
-            dots.push(Span::styled("\u{25CF} ", Style::default().fg(cat_color(cat))));
-        }
-        dots.push(Span::styled(
-            format!("+{} more ({} svc)", extra, extra_total),
-            Style::default().fg(DIM),
-        ));
-        lines.push(Line::from(dots));
-    }
+    let l1 = Line::from(vec![
+        Span::styled(" ", Style::default()),
+        Span::styled("\u{2588}".repeat(exposed_fill), Style::default().fg(Color::Rgb(255, 100, 80))),
+        Span::styled("\u{2588}".repeat(local_fill), Style::default().fg(Color::Rgb(80, 180, 230))),
+        Span::styled("\u{2500}".repeat(remainder), Style::default().fg(Color::Rgb(18, 25, 40))),
+    ]);
 
-    f.render_widget(Paragraph::new(lines), inner);
+    let l2 = Line::from(vec![
+        Span::styled(" \u{25CF} ", Style::default().fg(Color::Rgb(255, 100, 80))),
+        Span::styled(format!("{}", exposed), Style::default().fg(BRIGHT).add_modifier(Modifier::BOLD)),
+        Span::styled(" network-facing", Style::default().fg(TEXT)),
+        Span::styled("   \u{25CF} ", Style::default().fg(Color::Rgb(80, 180, 230))),
+        Span::styled(format!("{}", local_only), Style::default().fg(BRIGHT).add_modifier(Modifier::BOLD)),
+        Span::styled(" localhost", Style::default().fg(TEXT)),
+    ]);
+
+    let pct = if total > 0 { exposed * 100 / total } else { 0 };
+    let l3 = Line::from(vec![
+        Span::styled(format!(" {}% ", pct), Style::default().fg(exposure_color).add_modifier(Modifier::BOLD)),
+        Span::styled(format!("of {} TCP ports reachable from network", total), Style::default().fg(LABEL)),
+    ]);
+
+    f.render_widget(Paragraph::new(vec![l0, l1, l2, l3]), inner);
 }
 
 /// Right panel: Quick stats summary
@@ -515,9 +480,7 @@ fn draw_list(f: &mut Frame, area: Rect, rows: &[Row], selected: usize) {
             Row::ProtoHeader { proto, count } => {
                 render_proto_header(f, row_area, *proto, *count, w);
             }
-            Row::CatHeader { cat, count, collapsed } => {
-                render_cat_header(f, row_area, cat, *count, *collapsed, w);
-            }
+
             Row::CardTop { server, idx, conns } => {
                 render_card_top(f, row_area, server, *idx == selected, *conns, w);
             }
@@ -572,28 +535,6 @@ fn render_proto_header(f: &mut Frame, area: Rect, proto: ListenProto, count: usi
     );
 }
 
-// ─── Category sub-header ────────────────────────────────────────────────────
-
-fn render_cat_header(f: &mut Frame, area: Rect, cat: &ServerCategory, count: usize, collapsed: bool, w: usize) {
-    let cc = cat_color(cat);
-    let arrow = if collapsed { "\u{25B8}" } else { "\u{25BE}" };
-    let label = cat.label();
-    let prefix = format!("    {} {} ", arrow, label);
-    let suffix = format!(" {} ", count);
-    let fill_len = w.saturating_sub(prefix.len() + suffix.len());
-    let fill: String = "\u{2508}".repeat(fill_len);
-
-    let line = Line::from(vec![
-        Span::styled(prefix, Style::default().fg(cc)),
-        Span::styled(fill, Style::default().fg(Color::Rgb(18, 25, 40))),
-        Span::styled(suffix, Style::default().fg(cc)),
-    ]);
-    f.render_widget(
-        Paragraph::new(line).style(Style::default().bg(Color::Rgb(10, 13, 24))),
-        area,
-    );
-}
-
 // ─── Card line 1: icon + name + port + status ───────────────────────────────
 
 fn render_card_top(f: &mut Frame, area: Rect, s: &ListeningPort, sel: bool, conns: usize, w: usize) {
@@ -629,6 +570,27 @@ fn render_card_top(f: &mut Frame, area: Rect, s: &ListeningPort, sel: bool, conn
         format!(" :{}/{}", s.port, proto_tag),
         Style::default().fg(proto_color).add_modifier(Modifier::BOLD),
     ));
+
+    // Bind address badge
+    {
+        use std::net::IpAddr;
+        let (bind_label, bind_fg, bind_bg) = match s.bind_addr {
+            IpAddr::V4(v4) if v4.is_unspecified() => ("*", Color::Rgb(20, 10, 10), Color::Rgb(255, 100, 80)),
+            IpAddr::V6(v6) if v6.is_unspecified() => ("*", Color::Rgb(20, 10, 10), Color::Rgb(220, 140, 80)),
+            IpAddr::V4(v4) if v4.is_loopback() => ("127.0.0.1", Color::Rgb(10, 20, 30), Color::Rgb(80, 180, 230)),
+            IpAddr::V6(v6) if v6.is_loopback() => ("::1", Color::Rgb(10, 20, 30), Color::Rgb(100, 160, 210)),
+            other => {
+                let s = other.to_string();
+                // Leak is fine: these are a small fixed set of system IPs
+                let label: &'static str = Box::leak(s.into_boxed_str());
+                (label, Color::Rgb(20, 20, 10), Color::Rgb(200, 180, 100))
+            }
+        };
+        spans.push(Span::styled(
+            format!(" {} ", bind_label),
+            Style::default().fg(bind_fg).bg(bind_bg).add_modifier(Modifier::BOLD),
+        ));
+    }
 
     // Status
     spans.push(Span::styled("  ", Style::default()));

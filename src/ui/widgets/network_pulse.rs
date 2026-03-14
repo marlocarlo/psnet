@@ -7,9 +7,9 @@ use ratatui::widgets::{Block, Borders, Paragraph};
 use ratatui::Frame;
 
 use crate::app::App;
-use crate::utils::{format_bytes, format_speed};
+use crate::utils::format_bytes;
 
-/// Draw a compact network pulse / throughput widget.
+/// Draw a compact network pulse / KPI widget.
 pub fn draw_network_pulse(f: &mut Frame, area: Rect, app: &App) {
     let bg = Color::Rgb(8, 12, 24);
 
@@ -29,16 +29,6 @@ pub fn draw_network_pulse(f: &mut Frame, area: Rect, app: &App) {
     };
     let unique_apps = app.bandwidth_tracker.apps.len();
     let (today_down, today_up) = app.usage_tracker.today_usage();
-
-    // Uptime
-    let uptime_secs = app.session_start.elapsed().as_secs();
-    let uptime_str = if uptime_secs >= 3600 {
-        format!("{}h{}m", uptime_secs / 3600, (uptime_secs % 3600) / 60)
-    } else if uptime_secs >= 60 {
-        format!("{}m{}s", uptime_secs / 60, uptime_secs % 60)
-    } else {
-        format!("{}s", uptime_secs)
-    };
 
     // Pulsing indicator
     let pulse = if app.current_down_speed > 1000.0 || app.current_up_speed > 1000.0 {
@@ -62,10 +52,6 @@ pub fn draw_network_pulse(f: &mut Frame, area: Rect, app: &App) {
                     .fg(pulse_color)
                     .add_modifier(Modifier::BOLD),
             ),
-            Span::styled(
-                format!("up:{} ", uptime_str),
-                Style::default().fg(Color::Rgb(80, 100, 130)),
-            ),
         ]))
         .borders(Borders::ALL)
         .border_style(Style::default().fg(Color::Rgb(30, 50, 85)))
@@ -80,29 +66,7 @@ pub fn draw_network_pulse(f: &mut Frame, area: Rect, app: &App) {
 
     let mut lines: Vec<Line<'static>> = Vec::new();
 
-    // Row 1: Live throughput with mini sparkline indicator
-    let speed_indicator = throughput_bar(
-        app.current_down_speed + app.current_up_speed,
-        app.peak_down + app.peak_up,
-        inner.width.saturating_sub(20) as usize,
-    );
-    lines.push(Line::from(vec![
-        Span::styled(" ▼ ", Style::default().fg(Color::Rgb(80, 200, 255)).add_modifier(Modifier::BOLD)),
-        Span::styled(
-            format!("{:<10}", format_speed(app.current_down_speed)),
-            Style::default().fg(Color::Rgb(100, 200, 255)).add_modifier(Modifier::BOLD),
-        ),
-        Span::styled(" ▲ ", Style::default().fg(Color::Rgb(180, 120, 255)).add_modifier(Modifier::BOLD)),
-        Span::styled(
-            format_speed(app.current_up_speed),
-            Style::default().fg(Color::Rgb(200, 140, 255)).add_modifier(Modifier::BOLD),
-        ),
-    ]));
-
-    // Row 2: throughput bar
-    lines.push(Line::from(speed_indicator));
-
-    // Row 3: KPI grid
+    // Row 1: KPI grid — devices, countries, apps
     lines.push(Line::from(vec![
         Span::styled(" ", Style::default()),
         Span::styled(
@@ -133,7 +97,7 @@ pub fn draw_network_pulse(f: &mut Frame, area: Rect, app: &App) {
         ),
     ]));
 
-    // Row 4: Today's data
+    // Row 2: Today's data
     if inner.height as usize > lines.len() {
         lines.push(Line::from(vec![
             Span::styled(" Today ", Style::default().fg(Color::Rgb(50, 65, 90))),
@@ -150,7 +114,7 @@ pub fn draw_network_pulse(f: &mut Frame, area: Rect, app: &App) {
         ]));
     }
 
-    // Row 5: Firewall + alerts summary
+    // Row 3: Firewall + alerts summary
     if inner.height as usize > lines.len() {
         let fw_on = app.firewall_manager.enabled;
         let unread = app.alert_engine.unread();
@@ -182,41 +146,3 @@ pub fn draw_network_pulse(f: &mut Frame, area: Rect, app: &App) {
     f.render_widget(paragraph, inner);
 }
 
-/// Build a mini throughput bar showing current vs peak.
-fn throughput_bar(current: f64, peak: f64, width: usize) -> Vec<Span<'static>> {
-    if width < 4 || peak <= 0.0 {
-        return vec![Span::styled(
-            "  ░░░░░░░░░░",
-            Style::default().fg(Color::Rgb(25, 35, 55)),
-        )];
-    }
-    let pct = (current / peak).min(1.0);
-    let filled = (pct * width as f64).round() as usize;
-    let empty = width.saturating_sub(filled);
-
-    let fill_color = if pct > 0.8 {
-        Color::Rgb(255, 100, 80)
-    } else if pct > 0.5 {
-        Color::Rgb(255, 200, 80)
-    } else if pct > 0.1 {
-        Color::Rgb(80, 200, 120)
-    } else {
-        Color::Rgb(40, 80, 60)
-    };
-
-    vec![
-        Span::styled(" ", Style::default()),
-        Span::styled(
-            "█".repeat(filled),
-            Style::default().fg(fill_color),
-        ),
-        Span::styled(
-            "░".repeat(empty),
-            Style::default().fg(Color::Rgb(25, 35, 55)),
-        ),
-        Span::styled(
-            format!(" {:.0}%", pct * 100.0),
-            Style::default().fg(Color::Rgb(70, 85, 110)),
-        ),
-    ]
-}

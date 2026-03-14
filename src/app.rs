@@ -959,7 +959,7 @@ impl App {
                 filtered.get(selected).map(|c| DetailKind::Connection((*c).clone()))
             }
             BottomTab::Servers => {
-                let visible = self.servers_scanner.visible_servers();
+                let visible = self.servers_scanner.filtered_servers();
                 if visible.is_empty() { return; }
                 let selected = self.servers_scanner.scroll_offset.min(visible.len() - 1);
                 if let Some(s) = visible.get(selected) {
@@ -1140,17 +1140,10 @@ impl App {
         }
     }
 
-    /// Get the category of the currently selected server.
-    fn selected_server_category(&self) -> Option<crate::network::servers::types::ServerCategory> {
-        let visible = self.servers_scanner.visible_servers();
-        if visible.is_empty() { return None; }
-        let idx = self.servers_scanner.scroll_offset.min(visible.len() - 1);
-        Some(visible[idx].server_kind.category())
-    }
 
     /// Get the exe_path of the currently selected server (if any).
     fn selected_server_exe_path(&self) -> Option<String> {
-        let visible = self.servers_scanner.visible_servers();
+        let visible = self.servers_scanner.filtered_servers();
         if visible.is_empty() { return None; }
         let idx = self.servers_scanner.scroll_offset.min(visible.len() - 1);
         let path = &visible[idx].exe_path;
@@ -1202,16 +1195,6 @@ impl App {
                 } else {
                     self.status_message = Some(("No executable path available".into(), Instant::now()));
                 }
-            }
-            // Collapse selected server's category
-            KeyCode::Left => {
-                if let Some(cat) = self.selected_server_category() {
-                    self.servers_scanner.collapsed_categories.insert(cat);
-                }
-            }
-            // Expand all collapsed categories
-            KeyCode::Right => {
-                self.servers_scanner.collapsed_categories.clear();
             }
             KeyCode::Char('1') => {
                 self.servers_scanner.sort_column = 0;
@@ -1607,7 +1590,7 @@ impl App {
         match self.bottom_tab {
             BottomTab::Connections => self.conn_scroll = self.connections.len(),
             BottomTab::Servers => {
-                self.servers_scanner.scroll_offset = self.servers_scanner.visible_servers().len().saturating_sub(1);
+                self.servers_scanner.scroll_offset = self.servers_scanner.filtered_servers().len().saturating_sub(1);
             }
             BottomTab::Alerts => {
                 if let Some((cat, count)) = self.focused_alert_cat() {

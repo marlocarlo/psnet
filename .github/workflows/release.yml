@@ -313,7 +313,7 @@ jobs:
           PackageUrl: https://github.com/marlocarlo/psnet
           License: MIT
           LicenseUrl: https://github.com/marlocarlo/psnet/blob/master/LICENSE
-          ShortDescription: A beautiful real-time TUI network monitor for Windows — built in Rust
+          ShortDescription: A beautiful real-time TUI network monitor for Windows — 9 tabs, GeoIP, device discovery, firewall, topology
           Tags:
           - cli
           - monitor
